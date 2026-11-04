@@ -72,3 +72,5 @@ Tool editions, scanner/feed licenses and model data policy must be documented in
 No participant local setup is required. Hosted CI exercises real PostgreSQL, Redis and fresh container startup. T04/T05 remain open for actual permitted lab/corpus acceptance; M02's clearly labelled handcrafted contract tests do not replace genuine captures or independent accuracy review.
 
 Exact package locks and image digests identify the tested dependency baseline. They do not establish formal security/framework compliance. See issue-specific verification records for what actually ran and what needs manual setup.
+
+[M03 status and remaining runner gate](docs/milestone-3-status.md) documents scope, managed identities, single-use approvals, cancellation and inference guards. These controls do not enable native scanners, model calls or report rendering; genuine deployed-runner acceptance remains open.

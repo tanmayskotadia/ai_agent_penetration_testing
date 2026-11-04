@@ -129,7 +129,17 @@ def evidence_router(engine: Engine, config: Settings) -> APIRouter:
                 "information_kind": "redacted-source-derivative",
             }
 
-        return mutation(engine, request, actor, {}, apply, 200)
+        return mutation(
+            engine,
+            request,
+            actor,
+            {},
+            apply,
+            200,
+            replay_check=lambda connection: store().read(
+                connection, assessment_id, evidence_id, actor.subject
+            ),
+        )
 
     @router.get("/{evidence_id}/reviewed-derivative")
     def reviewed_derivative(

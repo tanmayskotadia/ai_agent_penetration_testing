@@ -139,7 +139,10 @@ def enforce_role(identity: Identity, request: Request) -> None:
         )
         allowed |= identity.role == "planner" and (
             (request.method == "GET" and "/findings" in path)
-            or (request.method == "POST" and path.endswith("/plans"))
+            or (
+                request.method == "POST"
+                and (path.endswith("/reasoning/proposals") or path.endswith("/reasoning/context"))
+            )
         )
         if not allowed:
             raise HTTPException(403, "Service role cannot perform this action")

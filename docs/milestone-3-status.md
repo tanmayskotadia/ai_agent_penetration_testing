@@ -1,0 +1,11 @@
+# M03 — Scope, approvals and security boundaries
+
+M03 implements deterministic scope checks (T13), identity lifecycle and least privilege (T15), action-bound single-use human approvals (T16), stop/cancellation controls (T17), and constrained inference/command/report inputs (T18). Issue delivery records on GitHub identify exact commits, checks and completion state; unverified work remains open. These are control-plane capabilities, not a claim that the native penetration-testing pipeline works yet.
+
+T14 is partial. Hosted CI has verified actual kernel allow/deny rules using an isolated benign connectivity harness: two permitted flows and seven denied flows, unprivileged probe, read-only root, no capabilities or Docker socket. It has not verified a genuine scanner in a deployed runner, private authenticated collector transport, or that runtime's target/control-plane routing. The issue and milestone must remain open until that acceptance exists. A local participant setup is unnecessary; a suitable hosted runner must be selected and verified before live jobs are enabled. Existing Render/Supabase resources are not repurposed or treated as privileged scan runners.
+
+Assessment scope, authorization references, DNS pins, exclusions, rates and expiry are runtime inputs. The general-purpose profile uses valid asset-owner authority; the hackathon profile retains organizer-lab restrictions. Imported captures cannot grant authority. No organizer questions or preloaded target are required to continue implementation. Actual security testing still requires valid authority at the time of use.
+
+All seven native integrations remain planned; model invocation and report rendering remain disabled. Genuine corpus/independent labels (M01), tool normalizers and working integrations (later milestones), deployed runner acceptance (T14), production secret injection and model endpoint approval remain separate gates. Synthetic API/process/connectivity tests do not satisfy genuine scanner accuracy or exploitation evidence.
+
+See [scope policy](scope-policy.md), [trust boundaries](trust-boundaries.md), [access control](access-control.md), [human approvals](human-approvals.md), [stop controls](validation-policy.md) and [inference boundaries](inference-boundaries.md). Each task has a verification record under `docs/verification/`.

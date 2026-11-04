@@ -26,6 +26,7 @@ def mutation(
     operation: Callable[[Connection], dict[str, Any]],
     status: int = 201,
     allow_readonly: bool = False,
+    replay_check: Callable[[Connection], object] | None = None,
 ) -> JSONResponse:
     if actor.role == "auditor" and not allow_readonly:
         raise HTTPException(403, "Read-only role")
@@ -72,6 +73,8 @@ def mutation(
             if row["request_digest"] != request_digest:
                 raise HTTPException(409, "Idempotency key already used with different input")
             if row["response"] is not None:
+                if replay_check is not None:
+                    replay_check(connection)
                 return JSONResponse(
                     row["response"], row["status_code"], headers={"Idempotent-Replay": "true"}
                 )

@@ -1,0 +1,7 @@
+{
+  "task": "T18",
+  "requirements": ["R02", "R03", "R04", "R11", "R31", "R32", "R34"],
+  "verification": ["tests/test_inference_guards.py", "API-to-database adversarial proposal/context checks", "PostgreSQL service acceptance", "generated OpenAPI/TypeScript contract drift checks"],
+  "manual_intervention_now": "None; no participant local setup",
+  "limits": ["Handcrafted adversarial fixtures are test-only", "No model, intelligence fetcher, native scanner or report renderer is enabled", "Identifier occurrence is not semantic vulnerability proof", "Secret masking requires human review", "Actual runner isolation and genuine scanner/collector acceptance remain T14 work", "Renderer/fetcher integrations must adopt these boundaries and pass their own real acceptance"]
+}

@@ -64,6 +64,7 @@ def record_request(
         AuditEvent(
             assessment_id=assessment_id,
             actor_id=actor.subject,
+            actor_kind="service" if actor.principal_kind == "service" else "human",
             request_id=context[0],
             correlation_id=context[1],
             action=action,
