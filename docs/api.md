@@ -32,6 +32,8 @@ All routes below start `/api/v1`. POST/PUT payload contracts use schema version 
 | GET `/assessments/{id}/resources/{kind}/{resource}` | Read workflow request and explicit state |
 | GET `/assessments/{id}/findings` or `/findings/{finding}` | Read canonical derived findings; empty remains empty until populated by real workflows |
 | GET `/assessments/{id}/events` | Finite batch of at most 100 persisted audit SSE events |
+| GET `/assessments/{id}/scan-jobs` | Latest 50 owner-bound durable job snapshots with truthful worker state and heartbeat freshness |
+| GET `/assessments/{id}/scan-jobs/{jobId}/events` | Finite batch of at most 100 append-only per-job SSE progress events; resume with `Last-Event-ID` |
 | GET `/assessments/{id}/audit/checkpoint` | Private signed checkpoint attachment for independent retention |
 
 Scope creation serializes on the assessment row and requires the next revision. New workflow requests check the current scope; job/approval requests also require a matching plan revision. A new scope invalidates use of a previous plan. Plans are immutable drafts; adaptive revision workflows belong to M07. Bounds on source steps prevent oversized narratives. Imports must reference evidence belonging to the same assessment. Recorded inputs never appear as live results. Contract test artifacts are not source-data authenticity proof.
@@ -49,3 +51,5 @@ SSE is authenticated and finite to tolerate free-host restarts. Reconnect with `
 ## Verification
 
 `tests/test_api_contracts.py` covers runtime scope/plan inputs, duplicate/conflicting/concurrent requests, no duplicate jobs/reports, stale revisions, wrong owner, missing/forged credentials, invalid schema/headers, oversized bodies, read-only roles, SSE reconnect and checkpoint attachment. Hosted CI reruns idempotency/concurrency and events on real PostgreSQL. Evidence API regression tests run through the same receipt mechanism; fresh migration tests cover rollback/forward. R01/R02/R10/R12/R22/R28 are supported at the contract/persistence layer; actual assessment reasoning, execution and report content belong to their later milestones.
+
+Durable scan-job snapshots use the same assessment access check as other private routes. Job progress is a finite persisted event batch per job, separate from canonical audit SSE. It reports worker-supplied attempt, duration, version and bounded exit status; it never estimates a percentage. Stale heartbeat presentation is derived as `unknown` while the last persisted state remains available until reconciliation. Diagnostics are selected from fixed safe messages; raw stderr and arbitrary exception text are excluded.

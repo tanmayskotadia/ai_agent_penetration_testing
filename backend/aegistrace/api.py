@@ -23,6 +23,7 @@ from aegistrace.identity_api import identity_router
 from aegistrace.inference_api import inference_router
 from aegistrace.ingestion import ingestion_router
 from aegistrace.job_api import job_router
+from aegistrace.job_progress_contracts import JobProgressEvent
 from aegistrace.log_safety import protect_handlers
 from aegistrace.platform_api import platform_router
 from aegistrace.policy_api import policy_router
@@ -66,6 +67,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
             components = schema.setdefault("components", {}).setdefault("schemas", {})
             components["AuditEvent"] = AuditEvent.model_json_schema()
+            components["JobProgressEvent"] = JobProgressEvent.model_json_schema()
             components["ApiError"] = ApiError.model_json_schema()
             capability_schema = Capability.model_json_schema()
             capability_schema.pop("$defs", None)
@@ -170,7 +172,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0016_results":
+            if revision != "0017_job_progress":
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
         except SQLAlchemyError:
             return JSONResponse(

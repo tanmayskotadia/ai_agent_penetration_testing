@@ -14,6 +14,7 @@ from sqlalchemy import Connection, func, select
 from aegistrace.auth import Identity
 from aegistrace.domain import ReportSnapshot
 from aegistrace.evidence import EvidenceStore
+from aegistrace.job_progress import append_progress
 from aegistrace.jobs import job_event, lock_job
 from aegistrace.platform_api import record_request
 from aegistrace.policy import PolicyError
@@ -209,6 +210,15 @@ def quarantine_late(
         "late-output-quarantined",
         {"artifact_id": str(artifact_id), "sha256": digest, "canonical_state_changed": False},
     )
+    append_progress(
+        connection,
+        job,
+        "late-output-quarantined",
+        str(job["state"]),
+        worker_id=worker_id,
+        epoch=epoch,
+        diagnostic_code="late-output-quarantined",
+    )
     return str(artifact_id)
 
 
@@ -262,4 +272,11 @@ def review_late(
         "published_export_changed": False,
     }
     record_request(connection, assessment_id, actor, "job.late-output-reviewed", artifact_id, value)
+    append_progress(
+        connection,
+        job,
+        "late-output-reviewed",
+        str(job["state"]),
+        diagnostic_code="late-output-reviewed",
+    )
     return value

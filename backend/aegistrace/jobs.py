@@ -17,6 +17,7 @@ from aegistrace.approvals import consume
 from aegistrace.auth import Identity
 from aegistrace.control import begin_execution, finish_execution, heartbeat
 from aegistrace.control_schema import executions
+from aegistrace.job_progress import append_progress
 from aegistrace.job_schema import chunks, jobs, outbox
 from aegistrace.platform_api import record_request
 from aegistrace.policy import PolicyError, release_policy
@@ -151,6 +152,7 @@ def enqueue(
         )
     )
     connection.execute(outbox.insert().values(job_id=value["id"], attempts=0, available_at=now))
+    append_progress(connection, value, "queued", "queued")
     record_request(connection, assessment_id, actor, "job.queued", UUID(value["id"]), value)
     return value
 
@@ -235,12 +237,22 @@ def publish_pending(engine: Engine, publish: Callable[[str], None], limit: int =
                         updated_at=time.time(),
                     )
                 )
+                append_progress(
+                    connection,
+                    job,
+                    "dispatch-retry",
+                    "queued",
+                    diagnostic_code="broker-retries-exhausted"
+                    if attempt == 5
+                    else "broker-unavailable",
+                )
             else:
                 connection.execute(
                     outbox.update()
                     .where(outbox.c.job_id == job_id)
                     .values(attempts=attempt, published_at=time.time())
                 )
+                append_progress(connection, job, "dispatched", "queued")
                 sent += 1
     return sent
 
@@ -261,6 +273,13 @@ def abandon_queued(connection: Connection, row: Mapping[str, Any], reason: str) 
         jobs.update()
         .where(jobs.c.id == row["id"])
         .values(state="failed", reason=reason, updated_at=time.time())
+    )
+    append_progress(
+        connection,
+        dict(row) | {"state": "failed"},
+        "failed-before-start",
+        "failed",
+        diagnostic_code="approval-stale",
     )
     job_event(connection, row, "failed-before-start", {"reason": reason})
 
@@ -295,6 +314,21 @@ def start_job(
             reason=None,
         )
     )
+    append_progress(
+        connection,
+        dict(row)
+        | {
+            "state": "running",
+            "worker_id": str(worker_id),
+            "epoch": execution["epoch"],
+            "attempt": 1,
+        },
+        "started",
+        "running",
+        attempt=1,
+        worker_id=worker_id,
+        epoch=execution["epoch"],
+    )
     job_event(
         connection,
         row,
@@ -317,11 +351,12 @@ def job_heartbeat(connection: Connection, job_id: UUID, worker_id: UUID, epoch: 
     lease = connection.execute(
         select(executions.c.lease_until).where(executions.c.claim_id == row["claim_id"])
     ).scalar_one()
+    now = time.time()
     connection.execute(
-        jobs.update()
-        .where(jobs.c.id == str(job_id))
-        .values(lease_until=lease, updated_at=time.time())
+        jobs.update().where(jobs.c.id == str(job_id)).values(lease_until=lease, updated_at=now)
     )
+    if now - row["updated_at"] >= 15:
+        append_progress(connection, row, "heartbeat", "running", worker_id=worker_id, epoch=epoch)
     return cancel
 
 
@@ -337,6 +372,9 @@ def record_submission(
         raise PolicyError("external submission already recorded")
     connection.execute(
         jobs.update().where(jobs.c.id == str(job_id)).values(external_scan_id=external_id)
+    )
+    append_progress(
+        connection, row, "submission-recorded", "running", worker_id=worker_id, epoch=epoch
     )
     job_event(connection, row, "submission-recorded", {"external_scan_id": external_id})
 
@@ -392,6 +430,10 @@ def finish_job(
     epoch: int,
     outcome: str,
     termination_confirmed: bool,
+    *,
+    tool_version: str | None = None,
+    exit_code: int | None = None,
+    diagnostic_code: str | None = None,
 ) -> str:
     if outcome not in {"collected", "partial", "failed", "cancelled", "blocked"}:
         raise ValueError("worker cannot claim normalized/completed results")
@@ -416,6 +458,26 @@ def finish_job(
             updated_at=time.time(),
             reason="verified-native-runner-unavailable" if outcome == "blocked" else None,
         )
+    )
+    code = diagnostic_code
+    if code is None:
+        code = {
+            "blocked": "runner-unavailable",
+            "failed": "tool-exit-nonzero" if exit_code is not None else None,
+            "partial": "collection-failed",
+        }.get(outcome)
+        if state == "cancelled" and not termination_confirmed:
+            code = "cancel-unconfirmed"
+    append_progress(
+        connection,
+        dict(row) | {"state": state},
+        "finished",
+        state,
+        worker_id=worker_id,
+        epoch=epoch,
+        tool_version=tool_version,
+        exit_code=exit_code,
+        diagnostic_code=code,
     )
     job_event(
         connection,
@@ -443,6 +505,15 @@ def reconcile(connection: Connection, job_id: UUID) -> str:
             .where(executions.c.claim_id == row["claim_id"])
             .values(state="unknown")
         )
+        append_progress(
+            connection,
+            dict(row) | {"state": "unknown"},
+            "worker-lost",
+            "unknown",
+            worker_id=UUID(row["worker_id"]) if row["worker_id"] else None,
+            epoch=row["epoch"],
+            diagnostic_code="worker-heartbeat-expired",
+        )
         job_event(connection, row, "worker-lost", {"state": "unknown", "automatic_retry": False})
         return "unknown"
     if row["state"] == "queued":
@@ -454,6 +525,9 @@ def reconcile(connection: Connection, job_id: UUID) -> str:
                 jobs.update()
                 .where(jobs.c.id == str(job_id))
                 .values(state="cancelled", updated_at=time.time())
+            )
+            append_progress(
+                connection, dict(row) | {"state": "cancelled"}, "cancelled", "cancelled"
             )
             return "cancelled"
         if datetime.fromisoformat(payload["deadline"]).timestamp() <= time.time():

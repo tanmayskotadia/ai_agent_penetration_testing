@@ -6,6 +6,22 @@ export class ApiFailure extends Error {
   }
 }
 
+export type JobProgressEvent = {
+  job_id: string;
+  assessment_id: string;
+  sequence: number;
+  event_id: string;
+  kind: string;
+  state: string;
+  attempt: number;
+  created_at: number;
+  elapsed_ms: number | null;
+  tool_version: string | null;
+  exit_code: number | null;
+  diagnostic_code: string | null;
+  diagnostic: string | null;
+};
+
 /** Caller retains the idempotency key across retries. Tokens remain in memory. */
 export async function mutate<T>(base: string, path: string, token: string, body: unknown, idempotencyKey: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(base + path, {
@@ -30,6 +46,24 @@ export async function eventBatch(base: string, assessmentId: string, token: stri
     if (id && data) {
       cursor = Number(id.slice(4));
       events.push(JSON.parse(data.slice(6)) as ApiSchemas["AuditEvent"]);
+    }
+  }
+  return { cursor, events };
+}
+
+/** Persisted per-job SSE batches resume from the last fully handled sequence. */
+export async function jobEventBatch(base: string, assessmentId: string, jobId: string, token: string, cursor: number, signal?: AbortSignal): Promise<{ cursor: number; events: JobProgressEvent[] }> {
+  const response = await fetch(`${base}/api/v1/assessments/${encodeURIComponent(assessmentId)}/scan-jobs/${encodeURIComponent(jobId)}/events`, {
+    signal, headers: { Authorization: `Bearer ${token}`, "Last-Event-ID": String(cursor) },
+  });
+  if (!response.ok) throw new ApiFailure(response.status, await response.json() as ApiSchemas["ApiError"]);
+  const events: JobProgressEvent[] = [];
+  for (const frame of (await response.text()).replace(/\r\n/g, "\n").split("\n\n")) {
+    const id = frame.split("\n").find(line => line.startsWith("id: "));
+    const data = frame.split("\n").find(line => line.startsWith("data: "));
+    if (id && data) {
+      cursor = Number(id.slice(4));
+      events.push(JSON.parse(data.slice(6)) as JobProgressEvent);
     }
   }
   return { cursor, events };
