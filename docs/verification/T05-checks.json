@@ -1,0 +1,32 @@
+{
+  "task": "T05",
+  "status": "partial-blocked-on-genuine-captures-and-independent-review",
+  "tests_passed": 7,
+  "actual_readiness": {
+    "metadata_valid": true,
+    "ready": false,
+    "errors": [],
+    "blockers": [
+      "Missing genuine held_out split.",
+      "Missing genuine permitted Nikto capture.",
+      "Missing genuine permitted Nmap capture.",
+      "Missing genuine permitted OWASP ZAP capture.",
+      "Missing genuine training split.",
+      "Missing independently reviewed clean_control case.",
+      "Missing independently reviewed contradictory_evidence case.",
+      "Missing independently reviewed cross_tool_duplicate case.",
+      "Missing independently reviewed distinct_assets case."
+    ],
+    "genuine_fixtures": 0,
+    "handcrafted_parser_fixtures": 0,
+    "labels": 0,
+    "calibration_ready": false,
+    "limitations": "Metadata consistency cannot authenticate captures, legal rights or reviewer independence. No accuracy/calibration claim is produced; T48 must evaluate representative held-out outcomes."
+  },
+  "manual_required": [
+    "Organizer-authorized capture or genuine permitted native exports with provenance and redistribution/redaction basis",
+    "Independent ground-truth review of duplicates, distinct assets, contradictions and clean controls",
+    "Training/held-out assignment before any prompt/threshold tuning"
+  ],
+  "limitations": "No genuine scanner output or independent label was manufactured. T05 remains open; zero real benchmark/correlation/calibration results claimed."
+}
