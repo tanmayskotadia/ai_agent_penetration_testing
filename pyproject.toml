@@ -18,10 +18,18 @@ dependencies = [
   "celery[redis]",
   "pyyaml",
   "cryptography>=50.0.2",
+  "defusedxml>=0.7.1",
 ]
 
 [dependency-groups]
-dev = ["pytest", "httpx", "ruff", "mypy", "types-PyYAML"]
+dev = [
+    "pytest",
+    "httpx",
+    "ruff",
+    "mypy",
+    "types-PyYAML",
+    "types-defusedxml>=0.7.0.20260504",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["backend/aegistrace", "workers/aegistrace_workers", "reports/aegistrace_reports"]

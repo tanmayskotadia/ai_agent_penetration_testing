@@ -12,6 +12,8 @@ export interface ApiSchemas {
   "Finding": { "schema_version"?: "1.0"; "id"?: string; "assessment_id": string; "concept_id": string; "title": string; "information_kind": "reviewer-decision" | "ai-inference"; "validation_state"?: "suspected" | "confirmed" | "false-positive" | "contradictory" | "unknown"; "decision_id"?: (string | null); "limitations"?: Array<string> };
   "HTTPValidationError": { "detail"?: Array<ApiSchemas["ValidationError"]> };
   "ImportCreate": { "schema_version"?: "1.0"; "scope_id": string; "scope_revision": number; "tool": "Nmap" | "Nessus" | "Greenbone" | "Nikto" | "OWASP ZAP" | "Burp Suite" | "Metasploit"; "format": string; "evidence_id": string };
+  "InspectionRequest": { "schema_version"?: "1.0"; "asset_mapping"?: Record<string, string> };
+  "InspectionResult": { "schema_version"?: "1.0"; "import_id": string; "evidence_id": string; "source_sha256": string; "mode"?: "recorded-import"; "state": "quarantined" | "container-validated"; "code": string; "assets": Array<string>; "out_of_scope_assets": Array<string>; "parsed_records": number; "findings_created"?: 0; "normalizer_enabled"?: false; "diagnostics": Array<string> };
   "JobCreate": { "schema_version"?: "1.0"; "plan_id": string; "plan_revision": number };
   "PlanCreate": { "schema_version"?: "1.0"; "scope_id": string; "scope_revision": number; "revision": number; "steps": Array<string> };
   "ReportCreate": { "schema_version"?: "1.0"; "format"?: "pdf" | "json" };

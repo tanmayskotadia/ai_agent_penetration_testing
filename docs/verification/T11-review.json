@@ -1,0 +1,7 @@
+{
+  "task": "T11",
+  "requirements": ["R05", "R08", "R09", "R31", "R32", "R34"],
+  "verification": ["tests/test_ingestion.py", "tests/test_api_contracts.py", "tests/test_foundation.py"],
+  "manual_intervention": "None for hostile-file boundary acceptance. Genuine native fixtures and normalization accuracy remain separate M01/later-adapter work.",
+  "limits": ["Only bounded native-container guards, no functioning scanner normalizer", "Originals limited to 2 MiB", "Child network denial is Python-level defense, not OS-enforced isolation", "Windows has no child memory quota in this implementation", "All test samples are handcrafted and labelled"]
+}
