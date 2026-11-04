@@ -79,8 +79,8 @@ jobs:
             sleep 3
           done
           curl --fail http://127.0.0.1:8000/health/ready
-          curl --fail http://127.0.0.1:5173/
-          curl --fail http://127.0.0.1:5173/api/v1/system/status
+          curl --fail --retry 15 --retry-all-errors --retry-delay 1 --max-time 5 http://127.0.0.1:5173/
+          curl --fail --retry 15 --retry-all-errors --retry-delay 1 --max-time 5 http://127.0.0.1:5173/api/v1/system/status
       - name: Container diagnostics on failure
         if: failure()
         env:
