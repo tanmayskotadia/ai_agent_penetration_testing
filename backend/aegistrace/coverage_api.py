@@ -9,6 +9,7 @@ from sqlalchemy import Engine, select
 
 from aegistrace.auth import Identity, identity_dependency
 from aegistrace.capabilities import capability_snapshot
+from aegistrace.correlation import correlate_observations
 from aegistrace.normalization_schema import normalizations
 from aegistrace.repository import require_access
 from aegistrace.result_schema import exports
@@ -77,6 +78,7 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
             raise HTTPException(404, "Resource not found") from error
         imports_by_tool = Counter(str(row.get("tool", "unknown")) for row in run_rows)
         runs_by_id = {str(row.get("id")): str(row.get("tool", "unknown")) for row in run_rows}
+        analytics = correlate_observations(observation_rows, runs_by_id)
         definition_ids = {
             endpoint_id
             for value in normalization_rows
@@ -109,7 +111,15 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
             "authorized_lab_demonstration": {"passed": False, "evidence": None},
             "authenticated_api_session_coverage": {"passed": False, "evidence": None},
             "full_endpoint_attempt_coverage": {"passed": False, "evidence": None},
-            "cross_tool_deduplication_and_ranking": {"passed": False, "evidence": None},
+            "cross_tool_deduplication_and_ranking": {
+                "passed": False,
+                "implementation_available": True,
+                "evidence": {
+                    "candidate_groups": analytics["candidate_group_count"],
+                    "ranking_method": analytics["ranking_method"],
+                },
+                "limitation": "Implementation is available; source data and reviewer acceptance are still required",
+            },
             "downloadable_pdf_report": {
                 "passed": report_export is not None,
                 "evidence": "reviewer-frozen export is available as a PDF"
@@ -130,6 +140,7 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
             "openapi_defined_endpoint_count": len(definition_ids),
             "endpoints_with_imported_web_alerts": len(alert_endpoint_ids),
             "observed_record_count": len(observation_rows),
+            "observation_analytics": analytics,
             "coverage_state": "coverage-not-established",
             "prototype_gate": prototype_gate,
             "coverage_limitations": [
