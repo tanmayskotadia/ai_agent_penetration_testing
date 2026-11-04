@@ -1,0 +1,85 @@
+name: Foundation CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  foundation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18-bookworm@sha256:5c4783a8cc3f0074912164f94dfa1be4e043438f0f707cf968d7af9a0d31a2c8
+        env:
+          POSTGRES_USER: aegistrace
+          POSTGRES_DB: aegistrace
+          POSTGRES_PASSWORD: ci-only-disposable
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U aegistrace -d aegistrace"
+          --health-interval 5s --health-timeout 3s --health-retries 15
+      redis:
+        image: redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
+        ports: [6379:6379]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 15
+    env:
+      DATABASE_URL: postgresql+psycopg://aegistrace:ci-only-disposable@127.0.0.1:5432/aegistrace
+      REDIS_URL: redis://127.0.0.1:6379/0
+      ENVIRONMENT: ci
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install locked Python environment
+        run: python -m pip install uv==0.12.13 && uv sync --frozen
+      - name: Generate ephemeral CI application secret
+        run: python -c "import secrets,os; open(os.environ['GITHUB_ENV'],'a').write('APP_SECRET='+secrets.token_hex(32)+'\n')"
+      - name: Python quality checks
+        run: |
+          uv run ruff check backend workers reports tests migrations scripts
+          uv run ruff format --check backend workers reports tests migrations scripts
+          uv run mypy
+      - name: Verify requirements baseline
+        run: |
+          python scripts/export_requirements.py --check
+          python scripts/validate_requirements.py
+          python scripts/check_source_hygiene.py
+      - name: Migrate real PostgreSQL
+        run: uv run alembic upgrade head
+      - name: Run API, migration and configuration checks
+        run: uv run pytest -m 'not services'
+      - name: Verify actual Redis/Celery round trip
+        run: |
+          uv run celery -A aegistrace_workers.cli:app worker --pool=solo --loglevel=WARNING > /tmp/aegistrace-worker.log 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          RUN_SERVICE_TESTS=1 uv run pytest -m services
+      - name: Build workspace
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund && npm run build
+      - name: Validate Compose development profile
+        env:
+          POSTGRES_PASSWORD: ci-only-disposable
+        run: docker compose config --quiet
+      - name: Build and start fresh container profile
+        env:
+          POSTGRES_PASSWORD: ci-only-disposable
+        run: |
+          docker compose up --build -d
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:8000/health/ready; then break; fi
+            sleep 3
+          done
+          curl --fail http://127.0.0.1:8000/health/ready
+          curl --fail http://127.0.0.1:5173/
+      - name: Stop container profile
+        if: always()
+        run: docker compose down

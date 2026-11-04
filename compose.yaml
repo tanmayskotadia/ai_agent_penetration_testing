@@ -1,0 +1,65 @@
+name: aegistrace
+services:
+  postgres:
+    image: postgres:18-bookworm@sha256:5c4783a8cc3f0074912164f94dfa1be4e043438f0f707cf968d7af9a0d31a2c8
+    environment:
+      POSTGRES_DB: aegistrace
+      POSTGRES_USER: aegistrace
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run python scripts/init_env.py first}
+    volumes: [postgres-data:/var/lib/postgresql]
+    networks: [control]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U aegistrace -d aegistrace]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  redis:
+    image: redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
+    networks: [control]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  migrate:
+    build: .
+    environment: &application-environment
+      APP_SECRET: ${APP_SECRET:?Run python scripts/init_env.py first}
+      DATABASE_URL: postgresql+psycopg://aegistrace:${POSTGRES_PASSWORD}@postgres:5432/aegistrace
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+    networks: [control]
+    depends_on:
+      postgres: {condition: service_healthy}
+    command: [uv, run, --no-sync, alembic, upgrade, head]
+  api:
+    build: .
+    environment: *application-environment
+    ports: [127.0.0.1:8000:8000]
+    networks: [control]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  worker:
+    build: .
+    environment: *application-environment
+    networks: [control]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    command: [uv, run, --no-sync, celery, -A, aegistrace_workers.cli:app, worker, --pool=solo, --loglevel=WARNING]
+  frontend:
+    build: frontend
+    environment: {API_PROXY_TARGET: "http://api:8000"}
+    ports: [127.0.0.1:5173:5173]
+    networks: [control]
+    depends_on:
+      api: {condition: service_healthy}
+networks:
+  control: {internal: true}
+volumes:
+  postgres-data:

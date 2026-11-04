@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aegistrace"
+version = "0.1.0"
+description = "Analyst-controlled VAPT assessment foundation"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi", "uvicorn[standard]", "pydantic-settings", "sqlalchemy",
+  "psycopg[binary]", "alembic", "celery[redis]",
+]
+
+[dependency-groups]
+dev = ["pytest", "httpx", "ruff", "mypy", "types-PyYAML", "pyyaml"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend/aegistrace", "workers/aegistrace_workers", "reports/aegistrace_reports"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+include = ["backend/**/*.py", "workers/**/*.py", "reports/**/*.py", "tests/**/*.py", "scripts/**/*.py", "migrations/**/*.py"]
+exclude = ["planning", ".venv"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["backend", "workers", "reports"]
+
+[[tool.mypy.overrides]]
+module = ["celery", "celery.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["services: requires real PostgreSQL and Redis services"]

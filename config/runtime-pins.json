@@ -1,0 +1,27 @@
+{
+  "review_date": "2026-11-04",
+  "images": {
+    "python": "python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337",
+    "node": "node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85",
+    "postgres": "postgres:18-bookworm@sha256:5c4783a8cc3f0074912164f94dfa1be4e043438f0f707cf968d7af9a0d31a2c8",
+    "redis": "redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537"
+  },
+  "actions": {
+    "checkout": {
+      "ref": "v6",
+      "sha": "d23441a48e516b6c34aea4fa41551a30e30af803"
+    },
+    "setup-python": {
+      "ref": "v6",
+      "sha": "ece7cb06caefa5fff74198d8649806c4678c61a1"
+    },
+    "setup-node": {
+      "ref": "v6",
+      "sha": "249970729cb0ef3589644e2896645e5dc5ba9c38"
+    }
+  },
+  "uv_version": "0.12.13",
+  "python_series": "3.12",
+  "node_series": "24",
+  "source": "Docker official library registry manifest digests; GitHub actions repository tag commits. Runtime use still requires build/CI verification."
+}

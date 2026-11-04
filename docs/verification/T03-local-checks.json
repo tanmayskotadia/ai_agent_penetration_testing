@@ -1,0 +1,17 @@
+{
+  "task": "T03",
+  "status": "local-checks-passed-services-CI-pending",
+  "local_environment": {"python": "3.12.5", "node": "24.14.1", "uv": "0.12.13", "docker_available": false},
+  "passed": [
+    "Locked Python dependency resolution and editable package installation",
+    "Ruff lint and formatting for backend/worker/report/test/migration/scripts",
+    "Strict mypy checks of eight application source files",
+    "Four acceptance tests: missing/private config, honest API readiness/status, fresh migration upgrade/downgrade, report request identity shape",
+    "Frontend exact npm lock installation, TypeScript check and Vite production build",
+    "T01 generated CSV/scorecard/submission gates remain unchanged semantically"
+  ],
+  "not_yet_verified_locally": ["Real PostgreSQL and Redis roundtrip", "Docker image build and full Compose startup"],
+  "verification_path": "CI uses real PostgreSQL/Redis services and builds/starts the pinned Compose development profile on an isolated GitHub runner.",
+  "manual_intervention": "No user action needed for automated CI. Docker Engine/Desktop with Linux containers is needed only for full local container execution. Organizer permission is still required before security testing.",
+  "limitations": ["This is development scaffolding, not implemented VAPT adapters or security controls.", "Native local migration uses SQLite smoke mode; PostgreSQL/Redis claims require successful service CI."]
+}
