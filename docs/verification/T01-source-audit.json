@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "source_sha256": "cfc55fc52fdecd8b4c65c5eec9217d39335ac4ab92461e869092fde8a33816cc",
+  "source_pages": 10,
+  "pdf_requirements_checked": 161,
+  "check": "Each PDF source anchor exists on the row-referenced page(s); normalized case, whitespace and line-wrapped hyphenation.",
+  "missing_anchors": [],
+  "website_review": "Public AMP page re-read on 2026-11-04; facts reviewed manually, not a byte-for-byte archived HTML check.",
+  "limitations": "Anchor presence supports traceability; semantic coverage still requires the page-by-page review and participant review."
+}

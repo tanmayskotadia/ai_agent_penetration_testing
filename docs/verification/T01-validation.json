@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "scope": "T01 requirements-register consistency, not product acceptance",
+  "requirements": 181,
+  "classification_counts": {
+    "reference": 4,
+    "required": 113,
+    "full-target": 7,
+    "advanced": 12,
+    "conditional": 9,
+    "quality": 22,
+    "event": 10,
+    "participant": 4
+  },
+  "checks_passed": 4960,
+  "errors": [],
+  "source_pdf_digest_checked": true,
+  "product_requirements_verified": 0,
+  "judging_points": 100,
+  "demo_checks": 7,
+  "submission_gates": 3,
+  "limitations": [
+    "Structural checks do not establish semantic completeness; the source review record is also required.",
+    "No product behavior, live scan, lab permission, license or current private organizer update is verified by this command."
+  ]
+}

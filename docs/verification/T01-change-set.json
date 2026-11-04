@@ -1,0 +1,85 @@
+{
+  "issue": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/issues/14",
+  "status": "publication-authorized",
+  "operation_approval": "approved-by-participant",
+  "intended_commit_email": "tanmayskotadia@gmail.com",
+  "files": [
+    {
+      "path": "docs/compliance-matrix.csv",
+      "bytes": 116667,
+      "sha256": "410f062f0ea9e8c9bf7b6ad595a1321a9ba7741a512eb02158dac4fab0749847"
+    },
+    {
+      "path": "docs/judging-scorecard.md",
+      "bytes": 8809,
+      "sha256": "31d98abc92fb0962f0e15acfa7815886079eaf8a5de0ff10c3b2cc6465e1486b"
+    },
+    {
+      "path": "docs/open-questions.md",
+      "bytes": 2750,
+      "sha256": "6f60e6df835bd99164888c50a2b8d32d6abdf7ee1fda2d90c2e172160c8fee23"
+    },
+    {
+      "path": "docs/requirements-register.json",
+      "bytes": 203697,
+      "sha256": "8d92332e5da7338f9ee3a7d75aaa116960ef305c70fb31fa7db32f00d42059a8"
+    },
+    {
+      "path": "docs/requirements.md",
+      "bytes": 11997,
+      "sha256": "f7fde3d99807121be4d1f6ad6bc823ca5d5871a1adec099c70c85c7d336fa56a"
+    },
+    {
+      "path": "docs/source-review-coverage.md",
+      "bytes": 4996,
+      "sha256": "f51a492528e6ed029c91b467b8264de11071f90ca43d80b70c7f331b7ce92111"
+    },
+    {
+      "path": "docs/sources/source-register.json",
+      "bytes": 2713,
+      "sha256": "a137cf277a58ce2be1f5fee817ef0bfef3103a4b7cef2d669592dddbebb01fcf"
+    },
+    {
+      "path": "docs/submission-gates.md",
+      "bytes": 4226,
+      "sha256": "d0ae28e62aa7015738e6527d6009a1105d26b25920d0ce63d0ffe5a40510c777"
+    },
+    {
+      "path": "docs/verification/T01-review.md",
+      "bytes": 5541,
+      "sha256": "dffa586a9b462d88cfeea4ae65a78896e7b4e5776b4d66618226d951d37c1ed8"
+    },
+    {
+      "path": "docs/verification/T01-source-audit.json",
+      "bytes": 595,
+      "sha256": "6738268134428e7c3f6ef08a9a8d6c3cf7b08709ca87ba1e3a20cefcad4888fe"
+    },
+    {
+      "path": "docs/verification/T01-validation.json",
+      "bytes": 765,
+      "sha256": "43e8cd2606a8e3159ef55ab0dfdfa340134bf4497c947cf814e53923f01a9f59"
+    },
+    {
+      "path": "scripts/export_requirements.py",
+      "bytes": 11525,
+      "sha256": "c6045712122aa245e59d6334a040471127b9111038dd9634e486d2553e92917f"
+    },
+    {
+      "path": "scripts/validate_requirements.py",
+      "bytes": 7913,
+      "sha256": "bd4248e1b4d7c9fca1e9fc2feae99ad7e436e7bc8925b930e1235e0bb6078ab3"
+    }
+  ],
+  "manifest_self_hash": "Excluded to avoid self-reference; this manifest is an additional proposed file.",
+  "excluded": [
+    "planning/",
+    "tmp/",
+    "**/__pycache__/",
+    "original supplied PDF",
+    "GitHub CLI authentication data"
+  ],
+  "approved_action": "commit-and-push",
+  "approval_message": "push to github",
+  "approval_date": "2026-11-04",
+  "approval_timezone": "Asia/Kolkata"
+}
