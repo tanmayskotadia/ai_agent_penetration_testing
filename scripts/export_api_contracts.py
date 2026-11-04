@@ -67,11 +67,12 @@ def main() -> None:
         (root / "frontend/src/generated/api.ts", types),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
+        expected = value.encode("utf-8")
         if args.check:
-            if not path.is_file() or path.read_text(encoding="utf-8") != value:
+            if not path.is_file() or path.read_bytes() != expected:
                 raise SystemExit(f"API contract drift: {path.name}")
         else:
-            path.write_text(value, encoding="utf-8")
+            path.write_bytes(expected)
 
 
 if __name__ == "__main__":

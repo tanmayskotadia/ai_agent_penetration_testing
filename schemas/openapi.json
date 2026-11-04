@@ -766,4 +766,34 @@
         "required": [
           "evidence_ids"
         ],
-        "t
+        "title": "ContextRequest",
+        "type": "object"
+      },
+      "ControlEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "attestation": {
+            "enum": [
+              "termination-reviewed",
+              "reset-reviewed"
+            ],
+            "title": "Attestation",
+            "type": "string"
+          },
+          "evidence_id": {
+            "format": "uuid",
+            "title": "Evidence Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "attestation"
+        ],
+        "title": "ControlEvidence",
+        "type": "object"
+      },
+      "DestinationCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "profile":
