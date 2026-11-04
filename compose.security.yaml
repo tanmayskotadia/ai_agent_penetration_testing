@@ -7,7 +7,7 @@ services:
     read_only: true
     security_opt: [no-new-privileges:true]
     environment: {CI_EGRESS_FIXTURE: '1'}
-    tmpfs: [/run/aegistrace:size=1m,noexec,nosuid]
+    tmpfs: ['/run/aegistrace:size=1m,noexec,nosuid']
     sysctls:
       net.ipv6.conf.all.disable_ipv6: '1'
       net.ipv6.conf.default.disable_ipv6: '1'
