@@ -10,7 +10,8 @@ import pytest
 from aegistrace.auth import issue_identity
 from aegistrace.safe_parse import inspect_container, isolated_inspection
 from aegistrace.scanner_parse import parse_scanner_export
-from test_ingestion import import_context as import_context
+
+pytest_plugins = ("test_ingestion",)
 
 NESSUS = b"""<?xml version="1.0"?>
 <!DOCTYPE NessusClientData_v2>
@@ -152,9 +153,7 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
         assert response.status_code in {200, 201, 202}, response.text
         return response.json()
 
-    assessment = post(
-        "/api/v1/assessments", {"name": "Handcrafted parser integration test only"}
-    )
+    assessment = post("/api/v1/assessments", {"name": "Handcrafted parser integration test only"})
     base = f"/api/v1/assessments/{assessment['id']}"
     scope = post(base + "/scopes", {"revision": 1, "targets": targets})
     now = datetime.now(UTC)
