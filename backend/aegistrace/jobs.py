@@ -378,8 +378,11 @@ def append_output(
 
 def purge_expired_output(connection: Connection) -> int:
     """Trusted retention sweeper; no raw output is logged or returned."""
+    from aegistrace.result_schema import late_outputs
+
     result = connection.execute(chunks.delete().where(chunks.c.expires_at <= time.time()))
-    return int(result.rowcount)
+    late = connection.execute(late_outputs.delete().where(late_outputs.c.expires_at <= time.time()))
+    return int(result.rowcount) + int(late.rowcount)
 
 
 def finish_job(

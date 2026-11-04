@@ -1,0 +1,6 @@
+{
+  "task": "T23",
+  "verification": ["tests/test_results.py", "atomic source-linked result revision", "immutable content-hashed reviewer JSON export", "worker/epoch fenced encrypted late-output quarantine", "PostgreSQL export immutability"],
+  "manual_intervention_now": "None; no local setup",
+  "limits": ["Candidate normalization does not establish scan coverage", "Late callback fixtures are test-only", "Late bytes remain quarantined until review and fresh import", "No PDF/report rendering or native scan completion enabled", "T14 runner/collector acceptance remains open"]
+}

@@ -14,6 +14,7 @@ from aegistrace.log_safety import safe_log_text
 from aegistrace.normalization_schema import normalizations
 from aegistrace.platform_api import current_scope, record_request, resource
 from aegistrace.repository import get_record, insert_record, require_access
+from aegistrace.results import record_revision
 from aegistrace.safe_parse import canonical, isolated_inspection, mapped_assets
 from aegistrace.schema_v1 import assessments, assets, observations, services
 from aegistrace.settings import Settings
@@ -177,6 +178,8 @@ def normalize_import(
             "Source service confidence is not calibrated probability",
         ],
     }
+    revision = record_revision(connection, value)
+    value.update(result_revision_id=revision["id"], run_revision=revision["revision"])
     connection.execute(
         normalizations.insert().values(
             id=value["id"],

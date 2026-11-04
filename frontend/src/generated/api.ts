@@ -16,6 +16,7 @@ export interface ApiSchemas {
   "EvidenceCreate": { "schema_version"?: "1.0"; "sha256": string; "pointer": string; "pointer_type": "byte-range" | "xml-path" | "json-pointer" | "whole-file"; "captured_at": string };
   "EvidenceReference": { "schema_version"?: "1.0"; "id"?: string; "assessment_id": string; "run_id": string; "sha256": string; "pointer": string; "pointer_type": "byte-range" | "xml-path" | "json-pointer" | "whole-file"; "captured_at": string };
   "ExecutionPolicy": { "schema_version"?: "1.0"; "id"?: string; "assessment_id": string; "scope_id": string; "scope_revision": number; "context": "general" | "hackathon"; "authorization_source": "asset-owner" | "organizer"; "authorization_reference": string; "authorization_document_sha256": string; "reviewed_by": string; "valid_from": string; "valid_until": string; "targets": Array<ApiSchemas["TargetRule"]>; "allowed_networks": Array<string>; "exclusions"?: Array<string>; "allowed_profiles": Array<"discovery" | "passive-web" | "active-web" | "controlled-validation">; "requests_per_second": number; "concurrent_jobs": number };
+  "ExportCreate": { "revision_ids": Array<string> };
   "Finding": { "schema_version"?: "1.0"; "id"?: string; "assessment_id": string; "concept_id": string; "title": string; "information_kind": "reviewer-decision" | "ai-inference"; "validation_state"?: "suspected" | "confirmed" | "false-positive" | "contradictory" | "unknown"; "decision_id"?: (string | null); "limitations"?: Array<string> };
   "HTTPValidationError": { "detail"?: Array<ApiSchemas["ValidationError"]> };
   "ImportCreate": { "schema_version"?: "1.0"; "scope_id": string; "scope_revision": number; "tool": "Nmap" | "Nessus" | "Greenbone" | "Nikto" | "OWASP ZAP" | "Burp Suite" | "Metasploit"; "format": string; "evidence_id": string };
@@ -23,6 +24,7 @@ export interface ApiSchemas {
   "InspectionResult": { "schema_version"?: "1.0"; "import_id": string; "evidence_id": string; "source_sha256": string; "mode"?: "recorded-import"; "state": "quarantined" | "container-validated"; "code": string; "assets": Array<string>; "out_of_scope_assets": Array<string>; "parsed_records": number; "findings_created"?: 0; "normalizer_enabled"?: false; "diagnostics": Array<string> };
   "JobCreate": { "schema_version"?: "1.0"; "plan_id": string; "plan_revision": number };
   "JobSubmit": { "schema_version"?: "1.0"; "approval_id": string; "action_digest": string; "priority"?: number };
+  "LateReview": { "decision": "include" | "reject"; "evidence_id"?: (string | null) };
   "Login": { "username": string; "password": string };
   "MembershipUpdate": { "subject": string; "role": "analyst" | "reviewer" | "admin" | "auditor" | "scanner" | "reporter" | "planner"; "active"?: boolean };
   "PasswordChange": { "old_password": string; "new_password": string };
