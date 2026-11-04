@@ -56,6 +56,7 @@ function HumanReview() {
   const [rightsBasis, setRightsBasis] = useState("");
   const [replayResult, setReplayResult] = useState<RecordedResult | null>(null);
   const [coverage, setCoverage] = useState<RecordedResult | null>(null);
+  const [reportBusy, setReportBusy] = useState(false);
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [intakeMessage, setIntakeMessage] = useState("");
   const [message, setMessage] = useState("");
@@ -250,6 +251,50 @@ function HumanReview() {
     } catch (failure) { setIntakeMessage(failure instanceof Error ? failure.message : "Recorded replay failed."); }
     finally { setIntakeBusy(false); }
   }
+  async function downloadEvidenceReport() {
+    if (!selected || !token) return;
+    setReportBusy(true);
+    setMessage("");
+    try {
+      const revisions = await apiJson<Array<{ id: string; run_id: string; revision: number; captured_at: string }>>(
+        token, `/api/v1/assessments/${encodeURIComponent(selected)}/result-revisions`, "GET",
+      );
+      const latestByRun = new Map<string, { id: string; run_id: string; revision: number; captured_at: string }>();
+      for (const revision of revisions) {
+        const previous = latestByRun.get(revision.run_id);
+        if (!previous || revision.revision > previous.revision) latestByRun.set(revision.run_id, revision);
+      }
+      const selectedRevisions = [...latestByRun.values()]
+        .sort((a, b) => a.captured_at.localeCompare(b.captured_at))
+        .slice(-50);
+      if (selectedRevisions.length === 0) throw new Error("Import authorized evidence before creating an export.");
+      const frozen = await apiJson<{ id: string }>(
+        token,
+        `/api/v1/assessments/${encodeURIComponent(selected)}/result-exports`,
+        "POST",
+        { revision_ids: selectedRevisions.map(revision => revision.id) },
+      );
+      const response = await fetch(
+        `/api/v1/assessments/${encodeURIComponent(selected)}/result-exports/${encodeURIComponent(frozen.id)}/pdf`,
+        { headers: { Authorization: `Bearer ${token}`, "X-Request-ID": crypto.randomUUID() } },
+      );
+      if (!response.ok) throw new Error(`PDF download failed (${response.status}).`);
+      const blob = await response.blob();
+      if (blob.type !== "application/pdf") throw new Error("The server did not return a PDF document.");
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `aegistrace-${selected}-evidence-report.pdf`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage(`Downloaded a frozen evidence summary using ${selectedRevisions.length} latest source revision(s). It is not a complete VAPT report.`);
+      setRefresh(value => value + 1);
+    } catch (failure) {
+      setMessage(failure instanceof Error ? failure.message : "Unable to create the evidence report.");
+    } finally {
+      setReportBusy(false);
+    }
+  }
   async function downloadOriginal(evidenceId: string) {
     if (!token || !selected) return;
     try {
@@ -277,39 +322,4 @@ function HumanReview() {
     } catch (failure) { setMessage(failure instanceof Error ? failure.message : "Stop was not confirmed."); }
     finally { setBusy(false); }
   }
-  return <section aria-labelledby="human-review"><h2 id="human-review">Human action review</h2>
-    <p>Review the exact destination, impact and rollback before recording a decision. Scanner execution remains disabled.</p>
-    {!token ? <form onSubmit={signIn}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required minLength={12} maxLength={128} /></label><button disabled={busy}>Sign in</button></form> : <><form onSubmit={createAssessment}><label>New assessment<input value={newAssessmentName} onChange={event => setNewAssessmentName(event.target.value)} maxLength={200} required /></label><button disabled={busy}>Create assessment</button></form><label>Assessment<select value={selected} onChange={event => setSelected(event.target.value)}><option value="">Select an assessment</option>{assessments.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><button onClick={signOut} disabled={busy}>Sign out</button><button disabled={busy || !selected} onClick={stopAssessment}>Stop assessment</button><button disabled={busy || !selected} onClick={() => setRefresh(value => value + 1)}>Refresh reviews</button>{selected && queue.length === 0 && <p>No action reviews are available for this assessment.</p>}{queue.map(item => <article className="review-card" key={item.id}><h3>{item.action.tool} Ã‚Â· {item.action.profile}</h3><p><strong>Destination:</strong> <code>{item.action.destination_url}</code></p><p><strong>Impact:</strong> {item.action.expected_impact}</p><p><strong>Parameters:</strong> <code>{JSON.stringify(item.action.parameters)}</code></p><p><strong>Rollback:</strong> {item.action.rollback_instructions}</p><p><strong>Maximum runtime:</strong> {item.action.max_runtime_seconds} seconds</p><p><strong>Scope revision:</strong> {item.scope_revision} Ã‚Â· <strong>Expires:</strong> {item.valid_until}</p><p className="digest"><strong>Action digest:</strong> <code>{item.action_digest}</code></p><p>Status: {item.expired ? "expired" : item.state}</p>{item.allowed_decisions.map(choice => <button key={choice} disabled={busy || item.expired} onClick={() => decide(item, choice)}>{choice === "approve" ? "Approve this action" : "Deny this action"}</button>)}</article>)}</>}
-    {token && selected && <section aria-labelledby="recorded-import"><h3 id="recorded-import">Import evidence and API definitions</h3><p>Upload an existing capture you are authorized to process. This flow never runs a scanner or contacts a target. OpenAPI server URLs and external references are never fetched, and credentials are not accepted. Captures are encrypted at rest, hashed, scope-checked and labeled as recorded input. A supplied authorization reference is recorded but not independently verified.</p><form onSubmit={importArtifact}><label>Evidence format<select value={importTool} onChange={event => { const nextTool = event.target.value as "Nmap" | "OWASP ZAP" | "Nikto" | "OpenAPI"; setImportTool(nextTool); setToolVersion(nextTool === "Nmap" ? "7.95" : nextTool === "Nikto" ? "2.6.1" : nextTool === "OpenAPI" ? "3.1.0" : "2.16.0"); setArtifact(null); }}><option value="Nmap">Nmap XML</option><option value="OWASP ZAP">OWASP ZAP Alerts JSON</option><option value="Nikto">Nikto 2.6 JSON</option><option value="OpenAPI">OpenAPI 3.1 JSON definition</option></select></label><label>{importTool === "Nmap" ? "Nmap XML file" : `${importTool} JSON file`}<input type="file" accept={importTool === "Nmap" ? ".xml,application/xml,text/xml" : ".json,application/json"} onChange={event => setArtifact(event.target.files?.[0] ?? null)} required /></label><label>Targets represented in the input<textarea value={targets} onChange={event => setTargets(event.target.value)} placeholder="One host, address or URL per line" required /></label><label>Excluded hosts/addresses<textarea value={exclusions} onChange={event => setExclusions(event.target.value)} placeholder="Optional; one host/address/URL per line" /></label><label>Source / authorization reference<input value={authorizationReference} onChange={event => setAuthorizationReference(event.target.value)} maxLength={500} required /></label><label>Source version reported by file<input value={toolVersion} onChange={event => setToolVersion(event.target.value)} maxLength={100} required /></label><label>Capture time reported by source<input type="datetime-local" value={capturedAt} onChange={event => setCapturedAt(event.target.value)} required /></label><button disabled={intakeBusy || !artifact}>Store and normalize recorded evidence</button></form>{intakeMessage && <p role="status" aria-live="polite">{intakeMessage}</p>}{recordedResult && <article className="review-card"><h4>IMPORTED / RECORDED · {String(recordedResult.state ?? "unknown")}</h4><p>The system does not report this input as a live scan. Findings created: {String(recordedResult.findings_created ?? 0)}.</p><pre>{JSON.stringify(recordedResult, null, 2)}</pre>{typeof recordedResult.evidence_id === "string" && <button onClick={() => void downloadOriginal(recordedResult.evidence_id as string)}>Download exact original artifact</button>}{importTool === "Nmap" && <><label>Capture reference<input value={captureReference} onChange={event => setCaptureReference(event.target.value)} maxLength={300} /></label><label>Rights basis<input value={rightsBasis} onChange={event => setRightsBasis(event.target.value)} maxLength={300} /></label><button disabled={intakeBusy || !recordedImportId || !captureReference || !rightsBasis} onClick={() => void replayNmap()}>Create manifest and replay recorded input</button></>}</article>}{manifestResult && <article className="review-card"><h4>{String(manifestResult.label ?? "RECORDED / provenance unverified")}</h4><p>Immutable manifest evidence for reviewer inspection:</p><pre>{JSON.stringify(manifestResult, null, 2)}</pre></article>}{replayResult && <article className="review-card"><h4>{String(replayResult.replay_label ?? "RECORDED / provenance unverified")}</h4><pre>{JSON.stringify(replayResult, null, 2)}</pre></article>}</section>}
-    {token && selected && <section aria-labelledby="scan-jobs"><h3 id="scan-jobs">Scan job status</h3><p>Statuses come from persisted worker events. No estimated completion percentage is shown.</p>{jobs.length === 0 ? <p>No scan jobs are recorded for this assessment.</p> : jobs.map(job => <article className="review-card" key={job.id}><h4>{job.status === job.state ? job.state : `${job.status} (last stored: ${job.state})`}</h4><p><strong>Attempt:</strong> {job.attempt} · <strong>Elapsed:</strong> {formatDuration(job.duration_ms)}</p>{job.heartbeat_at !== null && <p><strong>Worker heartbeat:</strong> {job.heartbeat_stale ? `stale (${job.heartbeat_age_seconds}s ago)` : `${job.heartbeat_age_seconds}s ago`}</p>}{job.tool_version && <p><strong>Tool version:</strong> {job.tool_version}</p>}{job.exit_code !== null && <p><strong>Exit code:</strong> {job.exit_code}</p>}{job.diagnostic && <p role="status"><strong>{job.diagnostic_code}:</strong> {job.diagnostic}</p>}{job.latest_event_kind && job.latest_event_at && <small>Latest persisted event: {job.latest_event_kind} · {new Date(job.latest_event_at * 1000).toLocaleString()}</small>}</article>)}</section>}
-    {coverage && <section aria-labelledby="assessment-coverage"><h3 id="assessment-coverage">Assessment coverage</h3><p><strong>Coverage status:</strong> {String(coverage.coverage_state)}. An imported alert or API definition does not prove that every endpoint was tested.</p><ul><li>Recorded source runs: {String(coverage.source_run_count)}</li><li>Assets: {String(coverage.asset_count)}</li><li>Catalogued endpoints: {String(coverage.endpoint_catalog_count)}</li><li>OpenAPI-defined endpoints: {String(coverage.openapi_defined_endpoint_count)}</li><li>Endpoints with imported web alerts: {String(coverage.endpoints_with_imported_web_alerts)}</li><li>Source observations: {String(coverage.observed_record_count)}</li></ul><pre>{JSON.stringify(coverage.source_runs_by_tool, null, 2)}</pre></section>}
-    {coverage && <section aria-labelledby="prototype-gate"><h3 id="prototype-gate">Prototype acceptance gate</h3><p>Each check uses verified artifacts. Recorded file uploads and test fixtures do not count as an authorized live demonstration.</p><ul>{Object.entries(coverage.prototype_gate as Record<string, { passed: boolean; evidence: unknown }>).map(([name, item]) => <li key={name}><strong>{item.passed ? "PASS" : "OPEN"}</strong> · {name.replaceAll("_", " ")}{item.evidence !== null && <small className="capability-description">{String(item.evidence)}</small>}</li>)}</ul></section>}
-    <p role="status" aria-live="polite">{message}</p>
-  </section>;
-}
-
-function App() {
-  const [status, setStatus] = useState<Status | null>(null);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/v1/system/status", { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("Workspace status unavailable"); return response.json() as Promise<Status>; })
-      .then(setStatus)
-      .catch((failure: unknown) => { if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "Unable to connect"); });
-    return () => controller.abort();
-  }, []);
-  return <main>
-    <header><p className="eyebrow">EVIDENCE. REASONING. HUMAN CONTROL.</p><h1>AegisTrace</h1><p>A clearer path from security evidence to action.</p></header>
-    <section aria-labelledby="readiness"><h2 id="readiness">Evidence platform</h2><p>Authenticated assessment, evidence and audit APIs are available. Recorded Nmap, OWASP ZAP and Nikto evidence import plus OpenAPI endpoint cataloging are available for user-supplied artifacts.</p><p className="notice">Live testing is disabled. Authorized scope and verified execution controls are required before live testing.</p>
-      <div role="status" aria-live="polite">{error || (status ? "Connected to the workspace" : "Connecting to the workspaceÃ¢â‚¬Â¦")}</div>
-    </section>
-    {status && <section aria-labelledby="integration-capabilities"><h2 id="integration-capabilities">Integration capabilities</h2><ul>{status.tools.map((tool) => <li key={tool.name}><div><span>{tool.name}</span><small className="capability-description">{tool.demonstration_label}</small><small className="capability-description">{(tool.limitations ?? []).join(". ")}</small></div><span className="badge">{tool.mode ?? "planned"}</span></li>)}</ul><p>Container inspection does not count as a working native integration. Recorded imports remain distinct from live scans.</p></section>}
-    <HumanReview />
-    <footer>Assessment permission, evidence provenance and human review come first.</footer>
-  </main>;
-}
-
-const root = document.getElementById("root");
-if (!root) throw new Error("Missing application root");
-createRoot(root).render(<StrictMode><App /></StrictMode>);
+  return <section aria-labelledby="human-review"><h2 id="human-review">Human action 

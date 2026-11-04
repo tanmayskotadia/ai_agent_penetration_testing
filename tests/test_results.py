@@ -44,7 +44,11 @@ def test_revision_and_export_are_frozen_and_late_callback_is_quarantined(import_
     frozen = client.get(base + "/result-exports/" + export.json()["id"], headers=headers())
     assert frozen.status_code == 200 and frozen.json()["sha256"] == export.json()["sha256"]
     assert frozen.json()["snapshot"]["complete_assessment"] is False
-    assert frozen.json()["snapshot"]["report_renderer_enabled"] is False
+    assert frozen.json()["snapshot"]["report_renderer_enabled"] is True
+    pdf = client.get(base + "/result-exports/" + export.json()["id"] + "/pdf", headers=headers())
+    assert pdf.status_code == 200
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert pdf.content.startswith(b"%PDF-1.4")
     engine = client.app.state.engine
     with engine.begin() as connection:
         # The SQLite fixture creates metadata directly instead of running migrations.

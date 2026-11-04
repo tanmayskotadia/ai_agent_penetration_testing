@@ -38,6 +38,9 @@ def record_revision(connection: Connection, snapshot: dict[str, Any]) -> dict[st
         .where(tool_runs.c.id == snapshot["run_id"])
         .values(scope_id=tool_runs.c.scope_id)
     )
+    run_payload = connection.execute(
+        select(tool_runs.c.payload).where(tool_runs.c.id == snapshot["run_id"])
+    ).scalar_one()
     key = content_hash(
         {
             name: snapshot[name]
@@ -63,6 +66,8 @@ def record_revision(connection: Connection, snapshot: dict[str, Any]) -> dict[st
         "id": str(uuid4()),
         "assessment_id": snapshot["assessment_id"],
         "run_id": snapshot["run_id"],
+        "tool": run_payload["tool"],
+        "tool_version": run_payload["tool_version"],
         "revision": number,
         "input_key": key,
         "normalization_id": snapshot["id"],
@@ -117,7 +122,7 @@ def freeze_export(
             raise LookupError("revision not found")
         values.append(value)
     limitations = [
-        "Immutable source-result export, not a rendered VAPT report",
+        "Rendered evidence summary is not a complete VAPT report",
         "Recorded/imported sources retain original capture times",
         "Later results require a new reviewed export",
     ]
@@ -127,7 +132,7 @@ def freeze_export(
         "assessment_id": str(assessment_id),
         "result_revisions": values,
         "complete_assessment": False,
-        "report_renderer_enabled": False,
+        "report_renderer_enabled": True,
         "limitations": limitations,
     }
     source_digest = content_hash(payload)

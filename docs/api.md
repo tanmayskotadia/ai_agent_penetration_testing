@@ -37,6 +37,9 @@ All routes below start `/api/v1`. POST/PUT payload contracts use schema version 
 | POST `/assessments/{id}/replays` and `/replays/{manifest}/ingest` | Create a signed recorded-input manifest and replay the private capture without a network call |
 | POST `/assessments/{id}/approvals` | Persist request as `pending-review`; cannot grant approval or authorize an action |
 | POST `/assessments/{id}/reports` | Persist request as `blocked`, `report-renderer-not-enabled`; no invented PDF or findings |
+| GET `/assessments/{id}/result-revisions` | Read source-linked immutable result revision summaries |
+| POST `/assessments/{id}/result-exports` | Reviewer freezes chosen revisions into an immutable, hashed export |
+| GET `/assessments/{id}/result-exports/{export_id}/pdf` | Download a PDF evidence summary from the frozen export; does not assert full coverage or complete VAPT conclusions |
 | GET `/assessments/{id}/resources/{kind}/{resource}` | Read workflow request and explicit state |
 | GET `/assessments/{id}/findings` or `/findings/{finding}` | Read canonical derived findings; empty remains empty until populated by real workflows |
 | GET `/assessments/{id}/events` | Finite batch of at most 100 persisted audit SSE events |

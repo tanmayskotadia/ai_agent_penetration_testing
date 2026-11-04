@@ -11,6 +11,7 @@ from aegistrace.auth import Identity, identity_dependency
 from aegistrace.capabilities import capability_snapshot
 from aegistrace.normalization_schema import normalizations
 from aegistrace.repository import require_access
+from aegistrace.result_schema import exports
 from aegistrace.schema_v1 import assets, endpoints, observations, tool_runs
 from aegistrace.settings import Settings
 
@@ -67,6 +68,11 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
                     .scalars()
                     .all()
                 )
+                report_export = connection.execute(
+                    select(exports.c.id)
+                    .where(exports.c.assessment_id == str(assessment_id))
+                    .limit(1)
+                ).first()
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error
         imports_by_tool = Counter(str(row.get("tool", "unknown")) for row in run_rows)
@@ -104,7 +110,12 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
             "authenticated_api_session_coverage": {"passed": False, "evidence": None},
             "full_endpoint_attempt_coverage": {"passed": False, "evidence": None},
             "cross_tool_deduplication_and_ranking": {"passed": False, "evidence": None},
-            "downloadable_pdf_report": {"passed": False, "evidence": None},
+            "downloadable_pdf_report": {
+                "passed": report_export is not None,
+                "evidence": "reviewer-frozen export is available as a PDF"
+                if report_export is not None
+                else None,
+            },
             "live_execution_safety": {
                 "passed": True,
                 "evidence": "live scanning is disabled; recorded imports perform no target network requests",
