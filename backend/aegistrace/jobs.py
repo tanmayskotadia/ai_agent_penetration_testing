@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from sqlalchemy import Connection, Engine, func, select
 
-from aegistrace.approval_schema import claims
+from aegistrace.approval_schema import claims, grants
 from aegistrace.approvals import consume
 from aegistrace.auth import Identity
 from aegistrace.control import begin_execution, finish_execution, heartbeat
@@ -21,6 +21,7 @@ from aegistrace.job_schema import chunks, jobs, outbox
 from aegistrace.platform_api import record_request
 from aegistrace.policy import PolicyError, release_policy
 from aegistrace.repository import require_access
+from aegistrace.scheduler_schema import admissions
 from aegistrace.schema_v1 import assessments
 from aegistrace.settings import Settings
 
@@ -68,12 +69,65 @@ def enqueue(
     approval_id: UUID,
     digest: str,
     actor: Identity,
+    priority: int = 0,
 ) -> dict[str, Any]:
     require_access(connection, assessment_id, actor.subject)
     if actor.principal_kind != "human" or actor.role not in {"analyst", "reviewer", "admin"}:
         raise PolicyError("human operator required")
     if config.evidence_key is None:
         raise PolicyError("encrypted output storage must be configured before queueing")
+    from aegistrace.approvals import ActionRequest, reviewer_current, verify_snapshot
+    from aegistrace.scheduler import reserve_admission
+
+    if type(priority) is not int or not 0 <= priority <= 10:
+        raise PolicyError("bounded human priority required")
+    connection.execute(
+        assessments.update()
+        .where(assessments.c.id == str(assessment_id))
+        .values(owner_id=assessments.c.owner_id)
+    )
+    approval = (
+        connection.execute(
+            select(grants).where(
+                grants.c.id == str(approval_id), grants.c.assessment_id == str(assessment_id)
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if (
+        approval is None
+        or approval["state"] != "approved"
+        or approval["action_digest"] != digest
+        or not reviewer_current(connection, approval, config)
+    ):
+        raise PolicyError("current human approval required")
+    verify_snapshot(approval)
+    if datetime.fromisoformat(approval["payload"]["valid_until"]).timestamp() <= time.time():
+        raise PolicyError("approval expired")
+    admission = reserve_admission(
+        connection, assessment_id, ActionRequest.model_validate(approval["payload"]["action"])
+    )
+    if "existing_job_id" in admission:
+        row = (
+            connection.execute(select(jobs).where(jobs.c.id == admission["existing_job_id"]))
+            .mappings()
+            .one()
+        )
+        value = dict(row) | {
+            "scheduling_decision": "suppressed-or-reused",
+            "scheduling_reason": admission["reason"],
+            "new_approval_consumed": False,
+        }
+        record_request(
+            connection,
+            assessment_id,
+            actor,
+            "job.suppressed",
+            UUID(row["id"]),
+            {"reason": admission["reason"]},
+        )
+        return value
     claim = consume(connection, config, assessment_id, approval_id, digest)
     now = time.time()
     value = dict(
@@ -91,6 +145,11 @@ def enqueue(
         reason=None,
     )
     connection.execute(jobs.insert().values(**value))
+    connection.execute(
+        admissions.insert().values(
+            job_id=value["id"], assessment_id=str(assessment_id), priority=priority, **admission
+        )
+    )
     connection.execute(outbox.insert().values(job_id=value["id"], attempts=0, available_at=now))
     record_request(connection, assessment_id, actor, "job.queued", UUID(value["id"]), value)
     return value
@@ -113,6 +172,26 @@ def publish_pending(engine: Engine, publish: Callable[[str], None], limit: int =
                 .order_by(outbox.c.available_at, outbox.c.job_id)
                 .limit(limit)
             ).scalars()
+        )
+        rankings = {
+            item["job_id"]: item
+            for item in connection.execute(
+                select(admissions).where(admissions.c.job_id.in_(ids))
+            ).mappings()
+        }
+        ids.sort(
+            key=lambda value: (
+                (
+                    -(
+                        rankings[value]["priority"]
+                        + max(0.0, time.time() - rankings[value]["admitted_at"])
+                    ),
+                    rankings[value]["admitted_at"],
+                    value,
+                )
+                if value in rankings
+                else (0.0, 0.0, value)
+            )
         )
     for job_id in ids:
         with engine.begin() as connection:

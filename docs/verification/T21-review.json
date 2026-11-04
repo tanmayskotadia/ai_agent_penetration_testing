@@ -1,0 +1,8 @@
+{
+  "task": "T21",
+  "status": "partial",
+  "verification": ["tests/test_scheduler.py", "tests/test_jobs.py", "PostgreSQL scheduler suppression in CI", "cross-assessment shared-target admission", "budget denial preserves approval", "priority ageing and bounded publication"],
+  "manual_intervention_now": "None; no local setup",
+  "remaining": ["Genuine native per-tool packet/HTTP rate measurements in an approved runner", "T14/T20 execution acceptance"],
+  "limits": ["Counters bound logical job admission, not native packets", "Conservative fixed ceilings require operator code/config migration to raise", "No unverified native execution or active validation enabled"]
+}

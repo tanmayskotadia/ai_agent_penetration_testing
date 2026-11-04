@@ -22,7 +22,7 @@ export interface ApiSchemas {
   "InspectionRequest": { "schema_version"?: "1.0"; "asset_mapping"?: Record<string, string> };
   "InspectionResult": { "schema_version"?: "1.0"; "import_id": string; "evidence_id": string; "source_sha256": string; "mode"?: "recorded-import"; "state": "quarantined" | "container-validated"; "code": string; "assets": Array<string>; "out_of_scope_assets": Array<string>; "parsed_records": number; "findings_created"?: 0; "normalizer_enabled"?: false; "diagnostics": Array<string> };
   "JobCreate": { "schema_version"?: "1.0"; "plan_id": string; "plan_revision": number };
-  "JobSubmit": { "schema_version"?: "1.0"; "approval_id": string; "action_digest": string };
+  "JobSubmit": { "schema_version"?: "1.0"; "approval_id": string; "action_digest": string; "priority"?: number };
   "Login": { "username": string; "password": string };
   "MembershipUpdate": { "subject": string; "role": "analyst" | "reviewer" | "admin" | "auditor" | "scanner" | "reporter" | "planner"; "active"?: boolean };
   "PasswordChange": { "old_password": string; "new_password": string };

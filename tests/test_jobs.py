@@ -21,6 +21,7 @@ from aegistrace.jobs import (
     start_job,
 )
 from aegistrace.policy import PolicyError
+from aegistrace.scheduler_schema import buckets
 from aegistrace_workers.app import create_worker
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from pydantic import SecretStr
@@ -31,7 +32,8 @@ from test_policy import policy_context as policy_context
 
 def queued(context):
     client, engine, config = context
-    config.evidence_key = SecretStr(secrets.token_hex(32))
+    if config.evidence_key is None:
+        config.evidence_key = SecretStr(secrets.token_hex(32))
     base, headers, approval, _ = prepared(context)
     review(context, base, headers, approval)
     body = {"approval_id": approval["id"], "action_digest": approval["action_digest"]}
@@ -172,6 +174,8 @@ def test_expired_unstarted_claim_and_output_retention(policy_context):
             == "partial"
         )
     # A separate unstarted job expires without consuming a second execution attempt.
+    with engine.begin() as connection:
+        connection.execute(buckets.update().values(updated_at=buckets.c.updated_at - 10))
     *_, later = queued(policy_context)
     with engine.begin() as connection:
         payload = dict(

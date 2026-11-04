@@ -21,6 +21,7 @@ class JobSubmit(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     approval_id: UUID
     action_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    priority: int = Field(default=0, ge=0, le=10, strict=True)
 
 
 def job_router(engine: Engine, config: Settings) -> APIRouter:
@@ -39,7 +40,13 @@ def job_router(engine: Engine, config: Settings) -> APIRouter:
             actor,
             body.model_dump(mode="json"),
             lambda connection: enqueue(
-                connection, config, assessment_id, body.approval_id, body.action_digest, actor
+                connection,
+                config,
+                assessment_id,
+                body.approval_id,
+                body.action_digest,
+                actor,
+                body.priority,
             ),
             202,
         )

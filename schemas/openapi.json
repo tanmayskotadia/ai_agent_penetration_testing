@@ -1379,6 +1379,13 @@
             "title": "Approval Id",
             "type": "string"
           },
+          "priority": {
+            "default": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Priority",
+            "type": "integer"
+          },
           "schema_version": {
             "const": "1.0",
             "default": "1.0",
