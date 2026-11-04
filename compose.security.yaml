@@ -1,0 +1,83 @@
+name: aegistrace-egress-ci
+services:
+  gateway:
+    build: infra/network-policy
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    environment: {CI_EGRESS_FIXTURE: '1'}
+    tmpfs: [/run/aegistrace:size=1m,noexec,nosuid]
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: '1'
+      net.ipv6.conf.default.disable_ipv6: '1'
+    networks:
+      lab:
+        ipv4_address: 10.254.240.2
+    healthcheck:
+      test: [CMD, python, -c, "from pathlib import Path; assert Path('/run/aegistrace/ready').exists()"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  target: &fixture
+    image: python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
+    user: '10001:10001'
+    cap_drop: [ALL]
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    environment: {PYTHONDONTWRITEBYTECODE: '1'}
+    volumes: [./infra/network-policy/fixture_server.py:/fixture.py:ro]
+    command: [python, /fixture.py, '8080', '9090', '8443']
+    networks:
+      lab:
+        ipv4_address: 10.254.240.10
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/')"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  collector:
+    <<: *fixture
+    networks:
+      lab:
+        ipv4_address: 10.254.240.20
+  rebound:
+    <<: *fixture
+    networks:
+      lab:
+        ipv4_address: 10.254.240.11
+  admin:
+    <<: *fixture
+    networks:
+      lab:
+        ipv4_address: 10.254.240.30
+  sibling:
+    <<: *fixture
+    networks:
+      lab:
+        ipv4_address: 10.254.240.40
+  probe:
+    image: python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
+    user: '10001:10001'
+    cap_drop: [ALL]
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 128m
+    network_mode: service:gateway
+    volumes: [./infra/network-policy/probe.py:/probe.py:ro]
+    environment: {PYTHONDONTWRITEBYTECODE: '1'}
+    command: [python, /probe.py]
+    depends_on:
+      gateway: {condition: service_healthy}
+      target: {condition: service_healthy}
+      collector: {condition: service_healthy}
+      rebound: {condition: service_healthy}
+      admin: {condition: service_healthy}
+      sibling: {condition: service_healthy}
+networks:
+  lab:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.254.240.0/24

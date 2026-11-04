@@ -37,7 +37,7 @@ packages = ["backend/aegistrace", "workers/aegistrace_workers", "reports/aegistr
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-include = ["backend/**/*.py", "workers/**/*.py", "reports/**/*.py", "tests/**/*.py", "scripts/**/*.py", "migrations/**/*.py"]
+include = ["backend/**/*.py", "workers/**/*.py", "reports/**/*.py", "tests/**/*.py", "scripts/**/*.py", "migrations/**/*.py", "infra/**/*.py"]
 exclude = ["planning", ".venv"]
 
 [tool.ruff.lint]

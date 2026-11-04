@@ -1,0 +1,1 @@
+{"schema_version":"1.0","purpose":"CI connectivity fixture only; not a scanner authorization","allow":[{"address":"10.254.240.10","port":8080,"protocol":"tcp"},{"address":"10.254.240.20","port":8443,"protocol":"tcp"}]}
