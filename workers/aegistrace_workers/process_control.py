@@ -44,7 +44,11 @@ def run_managed(
         for name in ["PATH", "SYSTEMROOT", "WINDIR", "LANG", "LC_ALL"]
         if name in os.environ
     }
-    flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    flags = (
+        (subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
+        if sys.platform == "win32"
+        else 0
+    )
     process = subprocess.Popen(
         list(argv),
         shell=False,
