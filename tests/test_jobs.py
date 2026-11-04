@@ -3,6 +3,7 @@
 import hashlib
 import os
 import secrets
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -195,6 +196,9 @@ def test_postgresql_outbox_and_actual_celery_job_redelivery(policy_context):
     if os.environ.get("RUN_SERVICE_TESTS") != "1":
         pytest.skip("requires actual PostgreSQL and running Redis/Celery")
     _, engine, config = policy_context
+    # Other service-marked tests share the disposable database and global bucket.
+    with engine.begin() as connection:
+        connection.execute(buckets.update().values(tokens=1.0, updated_at=time.time()))
     *_, job = queued(policy_context)
     from aegistrace.settings import Settings
 
