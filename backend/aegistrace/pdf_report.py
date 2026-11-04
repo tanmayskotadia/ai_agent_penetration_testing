@@ -52,13 +52,21 @@ def _content_stream(lines: list[tuple[str, int]], page_number: int, page_count: 
             [
                 b"BT",
                 f"/{font} {size} Tf {color} rg {LEFT} {y} Td ".encode("ascii")
-                + b"(" + _escape(text) + b") Tj",
+                + b"("
+                + _escape(text)
+                + b") Tj",
                 b"ET",
             ]
         )
 
     draw("AegisTrace - Recorded Evidence Report", 788, 16, True, "0.08 0.20 0.32")
-    draw("Reviewer export | Source records only | Not a complete VAPT report", 769, 9, False, "0.30 0.34 0.38")
+    draw(
+        "Reviewer export | Source records only | Not a complete VAPT report",
+        769,
+        9,
+        False,
+        "0.30 0.34 0.38",
+    )
     y = 738
     for text, level in lines:
         if level == 0:
@@ -71,7 +79,13 @@ def _content_stream(lines: list[tuple[str, int]], page_number: int, page_count: 
         else:
             draw(text, y, 9)
             y -= 13
-    draw(f"AegisTrace | Page {page_number} of {page_count} | Coverage is not established by imports", 28, 8, False, "0.35 0.38 0.42")
+    draw(
+        f"AegisTrace | Page {page_number} of {page_count} | Coverage is not established by imports",
+        28,
+        8,
+        False,
+        "0.35 0.38 0.42",
+    )
     return b"\n".join(commands)
 
 
@@ -93,12 +107,21 @@ def render_evidence_report(
             ("", 2),
             ("Interpretation and coverage", 0),
             ("This report summarizes recorded/imported evidence included in the frozen export.", 2),
-            ("It does not claim that a live scan ran, that the supplied source is authentic, or that every asset or endpoint was tested.", 2),
-            ("Observations remain suspected source evidence until a human reviewer validates them.", 2),
+            (
+                "It does not claim that a live scan ran, that the supplied source is authentic, or that every asset or endpoint was tested.",
+                2,
+            ),
+            (
+                "Observations remain suspected source evidence until a human reviewer validates them.",
+                2,
+            ),
             ("Coverage status: NOT ESTABLISHED", 1),
             ("", 2),
             (f"Included source-result revisions: {len(revisions)}", 2),
-            (f"Source observations referenced: {snapshot.get('observation_reference_count', sum(len(value.get('observation_ids', [])) for value in revisions))}", 2),
+            (
+                f"Source observations referenced: {snapshot.get('observation_reference_count', sum(len(value.get('observation_ids', [])) for value in revisions))}",
+                2,
+            ),
         ]
     )
     for limitation in snapshot.get("limitations", []):
@@ -109,7 +132,12 @@ def render_evidence_report(
     if not revisions:
         lines.append(("No source-result revisions were included in this export.", 2))
     for index, revision in enumerate(revisions, start=1):
-        lines.append((f"Source {index}: {revision.get('parser_code', 'unknown source')} - {revision.get('state', 'unknown')}", 1))
+        lines.append(
+            (
+                f"Source {index}: {revision.get('parser_code', 'unknown source')} - {revision.get('state', 'unknown')}",
+                1,
+            )
+        )
         for label, key in [
             ("Tool", "tool"),
             ("Tool version", "tool_version"),
@@ -143,7 +171,12 @@ def render_evidence_report(
             ("Asset", asset),
             ("Source key", observation.get("source_key", "unknown")),
             ("Source severity", observation.get("source_severity") or "not supplied"),
-            ("CVSS", observation.get("cvss_score") if observation.get("cvss_score") is not None else "not supplied"),
+            (
+                "CVSS",
+                observation.get("cvss_score")
+                if observation.get("cvss_score") is not None
+                else "not supplied",
+            ),
             ("CVE", observation.get("cve") or "not supplied"),
             ("CWE", observation.get("cwe") or "not supplied"),
             ("Validation", observation.get("validation_state", "unknown")),
@@ -154,7 +187,12 @@ def render_evidence_report(
 
     total_observations = int(snapshot.get("observation_reference_count", len(observations)))
     if total_observations > len(observations):
-        lines.append((f"Display limit: {len(observations)} of {total_observations} observations are listed; consult the JSON export for the frozen source snapshot.", 2))
+        lines.append(
+            (
+                f"Display limit: {len(observations)} of {total_observations} observations are listed; consult the JSON export for the frozen source snapshot.",
+                2,
+            )
+        )
 
     blocks: list[list[tuple[str, int]]] = []
     index = 0
@@ -202,7 +240,11 @@ def render_evidence_report(
     for page_number, page_lines in enumerate(pages, start=1):
         content = _content_stream(page_lines, page_number, len(pages))
         stream_id = add_object(
-            b"<< /Length " + str(len(content)).encode("ascii") + b" >>\nstream\n" + content + b"\nendstream"
+            b"<< /Length "
+            + str(len(content)).encode("ascii")
+            + b" >>\nstream\n"
+            + content
+            + b"\nendstream"
         )
         page_id = add_object(
             f"<< /Type /Page /Parent {pages_id} 0 R /MediaBox [0 0 {PAGE_WIDTH} {PAGE_HEIGHT}] "
@@ -227,6 +269,8 @@ def render_evidence_report(
     for offset in offsets[1:]:
         output.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
     output.extend(
-        f"trailer\n<< /Size {len(objects)} /Root {catalog_id} 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode("ascii")
+        f"trailer\n<< /Size {len(objects)} /Root {catalog_id} 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode(
+            "ascii"
+        )
     )
     return bytes(output)

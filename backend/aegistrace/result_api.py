@@ -135,7 +135,9 @@ def result_router(engine: Engine, config: Settings) -> APIRouter:
                             observations.c.assessment_id == str(assessment_id),
                             observations.c.id.in_(observation_ids),
                         )
-                    ).scalars().all()
+                    )
+                    .scalars()
+                    .all()
                     if observation_ids
                     else []
                 )
@@ -155,8 +157,13 @@ def result_router(engine: Engine, config: Settings) -> APIRouter:
             raise HTTPException(404, "Resource not found") from error
         snapshot["id"] = str(export_id)
         snapshot["sha256"] = row["sha256"]
-        asset_names = {str(asset_id): str(payload.get("identifier", "unmapped asset")) for asset_id, payload in asset_rows}
-        pdf = render_evidence_report(snapshot, [dict(value) for value in observation_rows], asset_names)
+        asset_names = {
+            str(asset_id): str(payload.get("identifier", "unmapped asset"))
+            for asset_id, payload in asset_rows
+        }
+        pdf = render_evidence_report(
+            snapshot, [dict(value) for value in observation_rows], asset_names
+        )
         return Response(
             content=pdf,
             media_type="application/pdf",
