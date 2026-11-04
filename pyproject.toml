@@ -9,8 +9,15 @@ description = "Analyst-controlled VAPT assessment foundation"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "fastapi", "uvicorn[standard]", "pydantic-settings", "sqlalchemy",
-  "psycopg[binary]", "alembic", "celery[redis]", "pyyaml",
+  "fastapi",
+  "uvicorn[standard]",
+  "pydantic-settings",
+  "sqlalchemy",
+  "psycopg[binary]",
+  "alembic",
+  "celery[redis]",
+  "pyyaml",
+  "cryptography>=50.0.2",
 ]
 
 [dependency-groups]

@@ -1,0 +1,19 @@
+# Private evidence and retention — T08
+
+Originals are stored under evidence UUIDs in `evidence_objects`, outside static hosting. The initial small-corpus implementation uses encrypted PostgreSQL binary rows rather than ephemeral Render files. Each original is limited to 2 MiB. This supports bounded free-hosted demonstrations; large scanner exports need a separately implemented private streaming object backend, not a raised limit without capacity review.
+
+AES-256-GCM uses an independently configured `EVIDENCE_KEY` (64 hex characters), a fresh random 96-bit nonce per object and assessment/evidence IDs as authenticated associated data. Key material is not stored with ciphertext. `EVIDENCE_KEY_ID` identifies the externally retained key. Store keys in the provider's secret configuration, keep secure recovery copies and retain old keys during migration; this version fails closed on unavailable/mismatched keys rather than claiming automatic key rotation. Losing a key makes its originals unrecoverable. [Cryptography AEAD documentation](https://cryptography.io/en/latest/hazmat/primitives/aead/).
+
+Every upload must match its canonical EvidenceReference SHA-256; reads authenticate ciphertext and recheck both stored/source hashes. Metadata preserves capture time and the original byte/XML/JSON pointer. Read access requires a valid short-lived server-issued bearer identity and assessment ownership. Download additionally needs a 60-second actor/assessment/object-bound ticket passed in a header. There are no public object URLs; responses are attachment-only, `no-store`, and `nosniff`. Downloads, storage, redactions, review and purge have attributed access records; T09 adds the chained audit layer.
+
+For the M02 contract, identities are issued only by trusted operator code using the server secret, with an explicit subject/role and up to 15 minutes lifetime. There is no public minting endpoint or trusted `X-User` header. Full sign-in, revocation and team membership are T15/T53 work. Do not expose operator secrets in browser configuration. Auditor identities cannot change originals or redactions; only an owning reviewer can approve a derivative.
+
+Automated snippets remove common credential headers, key/password fields, private-key blocks and URL credentials, escape HTML and suppress control characters. This is a candidate redaction, not a guarantee that arbitrary secrets/PII have been found. An owner with reviewer role must inspect the snippet before it is eligible for a report. Originals remain unchanged. Re-generating a snippet resets review. Report consumers use `EvidenceStore.derivative`, never raw download bytes.
+
+Retention expiry is explicit per original and enforced on original/derivative access. The purge function deletes expired ciphertext/derivatives but keeps source references and access history. It conservatively refuses purge for any assessment with a retained report snapshot. Scheduled invocation, external backups, fine-grained legal holds, multi-key migration and large-file object storage belong to later operational work. Database owners can bypass application access; AES-GCM does not make the database immutable.
+
+## Reproduce
+
+`uv run pytest tests/test_evidence.py` covers authenticated exact-byte retrieval, missing/forged identity, cross-owner denial, expired/wrong-object tickets, ciphertext tamper, original hash mismatch, candidate redaction/review, expiry and report pinning. All canaries are handcrafted test inputs, not genuine scanner exports. `uv run pytest -m 'not services'` includes migration upgrade/downgrade/upgrade. Hosted CI verifies fresh PostgreSQL/container operation without needing participant local setup.
+
+Source requirement links: R09/R16–R18 source traceability, R31–R32 private bounded evidence access, R34 explicit evidence versus reviewed conclusions. No scan, accuracy claim or completed PDF is implied by the storage implementation.

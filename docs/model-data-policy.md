@@ -22,7 +22,7 @@ Only send allowlisted sanitized fields. Preserve original source evidence privat
 
 ## Storage, retention and logs
 
-The foundation has no scan-evidence retention service yet. T08/T66 must implement private object access, digest checks, retention/restore and snapshot-aware deletion. Do not claim that a written policy already enforces those controls. Until then, do not add real scan artifacts to the public repository.
+T08 implements bounded encrypted database originals, authorized hash-checked download, separately reviewed redactions and conservative snapshot-aware retention. See [evidence retention](evidence-retention.md). T66 still owns operational backup/restore and deployment verification. Do not add private scan artifacts to the public repository.
 
 Preserve credentials in `.env` generated locally (ignored); the generator refuses overwrite and prints no values. Windows file access still depends on the user's actual directory ACLs. CI generates disposable credentials, masks the application secret and uses isolated temporary services. Logs should contain IDs/status/errors rather than raw private messages, secrets or full prompts; future redaction must be verified with labelled canaries.
 

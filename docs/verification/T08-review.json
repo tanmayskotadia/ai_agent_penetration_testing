@@ -1,0 +1,7 @@
+{
+  "task": "T08",
+  "requirements": ["R09", "R16", "R17", "R18", "R31", "R32", "R34"],
+  "verification": ["tests/test_evidence.py", "tests/test_foundation.py"],
+  "manual_intervention": "None for implementation. Before a hosted deployment, inject an independently generated evidence encryption key through private provider secrets; deployment is not performed by this issue.",
+  "limits": ["2 MiB per original; large-object backend deferred", "Automated redaction requires reviewer inspection", "Operator-issued short-lived identities precede full M03 identity lifecycle", "Retained report snapshots conservatively pin all evidence for their assessment"]
+}

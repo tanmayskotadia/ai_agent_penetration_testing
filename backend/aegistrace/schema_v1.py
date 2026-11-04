@@ -102,3 +102,4 @@ approvals = entity(
     link("decision_id", "decisions"),
 )
 report_snapshots = entity("report_snapshots")
+DOMAIN_TABLES = tuple(metadata.sorted_tables)

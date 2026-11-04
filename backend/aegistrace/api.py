@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from aegistrace.db import make_engine
+from aegistrace.evidence import evidence_router
 from aegistrace.settings import Settings
 
 TOOLS = ("Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit")
@@ -23,6 +24,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine.dispose()
 
     app = FastAPI(title="AegisTrace", version="0.1.0", lifespan=lifespan)
+    app.include_router(evidence_router(engine, config))
 
     @app.get("/health/live")
     def liveness() -> dict[str, str]:
@@ -35,7 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0002_domain":
+            if revision != "0003_evidence":
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
         except SQLAlchemyError:
             return JSONResponse(
