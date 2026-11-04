@@ -7,6 +7,7 @@ from sqlalchemy import Connection, select
 
 from aegistrace import schema_v1 as db
 from aegistrace.domain import CONTRACTS, Assessment, Contract, Finding, Observation, Occurrence
+from aegistrace.identity_schema import members, principals
 
 
 def insert_record(connection: Connection, collection: str, record: Contract) -> None:
@@ -33,6 +34,13 @@ def insert_record(connection: Connection, collection: str, record: Contract) -> 
         if decision["information_kind"] != "reviewer-decision":
             raise ValueError("an AI decision cannot confirm a finding")
     connection.execute(table.insert().values(**values, payload=payload))
+    if isinstance(record, Assessment):
+        if connection.execute(
+            select(principals.c.id).where(principals.c.id == record.owner_id)
+        ).first():
+            from aegistrace.identity_service import set_membership
+
+            set_membership(connection, record.id, record.owner_id, "admin")
 
 
 def get_record(
@@ -60,3 +68,28 @@ def require_owner(connection: Connection, assessment_id: UUID, actor_id: str) ->
     if payload is None:
         raise LookupError("resource not found")
     return Assessment.model_validate(payload)
+
+
+def require_access(connection: Connection, assessment_id: UUID, actor_id: str) -> Assessment:
+    principal = (
+        connection.execute(select(principals).where(principals.c.id == actor_id))
+        .mappings()
+        .one_or_none()
+    )
+    if principal is not None:
+        if not principal["active"]:
+            raise LookupError("resource not found")
+        member = connection.execute(
+            select(members.c.subject).where(
+                members.c.assessment_id == str(assessment_id),
+                members.c.subject == actor_id,
+                members.c.active.is_(True),
+            )
+        ).first()
+        if member is None:
+            raise LookupError("resource not found")
+        return Assessment.model_validate(
+            get_record(connection, "assessments", assessment_id, assessment_id)
+        )
+    # Development-only signed operator fixtures have no managed principal; owner-only.
+    return require_owner(connection, assessment_id, actor_id)

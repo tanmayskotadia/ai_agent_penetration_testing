@@ -1,0 +1,9 @@
+# Secret handling and rotation
+
+Inject APP_SECRET, EVIDENCE_KEY, database credentials and any future model/scanner credentials through provider secret configuration. Never copy them to frontend variables, URLs, source, GitHub issues or a scanner container. Sessions carry opaque server-issued authority; only token digests are stored. Service tokens are short-lived and assessment-bound, with no signing/master key needed by the recipient.
+
+The application does not log request bodies, passwords, raw originals or prompts. Existing application/Uvicorn handlers are wrapped by a formatter that removes configured app/evidence secrets, common credential fields/headers and credential-bearing exception text. This is defense in depth, not a guarantee of arbitrary secret detection or control over provider/proxy logs. Do not add query-string tokens or body logging. Derivative redaction still needs human review; raw evidence remains encrypted and private.
+
+Rotate human passwords through the authenticated endpoint; all previous sessions are invalidated. Revoke service/human sessions immediately in the database-backed identity lifecycle. Rotating APP_SECRET invalidates signatures; retain protected prior checkpoint-verification keys if old external audit anchors must be verified. Rotate EVIDENCE_KEY through a planned authenticated decrypt/re-encrypt migration while retaining recoverable old keys; changing its ID alone is not migration. Never drop a key before verifying retained originals/reports can be read.
+
+Deploy the application with ENVIRONMENT=production, trusted TLS ingress, managed sessions, restricted database permissions and explicit protected control CIDRs. M02 operator tokens are forcibly rejected in production. Host-provider secret stores and proxy retention/access must be reviewed during deployment; this document does not claim those external controls have already been configured.

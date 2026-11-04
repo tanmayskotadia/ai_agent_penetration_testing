@@ -18,6 +18,9 @@ export interface ApiSchemas {
   "InspectionRequest": { "schema_version"?: "1.0"; "asset_mapping"?: Record<string, string> };
   "InspectionResult": { "schema_version"?: "1.0"; "import_id": string; "evidence_id": string; "source_sha256": string; "mode"?: "recorded-import"; "state": "quarantined" | "container-validated"; "code": string; "assets": Array<string>; "out_of_scope_assets": Array<string>; "parsed_records": number; "findings_created"?: 0; "normalizer_enabled"?: false; "diagnostics": Array<string> };
   "JobCreate": { "schema_version"?: "1.0"; "plan_id": string; "plan_revision": number };
+  "Login": { "username": string; "password": string };
+  "MembershipUpdate": { "subject": string; "role": "analyst" | "reviewer" | "admin" | "auditor" | "scanner" | "reporter" | "planner"; "active"?: boolean };
+  "PasswordChange": { "old_password": string; "new_password": string };
   "PlanCreate": { "schema_version"?: "1.0"; "scope_id": string; "scope_revision": number; "revision": number; "steps": Array<string> };
   "PolicyCreate": { "schema_version"?: "1.0"; "scope_id": string; "scope_revision": number; "context": "general" | "hackathon"; "authorization_source": "asset-owner" | "organizer"; "authorization_reference": string; "authorization_document_sha256": string; "valid_from": string; "valid_until": string; "targets": Array<ApiSchemas["TargetRule"]>; "allowed_networks": Array<string>; "exclusions"?: Array<string>; "allowed_profiles": Array<"discovery" | "passive-web" | "active-web" | "controlled-validation">; "requests_per_second": number; "concurrent_jobs": number };
   "ReportCreate": { "schema_version"?: "1.0"; "format"?: "pdf" | "json" };
@@ -26,6 +29,7 @@ export interface ApiSchemas {
   "ScopeVersion": { "schema_version"?: "1.0"; "id"?: string; "assessment_id": string; "revision": number; "targets": Array<string>; "exclusions"?: Array<string>; "authorization_reference"?: (string | null); "valid_until"?: (string | null); "mode"?: "recorded-import" | "live-request" };
   "TargetRule": { "host": string; "protocol": "http" | "https" | "tcp" | "udp"; "port": number; "path_prefix"?: string; "pinned_addresses": Array<string> };
   "ToolRun": { "schema_version"?: "1.0"; "id"?: string; "assessment_id": string; "scope_id": string; "tool": "Nmap" | "Nessus" | "Greenbone" | "Nikto" | "OWASP ZAP" | "Burp Suite" | "Metasploit"; "tool_version": string; "mode": "recorded-import" | "live"; "captured_at": string; "state": "recorded" | "pending" | "running" | "partial" | "failed" | "completed" };
+  "UserCreate": { "username": string; "password": string; "role"?: "analyst" | "reviewer" | "admin" | "auditor" };
   "ValidationError": { "loc": Array<(string | number)>; "msg": string; "type": string; "input"?: unknown; "ctx"?: Record<string, unknown> };
   "WorkflowResource": { "schema_version"?: "1.0"; "id": string; "assessment_id": string; "kind": "plans" | "jobs" | "imports" | "approvals" | "reports"; "revision"?: number; "state": "draft" | "blocked" | "pending-review" | "pending-ingestion"; "reason"?: (string | null); "mode"?: "request-only" | "recorded-import"; "request": Record<string, unknown> };
 }

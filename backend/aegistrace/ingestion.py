@@ -14,7 +14,7 @@ from aegistrace.evidence import EvidenceStore
 from aegistrace.ingestion_schema import inspections
 from aegistrace.mutations import mutation
 from aegistrace.platform_api import current_scope, record_request, resource
-from aegistrace.repository import get_record, require_owner
+from aegistrace.repository import get_record, require_access
 from aegistrace.safe_parse import canonical, isolated_inspection, mapped_assets
 from aegistrace.settings import Settings
 
@@ -53,7 +53,7 @@ def ingestion_router(engine: Engine, config: Settings) -> APIRouter:
         actor: Identity = actor_dependency,
     ) -> JSONResponse:
         def apply(connection: Connection) -> dict[str, Any]:
-            require_owner(connection, assessment_id, actor.subject)
+            require_access(connection, assessment_id, actor.subject)
             existing = connection.execute(
                 select(inspections.c.result).where(
                     inspections.c.import_id == str(import_id),
@@ -136,7 +136,7 @@ def ingestion_router(engine: Engine, config: Settings) -> APIRouter:
     ) -> dict[str, Any]:
         try:
             with engine.connect() as connection:
-                require_owner(connection, assessment_id, actor.subject)
+                require_access(connection, assessment_id, actor.subject)
                 value = connection.execute(
                     select(inspections.c.result).where(
                         inspections.c.import_id == str(import_id),

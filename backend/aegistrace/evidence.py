@@ -13,7 +13,7 @@ from sqlalchemy import Connection, select
 
 from aegistrace.audit import AuditEvent, append_event, request_context
 from aegistrace.evidence_schema import access_events, objects
-from aegistrace.repository import get_record, require_owner
+from aegistrace.repository import get_record, require_access
 from aegistrace.schema_v1 import report_snapshots
 from aegistrace.settings import Settings
 
@@ -97,7 +97,7 @@ class EvidenceStore:
         raw: bytes,
         expires_at: datetime,
     ) -> None:
-        require_owner(connection, assessment_id, actor)
+        require_access(connection, assessment_id, actor)
         reference = get_record(connection, "evidence_references", assessment_id, evidence_id)
         if not 0 < len(raw) <= MAX_BYTES:
             raise EvidenceError("original must be 1 byte to 2 MiB")
@@ -125,7 +125,7 @@ class EvidenceStore:
     def read(
         self, connection: Connection, assessment_id: UUID, evidence_id: UUID, actor: str
     ) -> bytes:
-        require_owner(connection, assessment_id, actor)
+        require_access(connection, assessment_id, actor)
         row = (
             connection.execute(
                 select(objects).where(
@@ -170,7 +170,7 @@ class EvidenceStore:
     def derivative(
         connection: Connection, assessment_id: UUID, evidence_id: UUID, actor: str
     ) -> str:
-        require_owner(connection, assessment_id, actor)
+        require_access(connection, assessment_id, actor)
         row = (
             connection.execute(
                 select(objects).where(
@@ -190,7 +190,7 @@ class EvidenceStore:
 
     @staticmethod
     def purge_expired(connection: Connection, assessment_id: UUID, actor: str) -> int:
-        require_owner(connection, assessment_id, actor)
+        require_access(connection, assessment_id, actor)
         # Conservatively retain all originals if this assessment has any report snapshot.
         if connection.execute(
             select(report_snapshots.c.id).where(

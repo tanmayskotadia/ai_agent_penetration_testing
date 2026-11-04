@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 
 from aegistrace.api_schema import receipts
 from aegistrace.auth import Identity
-from aegistrace.repository import require_owner
+from aegistrace.repository import require_access
 
 
 def mutation(
@@ -25,8 +25,9 @@ def mutation(
     payload: object,
     operation: Callable[[Connection], dict[str, Any]],
     status: int = 201,
+    allow_readonly: bool = False,
 ) -> JSONResponse:
-    if actor.role == "auditor":
+    if actor.role == "auditor" and not allow_readonly:
         raise HTTPException(403, "Read-only role")
     try:
         UUID(request.headers["X-Request-ID"])
@@ -35,7 +36,7 @@ def mutation(
             raise ValueError("invalid key")
     except (KeyError, ValueError) as error:
         raise HTTPException(
-            422, "Mutations require a UUID X-Request-ID and an 8–128 character Idempotency-Key"
+            422, "Mutations require a UUID X-Request-ID and an 8â€“128 character Idempotency-Key"
         ) from error
     route = request.method + " " + request.url.path
     request_digest = hashlib.sha256(
@@ -51,7 +52,7 @@ def mutation(
         with engine.begin() as connection:
             parts = request.url.path.split("/")
             if len(parts) > 4 and parts[3] == "assessments":
-                require_owner(connection, UUID(parts[4]), actor.subject)
+                require_access(connection, UUID(parts[4]), actor.subject)
             insert = pg_insert if connection.dialect.name == "postgresql" else sqlite_insert
             connection.execute(
                 insert(receipts)

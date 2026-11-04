@@ -28,8 +28,9 @@ from aegistrace.api_schema import resources
 from aegistrace.audit import AuditEvent, append_event, checkpoint, read_events, request_context
 from aegistrace.auth import Identity, identity_dependency
 from aegistrace.domain import Assessment, Asset, EvidenceReference, Finding, ScopeVersion, ToolRun
+from aegistrace.identity_schema import members
 from aegistrace.mutations import mutation
-from aegistrace.repository import get_record, insert_record, require_owner
+from aegistrace.repository import get_record, insert_record, require_access
 from aegistrace.schema_v1 import assessments, findings, scope_versions
 from aegistrace.settings import Settings
 
@@ -111,11 +112,20 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     @router.get("/assessments", response_model=list[Assessment])
     def list_assessments(actor: Identity = actor_dependency) -> list[dict[str, Any]]:
         with engine.connect() as connection:
+            visible = (
+                assessments.c.owner_id == actor.subject
+                if actor.session_id is None
+                else assessments.c.id.in_(
+                    select(members.c.assessment_id).where(
+                        members.c.subject == actor.subject, members.c.active.is_(True)
+                    )
+                )
+            )
             return [
                 dict(value)
                 for value in connection.execute(
                     select(assessments.c.payload)
-                    .where(assessments.c.owner_id == actor.subject)
+                    .where(visible)
                     .order_by(assessments.c.id)
                     .limit(100)
                 ).scalars()
@@ -125,7 +135,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     def get_assessment(assessment_id: UUID, actor: Identity = actor_dependency) -> dict[str, Any]:
         try:
             with engine.connect() as connection:
-                return require_owner(connection, assessment_id, actor.subject).model_dump(
+                return require_access(connection, assessment_id, actor.subject).model_dump(
                     mode="json"
                 )
         except LookupError as error:
@@ -138,7 +148,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
         assessment_id: UUID, body: ScopeCreate, request: Request, actor: Identity = actor_dependency
     ) -> JSONResponse:
         def apply(connection: Connection) -> dict[str, Any]:
-            require_owner(connection, assessment_id, actor.subject)
+            require_access(connection, assessment_id, actor.subject)
             # Lock the assessment to serialize scope revision creation on PostgreSQL.
             connection.execute(
                 select(assessments.c.id)
@@ -176,7 +186,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     ) -> dict[str, Any]:
         try:
             with engine.connect() as connection:
-                require_owner(connection, assessment_id, actor.subject)
+                require_access(connection, assessment_id, actor.subject)
                 return get_record(connection, "scope_versions", assessment_id, scope_id)
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error
@@ -187,7 +197,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
         payload = body.model_dump(mode="json")
 
         def apply(connection: Connection) -> dict[str, Any]:
-            require_owner(connection, assessment_id, actor.subject)
+            require_access(connection, assessment_id, actor.subject)
             if kind in {"plans", "imports"}:
                 current_scope(connection, assessment_id, body.scope_id, body.scope_revision)
             if kind in {"jobs", "approvals"}:
@@ -297,7 +307,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     ) -> dict[str, Any]:
         try:
             with engine.connect() as connection:
-                require_owner(connection, assessment_id, actor.subject)
+                require_access(connection, assessment_id, actor.subject)
                 return resource(connection, assessment_id, kind, resource_id)
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error
@@ -307,7 +317,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
         assessment_id: UUID, body: AssetCreate, request: Request, actor: Identity = actor_dependency
     ) -> JSONResponse:
         def apply(connection: Connection) -> dict[str, Any]:
-            require_owner(connection, assessment_id, actor.subject)
+            require_access(connection, assessment_id, actor.subject)
             value = Asset(
                 assessment_id=assessment_id, **body.model_dump(exclude={"schema_version"})
             )
@@ -323,7 +333,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
         assessment_id: UUID, body: RunCreate, request: Request, actor: Identity = actor_dependency
     ) -> JSONResponse:
         def apply(connection: Connection) -> dict[str, Any]:
-            require_owner(connection, assessment_id, actor.subject)
+            require_access(connection, assessment_id, actor.subject)
             scope = get_record(connection, "scope_versions", assessment_id, body.scope_id)
             current_scope(connection, assessment_id, body.scope_id, scope["revision"])
             value = ToolRun(
@@ -353,7 +363,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
         actor: Identity = actor_dependency,
     ) -> JSONResponse:
         def apply(connection: Connection) -> dict[str, Any]:
-            require_owner(connection, assessment_id, actor.subject)
+            require_access(connection, assessment_id, actor.subject)
             get_record(connection, "tool_runs", assessment_id, run_id)
             value = EvidenceReference(
                 assessment_id=assessment_id,
@@ -377,7 +387,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     ) -> dict[str, Any]:
         try:
             with engine.connect() as connection:
-                require_owner(connection, assessment_id, actor.subject)
+                require_access(connection, assessment_id, actor.subject)
                 return get_record(connection, "evidence_references", assessment_id, evidence_id)
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error
@@ -388,7 +398,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     ) -> dict[str, Any]:
         try:
             with engine.connect() as connection:
-                require_owner(connection, assessment_id, actor.subject)
+                require_access(connection, assessment_id, actor.subject)
                 return get_record(connection, "findings", assessment_id, finding_id)
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error
@@ -399,7 +409,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     ) -> list[dict[str, Any]]:
         try:
             with engine.connect() as connection:
-                require_owner(connection, assessment_id, actor.subject)
+                require_access(connection, assessment_id, actor.subject)
                 return [
                     dict(value)
                     for value in connection.execute(
@@ -420,7 +430,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     ) -> StreamingResponse:
         try:
             with engine.connect() as connection:
-                require_owner(connection, assessment_id, actor.subject)
+                require_access(connection, assessment_id, actor.subject)
                 rows = read_events(connection, assessment_id, last_event_id, limit=100)
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error
@@ -440,7 +450,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
     def anchor(assessment_id: UUID, actor: Identity = actor_dependency) -> JSONResponse:
         try:
             with engine.connect() as connection:
-                require_owner(connection, assessment_id, actor.subject)
+                require_access(connection, assessment_id, actor.subject)
                 value = checkpoint(connection, assessment_id, config.app_secret.get_secret_value())
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error

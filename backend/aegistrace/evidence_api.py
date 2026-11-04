@@ -14,7 +14,7 @@ from aegistrace.auth import Identity, identity_dependency, seal, unseal
 from aegistrace.evidence import MAX_BYTES, EvidenceError, EvidenceStore
 from aegistrace.evidence_schema import objects
 from aegistrace.mutations import mutation
-from aegistrace.repository import require_owner
+from aegistrace.repository import require_access
 from aegistrace.settings import Settings
 
 
@@ -79,7 +79,7 @@ def evidence_router(engine: Engine, config: Settings) -> APIRouter:
                 "requires": "Bearer identity and X-Download-Ticket header",
             }
 
-        return mutation(engine, request, actor, {}, apply, 200)
+        return mutation(engine, request, actor, {}, apply, 200, allow_readonly=True)
 
     @router.get("/{evidence_id}/original")
     def download(
@@ -131,15 +131,33 @@ def evidence_router(engine: Engine, config: Settings) -> APIRouter:
 
         return mutation(engine, request, actor, {}, apply, 200)
 
+    @router.get("/{evidence_id}/reviewed-derivative")
+    def reviewed_derivative(
+        assessment_id: UUID, evidence_id: UUID, actor: Identity = actor_dependency
+    ) -> dict[str, str]:
+        try:
+            with engine.begin() as connection:
+                snippet = EvidenceStore.derivative(
+                    connection, assessment_id, evidence_id, actor.subject
+                )
+                EvidenceStore.event(
+                    connection, assessment_id, evidence_id, actor.subject, "derivative-read"
+                )
+        except LookupError as error:
+            raise HTTPException(404, "Resource not found") from error
+        except EvidenceError as error:
+            raise HTTPException(409, str(error)) from error
+        return {"snippet": snippet, "information_kind": "reviewed-source-derivative"}
+
     @router.post("/{evidence_id}/redaction-review")
     def review(
         assessment_id: UUID, evidence_id: UUID, request: Request, actor: Identity = actor_dependency
     ) -> JSONResponse:
-        if actor.role != "reviewer":
+        if actor.role not in {"reviewer", "admin"} or actor.principal_kind != "human":
             raise HTTPException(403, "Reviewer identity required")
 
         def apply(connection: Connection) -> dict[str, Any]:
-            require_owner(connection, assessment_id, actor.subject)
+            require_access(connection, assessment_id, actor.subject)
             row = connection.execute(
                 select(objects.c.redacted).where(
                     objects.c.id == str(evidence_id), objects.c.assessment_id == str(assessment_id)

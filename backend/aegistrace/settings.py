@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     app_secret: SecretStr = Field(min_length=32)
     database_url: str
     redis_url: str = "redis://127.0.0.1:6379/0"
-    environment: Literal["development", "test", "ci"] = "development"
+    environment: Literal["development", "test", "ci", "production"] = "development"
+    allow_operator_tokens: bool = True
     evidence_key: SecretStr | None = None
     evidence_key_id: str = Field(default="primary-v1", min_length=1, max_length=100)
     control_plane_networks: tuple[str, ...] = ("127.0.0.0/8", "::1/128")

@@ -17,7 +17,9 @@ from aegistrace.capabilities import Capability, capability_snapshot
 from aegistrace.db import make_engine
 from aegistrace.evidence_api import evidence_router
 from aegistrace.http_limits import BodyLimitMiddleware
+from aegistrace.identity_api import identity_router
 from aegistrace.ingestion import ingestion_router
+from aegistrace.log_safety import protect_handlers
 from aegistrace.platform_api import platform_router
 from aegistrace.policy_api import policy_router
 from aegistrace.settings import Settings
@@ -25,6 +27,12 @@ from aegistrace.settings import Settings
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     config = settings or Settings()  # type: ignore[call-arg]
+    protect_handlers(
+        (
+            config.app_secret.get_secret_value(),
+            config.evidence_key.get_secret_value() if config.evidence_key else "",
+        )
+    )
     engine = make_engine(config)
 
     @asynccontextmanager
@@ -33,10 +41,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine.dispose()
 
     app = FastAPI(title="AegisTrace", version="0.1.0", lifespan=lifespan)
+    app.state.engine = engine
     app.include_router(evidence_router(engine, config))
     app.include_router(platform_router(engine, config))
     app.include_router(ingestion_router(engine, config))
     app.include_router(policy_router(engine, config))
+    app.include_router(identity_router(engine, config))
     app.add_middleware(BodyLimitMiddleware)
 
     def contracts() -> dict[str, Any]:
@@ -63,7 +73,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                 }
                             },
                         }
-                    if method in {"post", "put", "patch", "delete"}:
+                    if (
+                        method in {"post", "put", "patch", "delete"}
+                        and path != "/api/v1/auth/login"
+                    ):
                         operation.setdefault("parameters", []).extend(
                             [
                                 {
@@ -145,7 +158,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0007_policy":
+            if revision != "0008_identity":
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
         except SQLAlchemyError:
             return JSONResponse(
