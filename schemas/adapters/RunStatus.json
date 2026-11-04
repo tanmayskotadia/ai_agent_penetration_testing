@@ -1,0 +1,40 @@
+{
+  "properties": {
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "run_id": {
+      "format": "uuid",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "pending",
+        "running",
+        "completed",
+        "partial",
+        "failed",
+        "cancelled",
+        "unknown"
+      ],
+      "title": "State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "state"
+  ],
+  "title": "RunStatus",
+  "type": "object"
+}

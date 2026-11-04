@@ -5,7 +5,7 @@
   "work_item": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/issues/14",
   "milestone": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/milestone/1",
   "baseline_status": "ready-for-participant-review",
-  "product_status": "planned",
+  "product_status": "in-progress",
   "tasks": {
     "T01": {
       "title": "Build the source-linked requirements and judging coverage register",
@@ -590,9 +590,11 @@
       ],
       "report_or_delivery_location": "Decision trace and report methodology",
       "required_evidence": "Reviewed plans for different discovered services showing justified supported tool choices.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T12-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -964,9 +966,11 @@
       ],
       "report_or_delivery_location": "End-to-end assessment and demo runbook",
       "required_evidence": "Traceable import/collection record and normalized observations.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T11-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -1475,9 +1479,11 @@
       ],
       "report_or_delivery_location": "Scope, rules of engagement, approvals and limitations",
       "required_evidence": "Attributable approval/denial, execution and result audit records.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T09-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -1720,9 +1726,11 @@
       ],
       "report_or_delivery_location": "Scope, rules of engagement, approvals and limitations",
       "required_evidence": "Access/redaction tests and deployment review for private evidence and exports.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -1801,9 +1809,11 @@
       ],
       "report_or_delivery_location": "Scope, rules of engagement, approvals and limitations",
       "required_evidence": "Request-to-output actor/run/decision chain and integrity review.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T09-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2077,9 +2087,11 @@
       ],
       "report_or_delivery_location": "Integration status matrix and limitations",
       "required_evidence": "Per-tool version/format/edition compatibility record and genuine integration result.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T12-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2115,9 +2127,11 @@
       ],
       "report_or_delivery_location": "Integration status matrix and limitations",
       "required_evidence": "Consistent UI/report/README labels checked against actual execution provenance.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T12-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2192,9 +2206,11 @@
       ],
       "report_or_delivery_location": "Integration status matrix and limitations",
       "required_evidence": "Seven-entry registry with verified status evidence, including absent tools.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T12-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2343,9 +2359,11 @@
       ],
       "report_or_delivery_location": "Integration status matrix and limitations",
       "required_evidence": "Unsupported request produces clear status and no fabricated fallback.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T12-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2452,9 +2470,11 @@
       ],
       "report_or_delivery_location": "Execution summary and failures",
       "required_evidence": "Persistent timeline survives UI reconnect and worker restart without fake success.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T09-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2485,9 +2505,12 @@
       ],
       "report_or_delivery_location": "Detailed findings and evidence",
       "required_evidence": "Versioned schema and cross-tool parsed examples with original evidence retained.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)",
+        "docs/verification/T11-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2549,9 +2572,11 @@
       ],
       "report_or_delivery_location": "Detailed findings and evidence",
       "required_evidence": "Same issue on separate assets retains separate occurrences and both source references.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2584,9 +2609,12 @@
       ],
       "report_or_delivery_location": "Per-finding evidence fields",
       "required_evidence": "Source tool/version/run identity resolves to the original artifact.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)",
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2619,9 +2647,11 @@
       ],
       "report_or_delivery_location": "Per-finding evidence fields",
       "required_evidence": "Each occurrence resolves to a scoped asset/service or endpoint.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2655,9 +2685,13 @@
       ],
       "report_or_delivery_location": "Per-finding evidence fields",
       "required_evidence": "Capture/run timestamps retain ordering and timezone semantics.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)",
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)",
+        "docs/verification/T09-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2690,9 +2724,12 @@
       ],
       "report_or_delivery_location": "Per-finding evidence fields",
       "required_evidence": "Exact XML/JSON/text pointer resolves inside the preserved original artifact.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)",
+        "docs/verification/T11-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2725,9 +2762,11 @@
       ],
       "report_or_delivery_location": "Per-finding evidence fields",
       "required_evidence": "Immutable original bytes plus useful redacted excerpt and integrity digest.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2760,9 +2799,11 @@
       ],
       "report_or_delivery_location": "Per-finding evidence fields",
       "required_evidence": "Scanner confidence, heuristic support and calibrated probability are not conflated.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -2796,9 +2837,11 @@
       ],
       "report_or_delivery_location": "Per-finding evidence fields",
       "required_evidence": "Unsupported banner/version hints remain suspected; changes have reviewed evidence.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -3021,9 +3064,11 @@
       ],
       "report_or_delivery_location": "Severity and prioritized findings",
       "required_evidence": "Claim-to-source check rejects missing or mismatched evidence.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -3223,9 +3268,11 @@
       ],
       "report_or_delivery_location": "Prototype acceptance gate T30",
       "required_evidence": "Integrated normalized findings with duplicates, source drill-down and priorities.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -3902,9 +3949,11 @@
       ],
       "report_or_delivery_location": "Professional unified VAPT PDF",
       "required_evidence": "PDF and evidence viewer use matching stable finding IDs.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -3935,9 +3984,11 @@
       ],
       "report_or_delivery_location": "Professional unified VAPT PDF",
       "required_evidence": "All affected occurrences survive report generation and deduplication.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -4002,9 +4053,11 @@
       ],
       "report_or_delivery_location": "Professional unified VAPT PDF",
       "required_evidence": "Each finding has useful redacted evidence and a resolvable original-source reference.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -4300,9 +4353,11 @@
       ],
       "report_or_delivery_location": "Professional unified VAPT PDF",
       "required_evidence": "Approval/denial actors, action references and outcomes reconcile with audit history.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T09-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -4333,9 +4388,11 @@
       ],
       "report_or_delivery_location": "Professional unified VAPT PDF",
       "required_evidence": "Assessment/report timing is consistent and timezone interpretation is clear.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -4911,9 +4968,11 @@
       ],
       "report_or_delivery_location": "PDF-required delivery bundle",
       "required_evidence": "Seven-tool matrix agrees with tested modes and actual demo/report behavior.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T12-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -5011,9 +5070,11 @@
       "demo_checks": [],
       "report_or_delivery_location": "Architecture overview",
       "required_evidence": "Contract and honest per-tool modes documented.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T12-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -5045,9 +5106,12 @@
       "demo_checks": [],
       "report_or_delivery_location": "Architecture overview",
       "required_evidence": "Source-output-to-normalization-to-report diagram with trust boundaries.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T07-review.json (engineering contract evidence; broader assessment verification pending)",
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },
@@ -5825,9 +5889,11 @@
       "demo_checks": [],
       "report_or_delivery_location": "Quality dossier and measured baseline comparison",
       "required_evidence": "Every exported finding resolves to preserved original evidence and affected occurrences.",
-      "implementation_status": "planned",
-      "evidence_status": "not-collected",
-      "actual_evidence": [],
+      "implementation_status": "in-progress",
+      "evidence_status": "collected",
+      "actual_evidence": [
+        "docs/verification/T08-review.json (engineering contract evidence; broader assessment verification pending)"
+      ],
       "reviewer_role": null,
       "applicability_rationale": null
     },

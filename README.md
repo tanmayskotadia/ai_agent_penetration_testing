@@ -2,7 +2,9 @@
 
 An evidence-driven, analyst-controlled Unified VAPT Agent for the DataOps Innovation Hackathon.
 
-**Current status:** requirements and architecture complete; API/UI/worker/report development foundation. All seven scanner integrations are **planned**. No live scanning, model assessment, fabricated scanner results or client-ready report is claimed implemented by this scaffold.
+**Current status:** M02 evidence-platform implementation: versioned canonical records, authenticated runtime assessment inputs, encrypted bounded originals, reviewed redactions, chained audit, atomic API idempotency, resumable events, hostile-file quarantine and a shared capability registry. All seven native scanner integrations remain **planned**. Live execution, model assessment, full analyst screens and client-ready PDF generation are later milestones.
+
+The participant requires cloud hosting without local setup. Render `My Workspace` and the separate Supabase `dataops` project are selected; application deployment/integration is not yet performed. Local commands below are optional developer workflows. See [cloud direction](docs/runtime-input-cloud-direction.md), [M02 status](docs/milestone-2-status.md) and [API contracts](docs/api.md).
 
 ## Quick start: native API/UI smoke mode
 
@@ -42,6 +44,9 @@ uv run mypy
 uv run pytest -m 'not services'
 python scripts/export_requirements.py --check
 python scripts/validate_requirements.py
+uv run python scripts/export_domain_schemas.py --check
+uv run python scripts/export_api_contracts.py --check
+uv run python scripts/export_capabilities.py --check
 cd frontend
 npm run build
 ```
@@ -50,20 +55,20 @@ CI installs from `uv.lock` and `frontend/package-lock.json`, verifies migrations
 
 ## Repository guide
 
-- `backend/aegistrace`: settings, control-plane health and honest planned-capability status.
+- `backend/aegistrace`: typed domain/persistence, identity contracts, encrypted evidence, audit, authenticated APIs, import quarantine and shared capabilities.
 - `workers/aegistrace_workers`: bounded diagnostic worker scaffold; execution adapters are later work.
 - `reports/aegistrace_reports`: typed report-request placeholder; no generated findings.
-- `migrations`: reversible foundation schema; no seeded vulnerabilities or assessments.
+- `migrations`: reversible platform/domain/evidence/audit/API/ingestion schemas; no seeded vulnerabilities or assessments.
 - `frontend`: accessible workspace status and truthful seven-tool roadmap.
 - [Requirements](docs/requirements.md), [architecture](docs/architecture.md), [threat model](docs/threat-model.md), [ADRs](docs/adr/README.md), [submission gates](docs/submission-gates.md).
 - [Prerequisites and observed resources](docs/prerequisites.md), [licensing assumptions](docs/licensing.md), [model/data policy](docs/model-data-policy.md), [lab authorization](docs/lab-authorization.md), [fixture provenance](docs/fixture-provenance.md).
 
 ## Authorization, licenses and limitations
 
-The participant has no organizer lab authorization yet. Local/private targets are not automatically permitted. No live security testing is available in this foundation. Future active exploitation/offensive validation requires explicit human approval and deterministic policy outside the LLM. Model processing remains disabled; never put credentials in browser variables or public issues.
+General-purpose implementation collects assessment inputs at runtime and does not require organizer answers to proceed. No live security testing is enabled. A later user must provide valid target authority and satisfy deterministic execution controls; the hackathon profile retains its organizer-authorized-target rule. Active exploitation/offensive validation requires explicit action-bound human approval outside the LLM. Model processing remains disabled; never put credentials in browser variables or public issues.
 
 Tool editions, scanner/feed licenses and model data policy must be documented in T06 before corresponding capabilities are promised. No commercial binary/feed/license or captured sensitive scan output is bundled. Original problem PDF, temporary planning artifacts, credentials and runtime data are excluded from source. Dependency licenses remain their upstream terms; a project redistribution license is not implied.
 
-Run `python scripts/check_prerequisites.py` for a non-invasive executable/runtime/free-space inventory. At the M01 review the workspace drive had about 5.8 GiB free and no Docker executable on PATH. Full local Docker/scanner/feed setup needs adequate storage and runtime installation; the native smoke path and verified hosted CI do not require installing Docker on this machine. T04/T05 still need genuine organizer authorization, actual captures and independent labels before their acceptance can pass.
+No participant local setup is required. Hosted CI exercises real PostgreSQL, Redis and fresh container startup. T04/T05 remain open for actual permitted lab/corpus acceptance; M02's clearly labelled handcrafted contract tests do not replace genuine captures or independent accuracy review.
 
 Exact package locks and image digests identify the tested dependency baseline. They do not establish formal security/framework compliance. See issue-specific verification records for what actually ran and what needs manual setup.

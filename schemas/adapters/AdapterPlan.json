@@ -1,0 +1,55 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "action_digest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Action Digest",
+      "type": "string"
+    },
+    "assessment_id": {
+      "format": "uuid",
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "profile": {
+      "enum": [
+        "discovery",
+        "passive-web",
+        "active-web",
+        "controlled-validation"
+      ],
+      "title": "Profile",
+      "type": "string"
+    },
+    "scope_id": {
+      "format": "uuid",
+      "title": "Scope Id",
+      "type": "string"
+    },
+    "scope_revision": {
+      "minimum": 1,
+      "title": "Scope Revision",
+      "type": "integer"
+    },
+    "target_asset_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Target Asset Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "assessment_id",
+    "scope_id",
+    "scope_revision",
+    "target_asset_ids",
+    "profile",
+    "action_digest"
+  ],
+  "title": "AdapterPlan",
+  "type": "object"
+}

@@ -3,9 +3,15 @@
 from typing import Literal
 from uuid import UUID
 
+from aegistrace.capabilities import capability_snapshot
 from pydantic import BaseModel
 
 
 class ReportRequest(BaseModel):
     schema_version: Literal["0-foundation"] = "0-foundation"
     assessment_id: UUID
+
+
+def report_capabilities() -> list[dict[str, object]]:
+    """Snapshot the same capability source used by the UI API; never infer from findings."""
+    return capability_snapshot()

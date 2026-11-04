@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0",
+  "tools": [
+    {
+      "adapter_implementation": null,
+      "api_version": null,
+      "demonstration_label": "Planned; no verified scanner integration",
+      "guarded_containers": [
+        "nmap-xml"
+      ],
+      "installed_edition": null,
+      "installed_version": null,
+      "last_verified_at": null,
+      "last_verified_run_id": null,
+      "license_reference": null,
+      "license_status": "unknown",
+      "limitations": [
+        "Native adapter and genuine fixture verification pending",
+        "Edition/API/license capability unverified"
+      ],
+      "mode": "planned",
+      "name": "Nmap",
+      "schema_version": "1.0",
+      "status": "planned",
+      "supported_formats": []
+    },
+    {
+      "adapter_implementation": null,
+      "api_version": null,
+      "demonstration_label": "Planned; no verified scanner integration",
+      "guarded_containers": [],
+      "installed_edition": null,
+      "installed_version": null,
+      "last_verified_at": null,
+      "last_verified_run_id": null,
+      "license_reference": null,
+      "license_status": "unknown",
+      "limitations": [
+        "Native adapter and genuine fixture verification pending",
+        "Edition/API/license capability unverified"
+      ],
+      "mode": "planned",
+      "name": "Nessus",
+      "schema_version": "1.0",
+      "status": "planned",
+      "supported_formats": []
+    },
+    {
+      "adapter_implementation": null,
+      "api_version": null,
+      "demonstration_label": "Planned; no verified scanner integration",
+      "guarded_containers": [],
+      "installed_edition": null,
+      "installed_version": null,
+      "last_verified_at": null,
+      "last_verified_run_id": null,
+      "license_reference": null,
+      "license_status": "unknown",
+      "limitations": [
+        "Native adapter and genuine fixture verification pending",
+        "Edition/API/license capability unverified"
+      ],
+      "mode": "planned",
+      "name": "Greenbone",
+      "schema_version": "1.0",
+      "status": "planned",
+      "supported_formats": []
+    },
+    {
+      "adapter_implementation": null,
+      "api_version": null,
+      "demonstration_label": "Planned; no verified scanner integration",
+      "guarded_containers": [],
+      "installed_edition": null,
+      "installed_version": null,
+      "last_verified_at": null,
+      "last_verified_run_id": null,
+      "license_reference": null,
+      "license_status": "unknown",
+      "limitations": [
+        "Native adapter and genuine fixture verification pending",
+        "Edition/API/license capability unverified"
+      ],
+      "mode": "planned",
+      "name": "Nikto",
+      "schema_version": "1.0",
+      "status": "planned",
+      "supported_formats": []
+    },
+    {
+      "adapter_implementation": null,
+      "api_version": null,
+      "demonstration_label": "Planned; no verified scanner integration",
+      "guarded_containers": [
+        "zap-alerts-json"
+      ],
+      "installed_edition": null,
+      "installed_version": null,
+      "last_verified_at": null,
+      "last_verified_run_id": null,
+      "license_reference": null,
+      "license_status": "unknown",
+      "limitations": [
+        "Native adapter and genuine fixture verification pending",
+        "Edition/API/license capability unverified"
+      ],
+      "mode": "planned",
+      "name": "OWASP ZAP",
+      "schema_version": "1.0",
+      "status": "planned",
+      "supported_formats": []
+    },
+    {
+      "adapter_implementation": null,
+      "api_version": null,
+      "demonstration_label": "Planned; no verified scanner integration",
+      "guarded_containers": [],
+      "installed_edition": null,
+      "installed_version": null,
+      "last_verified_at": null,
+      "last_verified_run_id": null,
+      "license_reference": null,
+      "license_status": "unknown",
+      "limitations": [
+        "Native adapter and genuine fixture verification pending",
+        "Edition/API/license capability unverified"
+      ],
+      "mode": "planned",
+      "name": "Burp Suite",
+      "schema_version": "1.0",
+      "status": "planned",
+      "supported_formats": []
+    },
+    {
+      "adapter_implementation": null,
+      "api_version": null,
+      "demonstration_label": "Planned; no verified scanner integration",
+      "guarded_containers": [],
+      "installed_edition": null,
+      "installed_version": null,
+      "last_verified_at": null,
+      "last_verified_run_id": null,
+      "license_reference": null,
+      "license_status": "unknown",
+      "limitations": [
+        "Native adapter and genuine fixture verification pending",
+        "Edition/API/license capability unverified"
+      ],
+      "mode": "planned",
+      "name": "Metasploit",
+      "schema_version": "1.0",
+      "status": "planned",
+      "supported_formats": []
+    }
+  ],
+  "verified_working_integrations": 0
+}

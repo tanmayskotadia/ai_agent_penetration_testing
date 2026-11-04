@@ -13,14 +13,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from aegistrace.api_contracts import ApiError
 from aegistrace.audit import AuditEvent, request_context
+from aegistrace.capabilities import Capability, capability_snapshot
 from aegistrace.db import make_engine
 from aegistrace.evidence_api import evidence_router
 from aegistrace.http_limits import BodyLimitMiddleware
 from aegistrace.ingestion import ingestion_router
 from aegistrace.platform_api import platform_router
 from aegistrace.settings import Settings
-
-TOOLS = ("Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -44,6 +43,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             components = schema.setdefault("components", {}).setdefault("schemas", {})
             components["AuditEvent"] = AuditEvent.model_json_schema()
             components["ApiError"] = ApiError.model_json_schema()
+            capability_schema = Capability.model_json_schema()
+            capability_schema.pop("$defs", None)
+            components["Capability"] = capability_schema
             for path, methods in schema["paths"].items():
                 if not path.startswith("/api/v1/"):
                     continue
@@ -152,11 +154,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/v1/system/status")
     def status() -> dict[str, Any]:
         return {
-            "stage": "foundation",
+            "stage": "evidence-platform",
             "live_scans_enabled": False,
             "model_enabled": False,
             "authorization": "not-configured",
-            "tools": [{"name": name, "status": "planned"} for name in TOOLS],
+            "tools": capability_snapshot(),
         }
+
+    @app.get("/api/v1/system/capabilities", response_model=list[Capability])
+    def capabilities() -> list[dict[str, object]]:
+        return capability_snapshot()
 
     return app

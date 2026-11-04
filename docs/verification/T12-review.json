@@ -1,0 +1,7 @@
+{
+  "task": "T12",
+  "requirements": ["R05", "R06", "R10", "R23", "R27", "R29"],
+  "verification": ["tests/test_capabilities.py", "scripts/export_capabilities.py --check", "frontend TypeScript production build"],
+  "manual_intervention": "None for registry/protocol acceptance. Real tool entitlement, native adapters and genuine verification are later gates; all seven current modes remain planned.",
+  "limits": ["No working native/live adapter is bundled", "Positive policy tests are isolated simulations, not scanner proof", "Metadata consistency cannot authenticate captures or license rights", "Registry promotions are in-process and revert conservatively on restart"]
+}

@@ -1,0 +1,21 @@
+{
+  "properties": {
+    "accepted": {
+      "title": "Accepted",
+      "type": "boolean"
+    },
+    "reasons": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Reasons",
+      "type": "array"
+    }
+  },
+  "required": [
+    "accepted"
+  ],
+  "title": "PlanValidation",
+  "type": "object"
+}

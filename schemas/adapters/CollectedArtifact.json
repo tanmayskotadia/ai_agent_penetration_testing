@@ -1,0 +1,65 @@
+{
+  "properties": {
+    "captured_at": {
+      "format": "date-time",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "evidence_id": {
+      "format": "uuid",
+      "title": "Evidence Id",
+      "type": "string"
+    },
+    "format": {
+      "title": "Format",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "live",
+        "recorded-import"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "run_id": {
+      "format": "uuid",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    },
+    "tool": {
+      "enum": [
+        "Nmap",
+        "Nessus",
+        "Greenbone",
+        "Nikto",
+        "OWASP ZAP",
+        "Burp Suite",
+        "Metasploit"
+      ],
+      "title": "Tool",
+      "type": "string"
+    },
+    "tool_version": {
+      "title": "Tool Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "evidence_id",
+    "run_id",
+    "tool",
+    "tool_version",
+    "mode",
+    "sha256",
+    "format",
+    "captured_at"
+  ],
+  "title": "CollectedArtifact",
+  "type": "object"
+}

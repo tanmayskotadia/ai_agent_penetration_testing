@@ -334,6 +334,185 @@
         "title": "AuditEvent",
         "type": "object"
       },
+      "Capability": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter_implementation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Adapter Implementation"
+          },
+          "api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Version"
+          },
+          "demonstration_label": {
+            "default": "Planned; no verified scanner integration",
+            "title": "Demonstration Label",
+            "type": "string"
+          },
+          "guarded_containers": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Guarded Containers",
+            "type": "array"
+          },
+          "installed_edition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Installed Edition"
+          },
+          "installed_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Installed Version"
+          },
+          "last_verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Verified At"
+          },
+          "last_verified_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Verified Run Id"
+          },
+          "license_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "License Reference"
+          },
+          "license_status": {
+            "default": "unknown",
+            "enum": [
+              "verified",
+              "missing",
+              "unknown"
+            ],
+            "title": "License Status",
+            "type": "string"
+          },
+          "limitations": {
+            "default": [
+              "Native adapter and genuine fixture verification pending",
+              "Edition/API/license capability unverified"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "mode": {
+            "default": "planned",
+            "enum": [
+              "live",
+              "import-only",
+              "planned",
+              "unsupported"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "Nmap",
+              "Nessus",
+              "Greenbone",
+              "Nikto",
+              "OWASP ZAP",
+              "Burp Suite",
+              "Metasploit"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "status": {
+            "default": "planned",
+            "enum": [
+              "live",
+              "import-only",
+              "planned",
+              "unsupported"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supported_formats": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Supported Formats",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Capability",
+        "type": "object"
+      },
       "EvidenceCreate": {
         "additionalProperties": false,
         "properties": {
@@ -4554,6 +4733,98 @@
         "tags": [
           "platform"
         ]
+      }
+    },
+    "/api/v1/system/capabilities": {
+      "get": {
+        "operationId": "capabilities_api_v1_system_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Capability"
+                  },
+                  "title": "Response Capabilities Api V1 System Capabilities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "summary": "Capabilities"
       }
     },
     "/api/v1/system/status": {
