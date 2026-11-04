@@ -1,0 +1,17 @@
+# EXAMPLE ONLY. This is pending and cannot authorize a scan.
+# 192.0.2.0/24 and assessment.test are documentation/test-only destinations.
+schema_version: 1
+status: pending
+authorization: null
+valid_from: "2026-11-01T00:00:00+05:30"
+valid_until: "2026-11-08T00:00:00+05:30"
+lab_networks: [192.0.2.0/24]
+targets:
+  - asset_id: example-not-authorized
+    host: assessment.test
+    approved_addresses: [192.0.2.10]
+exclusions: []
+allowed_profiles: [discovery]
+rate_limits:
+  requests_per_second: 1
+  concurrent_jobs: 1

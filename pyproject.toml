@@ -10,11 +10,11 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "fastapi", "uvicorn[standard]", "pydantic-settings", "sqlalchemy",
-  "psycopg[binary]", "alembic", "celery[redis]",
+  "psycopg[binary]", "alembic", "celery[redis]", "pyyaml",
 ]
 
 [dependency-groups]
-dev = ["pytest", "httpx", "ruff", "mypy", "types-PyYAML", "pyyaml"]
+dev = ["pytest", "httpx", "ruff", "mypy", "types-PyYAML"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["backend/aegistrace", "workers/aegistrace_workers", "reports/aegistrace_reports"]

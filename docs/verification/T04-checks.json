@@ -1,0 +1,9 @@
+{
+  "task": "T04",
+  "status": "partial-blocked-on-organizer-permission",
+  "implemented": ["Bounded strict YAML manifest schema", "Current-time scope/document-hash/exclusion/profile checks", "Offline readiness CLI with no DNS or target traffic", "Fail-closed pending example and private actual-manifest path", "Lab provisioning/reset preservation contract"],
+  "verification": {"policy_tests_passed": 19, "example_readiness": "denied: missing-authorization", "live_execution_enabled": false},
+  "not_completed": ["Genuine organizer scope/source approval", "Actual authorized target provisioning", "Verified worker/target routing and egress denial", "Permitted target health and reset/teardown proof"],
+  "manual_required": "Obtain organizer-provided authorization with exact targets/exclusions, validity, profiles/validation actions, rates and allowed local/remote lab setup. Keep credentials and source documents private.",
+  "limitations": "A locally consistent manifest/hash does not authenticate organizer identity or implement the later runtime human-approval/egress controls. No target was contacted."
+}
