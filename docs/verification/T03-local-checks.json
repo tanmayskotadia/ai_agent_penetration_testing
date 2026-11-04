@@ -32,5 +32,12 @@
     "api_tests_and_frontend_build": "passed",
     "container_build": "failed: non-root user could not create /app/.venv; fixed directory ownership, retest pending",
     "cleanup": "fixed missing ephemeral POSTGRES_PASSWORD in cleanup environment"
+  },
+  "ci_second_run": {
+    "url": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/actions/runs/41807861494",
+    "images_build": "passed",
+    "postgres_migration_and_api_internal_health": "passed",
+    "host_http_access": "failed with internal-only network; added workspace ingress network only to API/frontend, keeping database/broker/worker on the internal control network",
+    "retest": "pending"
   }
 }

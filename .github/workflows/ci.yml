@@ -75,11 +75,17 @@ jobs:
         run: |
           docker compose up --build -d
           for attempt in $(seq 1 40); do
-            if curl --fail --silent http://127.0.0.1:8000/health/ready; then break; fi
+            if curl --fail --silent --max-time 3 http://127.0.0.1:8000/health/ready; then break; fi
             sleep 3
           done
           curl --fail http://127.0.0.1:8000/health/ready
           curl --fail http://127.0.0.1:5173/
+          curl --fail http://127.0.0.1:5173/api/v1/system/status
+      - name: Container diagnostics on failure
+        if: failure()
+        env:
+          POSTGRES_PASSWORD: ci-only-disposable
+        run: docker compose ps && docker compose logs --tail 60 api frontend migrate
       - name: Stop container profile
         if: always()
         env:

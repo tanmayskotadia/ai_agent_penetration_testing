@@ -36,7 +36,7 @@ services:
     build: .
     environment: *application-environment
     ports: [127.0.0.1:8000:8000]
-    networks: [control]
+    networks: [control, workspace]
     depends_on:
       migrate: {condition: service_completed_successfully}
     healthcheck:
@@ -56,10 +56,11 @@ services:
     build: frontend
     environment: {API_PROXY_TARGET: "http://api:8000"}
     ports: [127.0.0.1:5173:5173]
-    networks: [control]
+    networks: [control, workspace]
     depends_on:
       api: {condition: service_healthy}
 networks:
   control: {internal: true}
+  workspace: {}
 volumes:
   postgres-data:
