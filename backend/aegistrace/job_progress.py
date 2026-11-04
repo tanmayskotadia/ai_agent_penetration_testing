@@ -66,6 +66,9 @@ def append_progress(
             progress_events.c.job_id == str(job["id"]), progress_events.c.kind == "started"
         )
     ).scalar_one_or_none()
+    event_epoch = epoch if epoch is not None else job.get("epoch")
+    if event_epoch is not None and event_epoch < 1:
+        event_epoch = None
     payload = {
         "schema_version": "1.0",
         "job_id": str(job["id"]),
@@ -77,7 +80,7 @@ def append_progress(
         "attempt": job["attempt"] if attempt is None else attempt,
         "created_at": now,
         "worker_id": str(worker_id) if worker_id else job.get("worker_id"),
-        "epoch": epoch if epoch is not None else job.get("epoch"),
+        "epoch": event_epoch,
         "elapsed_ms": max(0, int((now - started) * 1000)) if started is not None else None,
         "tool_version": tool_version,
         "exit_code": exit_code,
