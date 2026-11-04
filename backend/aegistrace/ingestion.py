@@ -13,6 +13,7 @@ from aegistrace.auth import Identity, identity_dependency
 from aegistrace.evidence import EvidenceStore
 from aegistrace.ingestion_schema import inspections
 from aegistrace.mutations import mutation
+from aegistrace.native_intake import normalize_import
 from aegistrace.platform_api import current_scope, record_request, resource
 from aegistrace.repository import get_record, require_access
 from aegistrace.safe_parse import canonical, isolated_inspection, mapped_assets
@@ -43,6 +44,24 @@ class InspectionResult(ApiContract):
 def ingestion_router(engine: Engine, config: Settings) -> APIRouter:
     router = APIRouter(prefix="/api/v1/assessments/{assessment_id}/imports", tags=["ingestion"])
     actor_dependency = Depends(identity_dependency(config))
+
+    @router.post("/{import_id}/normalize-nmap")
+    def normalize(
+        assessment_id: UUID,
+        import_id: UUID,
+        body: InspectionRequest,
+        request: Request,
+        actor: Identity = actor_dependency,
+    ) -> JSONResponse:
+        return mutation(
+            engine,
+            request,
+            actor,
+            body.model_dump(mode="json"),
+            lambda connection: normalize_import(
+                connection, config, assessment_id, import_id, body.asset_mapping, actor
+            ),
+        )
 
     @router.post("/{import_id}/inspect", response_model=InspectionResult)
     def inspect_import(

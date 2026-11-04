@@ -256,7 +256,13 @@ def _worker(pipe: Connection, raw: bytes, tool: str, format_name: str, version: 
 
             resource.setrlimit(resource.RLIMIT_CPU, (2, 3))
             resource.setrlimit(resource.RLIMIT_AS, (384 * 1024 * 1024, 384 * 1024 * 1024))
-        payload = json.dumps(inspect_container(raw, tool, format_name, version)).encode()
+        if tool == "Nmap" and format_name == "nmap-normalize-v1":
+            from aegistrace.nmap_parse import normalize_nmap
+
+            value = normalize_nmap(raw, version)
+        else:
+            value = inspect_container(raw, tool, format_name, version)
+        payload = json.dumps(value).encode()
         if len(payload) > MAX_RESULT:
             payload = (
                 b'{"state":"quarantined","code":"result-limit","assets":[],"parsed_records":0}'

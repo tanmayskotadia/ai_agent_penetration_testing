@@ -1,0 +1,8 @@
+{
+  "task": "T20",
+  "status": "partial",
+  "verification": ["tests/test_nmap.py", "isolated bounded native-format parsing", "private API-to-canonical-database provenance and deduplication", "actual PostgreSQL intake in CI"],
+  "manual_intervention_now": "None; no local setup",
+  "remaining": ["Genuine permitted live Nmap capture and fixture comparison", "Verified binary/version/license and exact approved arguments", "T14 deployed runner and authenticated collector acceptance"],
+  "limits": ["Handcrafted XML is test-only", "Candidate parser does not promote the registry", "Native execution remains disabled", "Open ports/service guesses never establish vulnerabilities"]
+}
