@@ -8,10 +8,24 @@ from aegistrace.job_progress import append_progress
 from aegistrace.job_progress_schema import progress_events, protect_progress
 from aegistrace.job_schema import jobs
 from aegistrace.jobs import finish_job, start_job
+from aegistrace.scheduler_schema import buckets
 from sqlalchemy import select
 from sqlalchemy.exc import DatabaseError
 from test_jobs import policy_context as policy_context
 from test_jobs import queued
+
+
+@pytest.fixture(autouse=True)
+def restore_shared_dispatch_budget(policy_context):
+    """Keep these integration cases from starving later shared-bucket tests."""
+    yield
+    _, engine, _ = policy_context
+    with engine.begin() as connection:
+        connection.execute(
+            buckets.update()
+            .where(buckets.c.key == "global")
+            .values(tokens=1.0, rate=4.0, updated_at=time.time())
+        )
 
 
 def prepare(context):
