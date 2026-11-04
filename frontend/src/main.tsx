@@ -55,7 +55,8 @@ function HumanReview() {
       if (!response.ok) throw new Error("Review rejected: permission, expiry or action may have changed. Reload the assessment.");
       const updated = await response.json() as ApiSchemas["ApprovalView"];
       setQueue(current => current.map(value => value.id === updated.id ? updated : value));
-      setMessage(`Decision recorded: ${updated.state}. This does not claim a scanner executed.`);
+      setRefresh(value => value + 1);
+      setMessage("Review response received; refreshing the current state. No scanner execution is claimed.");
     } catch (failure) { setMessage(failure instanceof Error ? failure.message : "Unable to save review."); }
     finally { setBusy(false); }
   }
@@ -65,9 +66,21 @@ function HumanReview() {
     catch { /* Local sign-out still clears the in-memory credential. */ }
     finally { setToken(""); setAssessments([]); setSelected(""); setQueue([]); keys.current.clear(); setMessage(revoked ? "Signed out; server session revoked." : "Signed out in this browser. Server revocation was not confirmed; sessions also expire automatically."); }
   }
+  async function stopAssessment() {
+    if (!selected) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/v1/assessments/${selected}/controls/stop`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "X-Request-ID": crypto.randomUUID(), "Idempotency-Key": crypto.randomUUID() } });
+      if (!response.ok) throw new Error("Stop request rejected or not confirmed. Refresh current status.");
+      const result = await response.json() as { cancelled_before_start: number; running_cancel_requests: number; unknown_disconnected: number };
+      setMessage(`Assessment stopped for new work. Queued claims cancelled: ${result.cancelled_before_start}. Running cancellation requests: ${result.running_cancel_requests}. Disconnected/unknown: ${result.unknown_disconnected}.`);
+      setRefresh(value => value + 1);
+    } catch (failure) { setMessage(failure instanceof Error ? failure.message : "Stop was not confirmed."); }
+    finally { setBusy(false); }
+  }
   return <section aria-labelledby="human-review"><h2 id="human-review">Human action review</h2>
     <p>Review the exact destination, impact and rollback before recording a decision. Scanner execution remains disabled.</p>
-    {!token ? <form onSubmit={signIn}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required minLength={12} maxLength={128} /></label><button disabled={busy}>Sign in</button></form> : <><label>Assessment<select value={selected} onChange={event => setSelected(event.target.value)}><option value="">Select an assessment</option>{assessments.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><button onClick={signOut} disabled={busy}>Sign out</button><button disabled={busy || !selected} onClick={() => setRefresh(value => value + 1)}>Refresh reviews</button>{selected && queue.length === 0 && <p>No action reviews are available for this assessment.</p>}{queue.map(item => <article className="review-card" key={item.id}><h3>{item.action.tool} Â· {item.action.profile}</h3><p><strong>Destination:</strong> <code>{item.action.destination_url}</code></p><p><strong>Impact:</strong> {item.action.expected_impact}</p><p><strong>Parameters:</strong> <code>{JSON.stringify(item.action.parameters)}</code></p><p><strong>Rollback:</strong> {item.action.rollback_instructions}</p><p><strong>Maximum runtime:</strong> {item.action.max_runtime_seconds} seconds</p><p><strong>Scope revision:</strong> {item.scope_revision} Â· <strong>Expires:</strong> {item.valid_until}</p><p className="digest"><strong>Action digest:</strong> <code>{item.action_digest}</code></p><p>Status: {item.expired ? "expired" : item.state}</p>{item.allowed_decisions.map(choice => <button key={choice} disabled={busy || item.expired} onClick={() => decide(item, choice)}>{choice === "approve" ? "Approve this action" : "Deny this action"}</button>)}</article>)}</>}
+    {!token ? <form onSubmit={signIn}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required minLength={12} maxLength={128} /></label><button disabled={busy}>Sign in</button></form> : <><label>Assessment<select value={selected} onChange={event => setSelected(event.target.value)}><option value="">Select an assessment</option>{assessments.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><button onClick={signOut} disabled={busy}>Sign out</button><button disabled={busy || !selected} onClick={stopAssessment}>Stop assessment</button><button disabled={busy || !selected} onClick={() => setRefresh(value => value + 1)}>Refresh reviews</button>{selected && queue.length === 0 && <p>No action reviews are available for this assessment.</p>}{queue.map(item => <article className="review-card" key={item.id}><h3>{item.action.tool} Ã‚Â· {item.action.profile}</h3><p><strong>Destination:</strong> <code>{item.action.destination_url}</code></p><p><strong>Impact:</strong> {item.action.expected_impact}</p><p><strong>Parameters:</strong> <code>{JSON.stringify(item.action.parameters)}</code></p><p><strong>Rollback:</strong> {item.action.rollback_instructions}</p><p><strong>Maximum runtime:</strong> {item.action.max_runtime_seconds} seconds</p><p><strong>Scope revision:</strong> {item.scope_revision} Ã‚Â· <strong>Expires:</strong> {item.valid_until}</p><p className="digest"><strong>Action digest:</strong> <code>{item.action_digest}</code></p><p>Status: {item.expired ? "expired" : item.state}</p>{item.allowed_decisions.map(choice => <button key={choice} disabled={busy || item.expired} onClick={() => decide(item, choice)}>{choice === "approve" ? "Approve this action" : "Deny this action"}</button>)}</article>)}</>}
     <p role="status" aria-live="polite">{message}</p>
   </section>;
 }
@@ -86,7 +99,7 @@ function App() {
   return <main>
     <header><p className="eyebrow">EVIDENCE. REASONING. HUMAN CONTROL.</p><h1>AegisTrace</h1><p>A clearer path from security evidence to action.</p></header>
     <section aria-labelledby="readiness"><h2 id="readiness">Evidence platform</h2><p>Authenticated assessment, evidence and audit APIs are available. Analyst screens and scanner integrations are being built.</p><p className="notice">Live testing is disabled. Authorized scope and verified execution controls are required before live testing.</p>
-      <div role="status" aria-live="polite">{error || (status ? "Connected to the workspace" : "Connecting to the workspaceâ€¦")}</div>
+      <div role="status" aria-live="polite">{error || (status ? "Connected to the workspace" : "Connecting to the workspaceÃ¢â‚¬Â¦")}</div>
     </section>
     {status && <section aria-labelledby="coverage"><h2 id="coverage">Integration capabilities</h2><ul>{status.tools.map((tool) => <li key={tool.name}><div><span>{tool.name}</span><small className="capability-description">{tool.demonstration_label}</small><small className="capability-description">{(tool.limitations ?? []).join(". ")}</small></div><span className="badge">{tool.mode ?? "planned"}</span></li>)}</ul><p>Container inspection does not count as a working native integration. Recorded imports remain distinct from live scans.</p></section>}
     <HumanReview />

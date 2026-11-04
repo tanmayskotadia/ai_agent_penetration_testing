@@ -15,6 +15,7 @@ from aegistrace.api_contracts import ApiError
 from aegistrace.approval_api import approval_router
 from aegistrace.audit import AuditEvent, request_context
 from aegistrace.capabilities import Capability, capability_snapshot
+from aegistrace.control_api import control_router
 from aegistrace.db import make_engine
 from aegistrace.evidence_api import evidence_router
 from aegistrace.http_limits import BodyLimitMiddleware
@@ -49,6 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(policy_router(engine, config))
     app.include_router(identity_router(engine, config))
     app.include_router(approval_router(engine, config))
+    app.include_router(control_router(engine, config))
     app.add_middleware(BodyLimitMiddleware)
 
     def contracts() -> dict[str, Any]:
@@ -160,7 +162,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0009_approvals":
+            if revision != "0010_control":
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
         except SQLAlchemyError:
             return JSONResponse(

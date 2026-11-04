@@ -166,10 +166,14 @@ def request_approval(
     actor: Identity,
     resolver: Resolver = dns_addresses,
 ) -> dict[str, Any]:
+    from aegistrace.control import require_running
+
+    require_running(connection, assessment_id)
     require_access(connection, assessment_id, actor.subject)
     if actor.principal_kind != "human" or actor.role not in {"analyst", "reviewer", "admin"}:
         raise PolicyError("human action request required")
     value = validate_action(connection, assessment_id, body, resolver)
+    require_running(connection, assessment_id)
     approval_id = uuid4()
     digest = action_digest(value)
     payload = value | {
@@ -269,6 +273,9 @@ def decide(
     if row["state"] not in allowed[decision]:
         raise PolicyError("approval is no longer reviewable")
     if decision == "approve":
+        from aegistrace.control import require_running
+
+        require_running(connection, assessment_id)
         if datetime.fromisoformat(row["payload"]["valid_until"]) <= datetime.now(UTC):
             raise PolicyError("approval expired")
         body = ActionRequest.model_validate(row["payload"]["action"])
@@ -349,12 +356,16 @@ def consume(
     expected_digest: str,
     resolver: Resolver = dns_addresses,
 ) -> dict[str, Any]:
+    from aegistrace.control import require_running
+
+    require_running(connection, assessment_id)
     connection.execute(
         assessments.update()
         .where(assessments.c.id == str(assessment_id))
         .values(owner_id=assessments.c.owner_id)
     )
     # No public endpoint. Control dispatch reloads this persisted human decision.
+    require_running(connection, assessment_id)
     connection.execute(
         grants.update()
         .where(grants.c.id == str(approval_id), grants.c.assessment_id == str(assessment_id))
