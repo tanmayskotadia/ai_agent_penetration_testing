@@ -1,5 +1,6 @@
 """Authenticated quarantine boundary for recorded native containers, not tool adapters."""
 
+from collections.abc import Callable
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -18,6 +19,7 @@ from aegistrace.openapi_intake import normalize_openapi_import
 from aegistrace.platform_api import current_scope, record_request, resource
 from aegistrace.repository import get_record, require_access
 from aegistrace.safe_parse import canonical, isolated_inspection, mapped_assets
+from aegistrace.scanner_intake import normalize_scanner_import
 from aegistrace.settings import Settings
 from aegistrace.web_intake import normalize_nikto_import, normalize_zap_import
 
@@ -38,6 +40,7 @@ class InspectionResult(ApiContract):
     assets: list[str]
     out_of_scope_assets: list[str]
     parsed_records: int
+    incomplete: bool = False
     findings_created: Literal[0] = 0
     normalizer_enabled: Literal[False] = False
     diagnostics: list[str]
@@ -119,6 +122,45 @@ def ingestion_router(engine: Engine, config: Settings) -> APIRouter:
             ),
         )
 
+    def make_scanner_normalizer(tool_name: str) -> Callable[..., JSONResponse]:
+
+        def scanner_normalizer(
+            assessment_id: UUID,
+            import_id: UUID,
+            body: InspectionRequest,
+            request: Request,
+            actor: Identity = actor_dependency,
+        ) -> JSONResponse:
+            return mutation(
+                engine,
+                request,
+                actor,
+                body.model_dump(mode="json"),
+                lambda connection: normalize_scanner_import(
+                    connection,
+                    config,
+                    assessment_id,
+                    import_id,
+                    body.asset_mapping,
+                    actor,
+                    tool_name,
+                ),
+            )
+
+        return scanner_normalizer
+
+    for route_name, tool_name in [
+        ("normalize-nessus", "Nessus"),
+        ("normalize-greenbone", "Greenbone"),
+        ("normalize-burp", "Burp Suite"),
+    ]:
+        router.add_api_route(
+            "/{import_id}/" + route_name,
+            make_scanner_normalizer(tool_name),
+            methods=["POST"],
+            name=route_name,
+        )
+
     @router.post("/{import_id}/inspect", response_model=InspectionResult)
     def inspect_import(
         assessment_id: UUID,
@@ -186,6 +228,7 @@ def ingestion_router(engine: Engine, config: Settings) -> APIRouter:
                 assets=parsed["assets"],
                 out_of_scope_assets=excluded,
                 parsed_records=parsed["parsed_records"],
+                incomplete=bool(parsed.get("incomplete", False)),
                 diagnostics=[
                     "Original preserved privately; no normalized findings created",
                     "Container inspection is not authenticity verification or a working native adapter",

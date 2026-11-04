@@ -28,7 +28,9 @@
       "adapter_implementation": null,
       "api_version": null,
       "demonstration_label": "Planned; no verified scanner integration",
-      "guarded_containers": [],
+      "guarded_containers": [
+        "nessus-xml"
+      ],
       "installed_edition": null,
       "installed_version": null,
       "last_verified_at": null,
@@ -49,7 +51,9 @@
       "adapter_implementation": null,
       "api_version": null,
       "demonstration_label": "Planned; no verified scanner integration",
-      "guarded_containers": [],
+      "guarded_containers": [
+        "greenbone-xml"
+      ],
       "installed_edition": null,
       "installed_version": null,
       "last_verified_at": null,
@@ -116,7 +120,9 @@
       "adapter_implementation": null,
       "api_version": null,
       "demonstration_label": "Planned; no verified scanner integration",
-      "guarded_containers": [],
+      "guarded_containers": [
+        "burp-xml"
+      ],
       "installed_edition": null,
       "installed_version": null,
       "last_verified_at": null,

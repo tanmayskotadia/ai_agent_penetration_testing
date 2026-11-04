@@ -269,6 +269,18 @@ def inspect_container(raw: bytes, tool: str, format_name: str, tool_version: str
                 raise ParseRejected(str(normalized["code"]))
             assets.update(normalized["assets"])
             records = normalized["parsed_records"]
+        elif (tool, format_name) in {
+            ("Nessus", "nessus-xml"),
+            ("Greenbone", "greenbone-xml"),
+            ("Burp Suite", "burp-xml"),
+        }:
+            from aegistrace.scanner_parse import parse_scanner_export
+
+            normalized = parse_scanner_export(raw, tool)
+            if normalized["state"] == "quarantined":
+                raise ParseRejected(str(normalized["code"]))
+            assets.update(normalized["assets"])
+            records = normalized["parsed_records"]
         else:
             raise ParseRejected("unsupported-format")
         if not assets:
@@ -276,6 +288,8 @@ def inspect_container(raw: bytes, tool: str, format_name: str, tool_version: str
         result.update(state="container-validated", code="normalizer-not-enabled")
     except ParseRejected as error:
         result["code"] = str(error)
+        if str(error) == "truncated-or-malformed-xml":
+            result["incomplete"] = True
     except (ValueError, KeyError, UnicodeError, SafeET.ParseError):
         result["code"] = "malformed"
     except Exception:
@@ -316,6 +330,14 @@ def _worker(pipe: Connection, raw: bytes, tool: str, format_name: str, version: 
             from aegistrace.openapi_parse import parse_openapi
 
             value = parse_openapi(raw, version)
+        elif (tool, format_name) in {
+            ("Nessus", "nessus-normalize-v1"),
+            ("Greenbone", "greenbone-normalize-v1"),
+            ("Burp Suite", "burp-normalize-v1"),
+        }:
+            from aegistrace.scanner_parse import parse_scanner_export
+
+            value = parse_scanner_export(raw, tool)
         else:
             value = inspect_container(raw, tool, format_name, version)
         payload = json.dumps(value).encode()

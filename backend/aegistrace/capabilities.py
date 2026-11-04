@@ -83,8 +83,11 @@ class CapabilityRegistry:
     def __init__(self) -> None:
         guards: dict[ToolName, tuple[str, ...]] = {
             "Nmap": ("nmap-xml",),
+            "Nessus": ("nessus-xml",),
+            "Greenbone": ("greenbone-xml",),
             "Nikto": ("nikto-json",),
             "OWASP ZAP": ("zap-alerts-json",),
+            "Burp Suite": ("burp-xml",),
         }
         self._entries = {
             name: Capability(name=name, guarded_containers=guards.get(name, ()))

@@ -5,14 +5,14 @@ The API, frontend and report snapshot helper use `aegistrace.capabilities.capabi
 | Tool | Current mode | Edition/version/license | Native integration |
 |---|---|---|---|
 | Nmap | planned | unverified | No normalizer/live adapter; bounded XML container guard only |
-| Nessus | planned | unverified | No entitled product API/export adapter verified |
-| Greenbone / OpenVAS | planned | unverified | No installed manager/feed/API adapter verified |
+| Nessus | planned | unverified | Candidate bounded offline `.nessus` XML parser and source-linked host/plugin observations; no genuine version-matched capture, Tenable API entitlement, or live runner verified |
+| Greenbone / OpenVAS | planned | unverified | Candidate bounded offline XML report parser; QoD stays source metadata; no genuine capture, GMP client, manager/feed/configuration readiness, or live runner verified |
 | Nikto | planned | unverified | Candidate offline 2.6.x JSON import normalizer; no verified adapter or live runner; genuine versioned capture and permitted lab demonstration pending |
 | OWASP ZAP | planned | unverified | Candidate offline Alerts JSON normalizer; no verified adapter or live runner; genuine versioned capture and permitted lab demonstration pending |
-| Burp Suite | planned | unverified | Edition/export/API entitlement unverified |
+| Burp Suite | planned | unverified | Candidate bounded offline issue XML parser; base64 request/response bodies stay in private encrypted original; no genuine capture, edition/export/API entitlement, or live runner verified |
 | Metasploit | planned | unverified | No module execution or validation adapter enabled |
 
-**Verified working integration count: 0.** Nmap and ZAP now have candidate offline import paths, but handcrafted contracts and user-uploaded files do not verify source authenticity or establish scanner integration. The PDF's minimum three native integrations/imports with network and web coverage remains an M05 gate. The full seven-tool target remains M06 work. Neither mock classes nor container recognition satisfies those gates.
+**Verified working integration count: 0.** Nmap, Nessus, Greenbone, ZAP, Nikto, Burp and OpenAPI now have offline candidate parsing/normalization paths in the application. Handcrafted parser tests and user-declared metadata do not verify source authenticity, licensing, installed edition, or scanner integration; capability mode therefore remains `planned`. The PDF's minimum three genuine permitted integrations/imports with network and web coverage remains an M05 gate. M06's import implementations still require genuine format/version fixtures and review before an issue can close. Neither parser tests nor format recognition satisfy those gates.
 
 ## Typed adapter boundary
 
