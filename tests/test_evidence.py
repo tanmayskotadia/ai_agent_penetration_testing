@@ -5,7 +5,7 @@ import os
 import secrets
 import time
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from aegistrace.api import create_app
@@ -71,6 +71,7 @@ def evidence_context(tmp_path, request):
 def test_authenticated_trace_download_and_separate_reviewed_redaction(evidence_context):
     settings, engine, assessment, evidence, raw = evidence_context
     headers = {"Authorization": "Bearer " + issue_identity(settings, "owner", "reviewer")}
+    headers |= {"X-Request-ID": str(uuid4()), "Idempotency-Key": str(uuid4())}
     route = f"/api/v1/assessments/{assessment.id}/evidence/{evidence.id}"
     with TestClient(create_app(settings)) as client:
         assert (
@@ -83,7 +84,7 @@ def test_authenticated_trace_download_and_separate_reviewed_redaction(evidence_c
             == 201
         )
         assert client.get(route + "/original").status_code == 401
-        denied = {"Authorization": "Bearer " + issue_identity(settings, "other")}
+        denied = headers | {"Authorization": "Bearer " + issue_identity(settings, "other")}
         assert client.post(route + "/download-ticket", headers=denied).status_code == 404
         ticket = client.post(route + "/download-ticket", headers=headers).json()["ticket"]
         download = client.get(route + "/original", headers=headers | {"X-Download-Ticket": ticket})

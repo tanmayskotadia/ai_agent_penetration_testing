@@ -1,0 +1,7 @@
+{
+  "task": "T10",
+  "requirements": ["R01", "R02", "R10", "R12", "R22", "R28"],
+  "verification": ["tests/test_api_contracts.py", "tests/test_evidence.py", "scripts/export_api_contracts.py --check", "frontend production TypeScript build"],
+  "manual_intervention": "None for contract acceptance. Operator-issued identities precede full M03 sign-in; actual hosted secret injection is a deployment prerequisite, not participant local setup.",
+  "limits": ["Jobs and reports are explicitly blocked requests, not executed capabilities", "Approvals are pending requests, not grants", "SSE uses finite persisted batches", "List endpoints cap output at 100; broad analyst navigation comes later"]
+}

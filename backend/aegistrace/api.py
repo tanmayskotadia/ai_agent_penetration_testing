@@ -4,13 +4,19 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from aegistrace.audit import request_context
+from aegistrace.api_contracts import ApiError
+from aegistrace.audit import AuditEvent, request_context
 from aegistrace.db import make_engine
-from aegistrace.evidence import evidence_router
+from aegistrace.evidence_api import evidence_router
+from aegistrace.http_limits import BodyLimitMiddleware
+from aegistrace.platform_api import platform_router
 from aegistrace.settings import Settings
 
 TOOLS = ("Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit")
@@ -27,6 +33,83 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="AegisTrace", version="0.1.0", lifespan=lifespan)
     app.include_router(evidence_router(engine, config))
+    app.include_router(platform_router(engine, config))
+    app.add_middleware(BodyLimitMiddleware)
+
+    def contracts() -> dict[str, Any]:
+        if app.openapi_schema is None:
+            schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+            components = schema.setdefault("components", {}).setdefault("schemas", {})
+            components["AuditEvent"] = AuditEvent.model_json_schema()
+            components["ApiError"] = ApiError.model_json_schema()
+            for path, methods in schema["paths"].items():
+                if not path.startswith("/api/v1/"):
+                    continue
+                for method, operation in methods.items():
+                    if method not in {"get", "post", "put", "patch", "delete"}:
+                        continue
+                    for code in ["401", "403", "404", "409", "413", "422", "503"]:
+                        operation.setdefault("responses", {})[code] = {
+                            "description": "Typed API error",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/ApiError"}
+                                }
+                            },
+                        }
+                    if method in {"post", "put", "patch", "delete"}:
+                        operation.setdefault("parameters", []).extend(
+                            [
+                                {
+                                    "name": "X-Request-ID",
+                                    "in": "header",
+                                    "required": True,
+                                    "schema": {"type": "string", "format": "uuid"},
+                                },
+                                {
+                                    "name": "Idempotency-Key",
+                                    "in": "header",
+                                    "required": True,
+                                    "schema": {"type": "string", "minLength": 8, "maxLength": 128},
+                                },
+                            ]
+                        )
+            app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = contracts  # type: ignore[method-assign]  # FastAPI's documented schema override.
+
+    @app.exception_handler(StarletteHTTPException)
+    async def typed_error(request: Request, error: StarletteHTTPException) -> JSONResponse:
+        codes = {
+            401: "unauthenticated",
+            403: "forbidden",
+            404: "not-found",
+            409: "conflict",
+            413: "body-too-large",
+            422: "invalid-request",
+            503: "unavailable",
+        }
+        return JSONResponse(
+            {
+                "code": codes.get(error.status_code, "request-failed"),
+                "message": str(error.detail),
+                "request_id": request.headers.get("X-Request-ID"),
+            },
+            error.status_code,
+            headers=error.headers,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(request: Request, _: RequestValidationError) -> JSONResponse:
+        return JSONResponse(
+            {
+                "code": "invalid-request",
+                "message": "Input does not match the versioned request schema",
+                "request_id": request.headers.get("X-Request-ID"),
+            },
+            422,
+        )
 
     @app.middleware("http")
     async def attribution(request: Request, call_next: Any) -> Any:
@@ -56,7 +139,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0004_audit":
+            if revision != "0005_api":
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
         except SQLAlchemyError:
             return JSONResponse(

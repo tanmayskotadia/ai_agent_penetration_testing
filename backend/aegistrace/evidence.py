@@ -4,18 +4,14 @@ import hashlib
 import html
 import re
 import secrets
-import time
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
-from sqlalchemy import Connection, Engine, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Connection, select
 
 from aegistrace.audit import AuditEvent, append_event, request_context
-from aegistrace.auth import Identity, identity_dependency, seal, unseal
 from aegistrace.evidence_schema import access_events, objects
 from aegistrace.repository import get_record, require_owner
 from aegistrace.schema_v1 import report_snapshots
@@ -216,157 +212,3 @@ class EvidenceStore:
                 connection.execute(objects.delete().where(objects.c.id == row["id"]))
                 count += 1
         return count
-
-
-def evidence_router(engine: Engine, config: Settings) -> APIRouter:
-    router = APIRouter(prefix="/api/v1/assessments/{assessment_id}/evidence", tags=["evidence"])
-    identity = identity_dependency(config)
-    actor_dependency = Depends(identity)
-
-    def store() -> EvidenceStore:
-        try:
-            return EvidenceStore(config)
-        except EvidenceError as error:
-            raise HTTPException(503, str(error)) from error
-
-    @router.put("/{evidence_id}/original", status_code=201)
-    async def upload(
-        assessment_id: UUID,
-        evidence_id: UUID,
-        request: Request,
-        expires_at: datetime,
-        actor: Identity = actor_dependency,
-    ) -> dict[str, str]:
-        if actor.role == "auditor":
-            raise HTTPException(403, "Read-only role")
-        raw = bytearray()
-        async for chunk in request.stream():
-            raw.extend(chunk)
-            if len(raw) > MAX_BYTES:
-                raise HTTPException(413, "Evidence exceeds 2 MiB")
-        try:
-            with engine.begin() as connection:
-                store().put(
-                    connection, assessment_id, evidence_id, actor.subject, bytes(raw), expires_at
-                )
-        except LookupError as error:
-            raise HTTPException(404, "Resource not found") from error
-        except IntegrityError as error:
-            raise HTTPException(409, "Original already stored") from error
-        except EvidenceError as error:
-            raise HTTPException(422, str(error)) from error
-        return {"id": str(evidence_id), "status": "stored"}
-
-    @router.post("/{evidence_id}/download-ticket")
-    def ticket(
-        assessment_id: UUID, evidence_id: UUID, actor: Identity = actor_dependency
-    ) -> dict[str, str]:
-        try:
-            with engine.begin() as connection:
-                store().read(connection, assessment_id, evidence_id, actor.subject)
-        except LookupError as error:
-            raise HTTPException(404, "Resource not found") from error
-        except EvidenceError as error:
-            raise HTTPException(409, str(error)) from error
-        value = seal(
-            config.app_secret.get_secret_value(),
-            "download",
-            {
-                "assessment_id": str(assessment_id),
-                "evidence_id": str(evidence_id),
-                "subject": actor.subject,
-                "expires": min(actor.expires, int(time.time()) + 60),
-            },
-        )
-        return {
-            "ticket": value,
-            "expires_in": "60",
-            "requires": "Bearer identity and X-Download-Ticket header",
-        }
-
-    @router.get("/{evidence_id}/original")
-    def download(
-        assessment_id: UUID,
-        evidence_id: UUID,
-        x_download_ticket: str = Header(),
-        actor: Identity = actor_dependency,
-    ) -> Response:
-        try:
-            claims = unseal(config.app_secret.get_secret_value(), "download", x_download_ticket)
-            if any(
-                claims.get(k) != v
-                for k, v in {
-                    "assessment_id": str(assessment_id),
-                    "evidence_id": str(evidence_id),
-                    "subject": actor.subject,
-                }.items()
-            ):
-                raise ValueError("wrong ticket")
-        except ValueError as error:
-            raise HTTPException(403, "Invalid or expired download ticket") from error
-        try:
-            with engine.begin() as connection:
-                raw = store().read(connection, assessment_id, evidence_id, actor.subject)
-        except LookupError as error:
-            raise HTTPException(404, "Resource not found") from error
-        except EvidenceError as error:
-            raise HTTPException(409, str(error)) from error
-        return Response(
-            raw,
-            media_type="application/octet-stream",
-            headers={
-                "Cache-Control": "no-store",
-                "Content-Disposition": f'attachment; filename="{evidence_id}.bin"',
-                "X-Content-Type-Options": "nosniff",
-            },
-        )
-
-    @router.post("/{evidence_id}/redaction")
-    def redact(
-        assessment_id: UUID, evidence_id: UUID, actor: Identity = actor_dependency
-    ) -> dict[str, str]:
-        if actor.role == "auditor":
-            raise HTTPException(403, "Read-only role")
-        try:
-            with engine.begin() as connection:
-                snippet = store().redact(connection, assessment_id, evidence_id, actor.subject)
-        except LookupError as error:
-            raise HTTPException(404, "Resource not found") from error
-        except EvidenceError as error:
-            raise HTTPException(409, str(error)) from error
-        return {
-            "snippet": snippet,
-            "review": "required",
-            "information_kind": "redacted-source-derivative",
-        }
-
-    @router.post("/{evidence_id}/redaction-review")
-    def review(
-        assessment_id: UUID, evidence_id: UUID, actor: Identity = actor_dependency
-    ) -> dict[str, str]:
-        if actor.role != "reviewer":
-            raise HTTPException(403, "Reviewer identity required")
-        try:
-            with engine.begin() as connection:
-                require_owner(connection, assessment_id, actor.subject)
-                row = connection.execute(
-                    select(objects.c.redacted).where(
-                        objects.c.id == str(evidence_id),
-                        objects.c.assessment_id == str(assessment_id),
-                    )
-                ).first()
-                if row is None or row[0] is None:
-                    raise LookupError("redaction not found")
-                connection.execute(
-                    objects.update()
-                    .where(objects.c.id == str(evidence_id))
-                    .values(redaction_reviewed=True)
-                )
-                EvidenceStore.event(
-                    connection, assessment_id, evidence_id, actor.subject, "redaction-reviewed"
-                )
-        except LookupError as error:
-            raise HTTPException(404, "Resource not found") from error
-        return {"status": "reviewed"}
-
-    return router
