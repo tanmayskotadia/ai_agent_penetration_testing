@@ -182,7 +182,9 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
         return mutation(engine, request, actor, body.model_dump(mode="json"), apply)
 
     @router.get("/assessments/{assessment_id}/scopes", response_model=list[ScopeVersion])
-    def list_scopes(assessment_id: UUID, actor: Identity = actor_dependency) -> list[dict[str, Any]]:
+    def list_scopes(
+        assessment_id: UUID, actor: Identity = actor_dependency
+    ) -> list[dict[str, Any]]:
         with engine.connect() as connection:
             require_access(connection, assessment_id, actor.subject)
             return [
