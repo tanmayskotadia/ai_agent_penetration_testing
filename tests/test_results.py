@@ -47,8 +47,9 @@ def test_revision_and_export_are_frozen_and_late_callback_is_quarantined(import_
     assert frozen.json()["snapshot"]["report_renderer_enabled"] is False
     engine = client.app.state.engine
     with engine.begin() as connection:
-        # The shared test fixture creates metadata directly instead of running migrations.
-        protect_results(connection)
+        # The SQLite fixture creates metadata directly instead of running migrations.
+        if connection.dialect.name == "sqlite":
+            protect_results(connection)
         with pytest.raises(DatabaseError), connection.begin_nested():
             connection.execute(
                 exports.update().where(exports.c.id == export.json()["id"]).values(sha256="0" * 64)
