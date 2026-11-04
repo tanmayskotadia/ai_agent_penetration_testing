@@ -1,0 +1,15 @@
+# Human action approval — T16
+
+`POST /assessments/{id}/action-approvals` persists an immutable review snapshot: exact tool/template/profile, target URL, bounded parameters/hash, scope/policy/plan versions, expected impact, cited evidence, runtime limit and rollback/reset instructions. The action digest covers the entire snapshot. Legacy `/approvals` workflow requests remain request-only and cannot authorize execution.
+
+Authenticated humans review the complete snapshot through GET/list and the UI, then POST a decision with the displayed action digest. Only current human reviewer/admin membership can approve/deny/revoke. Extra `approved` flags and model-provided authority fields are rejected. Duplicate button submissions use transactional idempotency; changed digests or repeated decisions with a new key fail. Expired reviews expose no allowed approval buttons.
+
+Consumption has no public API or unrestricted Celery task. Control dispatch reloads policy/current scope, checks plan revision, verifies snapshot/parameter integrity, expiry and current human reviewer account/session/membership, rechecks DNS/profile/peer permissions and reserves shared limits. Assessment/approval locks serialize consumption. One approval can produce exactly one persisted dispatch claim; concurrent workers cannot both consume it. The claim is explicitly `claimed-not-executed` and contains pinned destination, action digest, reviewer and a deadline bounded by runtime/policy/review expiry. This milestone does not start a scanner.
+
+Approved reviews survive restart through PostgreSQL state, not in-memory booleans. Revoked or expired reviewer sessions/accounts/memberships invalidate unconsumed approvals. Scope/plan edits, policy mismatch, denied/revoked/consumed state, changed parameters, expired policy and mismatched digests deny dispatch. Consumed approvals never become reusable after worker failure; reconcile the claim/outcome instead. Every review/claim outcome references the human and reviewed action in canonical audit history.
+
+All initial profiles require explicit approval, including discovery/passive actions; this is deliberately stricter than a future per-rules-of-engagement exemption. The only template identifiers are fixed and parameters contain no executable name or shell fragment. Metasploit/offensive validation is disabled: its placeholder can be proposed for review but never approved/consumed. Real narrowly allowed modules need later native integration, isolated networking and reset evidence.
+
+Tests use reserved addresses and synthetic authority records, never a security scan. `tests/test_approvals.py` exercises human review/persisted reload, two-worker race, denied/revoked/stale/tampered/wrong-digest paths, duplicate clicks and forbidden fields. Hosted CI repeats actual PostgreSQL consumption races. R04/R12/R18/R26/R31/W01 are enforced at the approval boundary; genuine approved lab execution remains later native/lab acceptance.
+
+Manual intervention now: none. A real operator reviews each actual action at runtime; the participant need not preapprove fictitious assessments, contact organizers or install local tools.

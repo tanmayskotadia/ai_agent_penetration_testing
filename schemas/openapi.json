@@ -1,6 +1,128 @@
 {
   "components": {
     "schemas": {
+      "ActionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "destination_url": {
+            "maxLength": 2500,
+            "minLength": 1,
+            "title": "Destination Url",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "default": [],
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "expected_impact": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Expected Impact",
+            "type": "string"
+          },
+          "max_runtime_seconds": {
+            "maximum": 300.0,
+            "minimum": 1.0,
+            "title": "Max Runtime Seconds",
+            "type": "integer"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "maxProperties": 2,
+            "propertyNames": {
+              "enum": [
+                "timeout_seconds",
+                "max_redirects"
+              ]
+            },
+            "title": "Parameters",
+            "type": "object"
+          },
+          "plan_id": {
+            "format": "uuid",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "plan_revision": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Plan Revision",
+            "type": "integer"
+          },
+          "policy_id": {
+            "format": "uuid",
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "profile": {
+            "enum": [
+              "discovery",
+              "passive-web",
+              "active-web",
+              "controlled-validation"
+            ],
+            "title": "Profile",
+            "type": "string"
+          },
+          "rollback_instructions": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Rollback Instructions",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "template": {
+            "enum": [
+              "nmap.connect.v1",
+              "zap.passive.v1",
+              "zap.active.v1",
+              "metasploit.disabled"
+            ],
+            "title": "Template",
+            "type": "string"
+          },
+          "tool": {
+            "enum": [
+              "Nmap",
+              "Nessus",
+              "Greenbone",
+              "Nikto",
+              "OWASP ZAP",
+              "Burp Suite",
+              "Metasploit"
+            ],
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy_id",
+          "plan_id",
+          "plan_revision",
+          "tool",
+          "template",
+          "profile",
+          "destination_url",
+          "expected_impact",
+          "rollback_instructions",
+          "max_runtime_seconds"
+        ],
+        "title": "ActionRequest",
+        "type": "object"
+      },
       "ApiError": {
         "properties": {
           "code": {
@@ -62,6 +184,118 @@
           "action_digest"
         ],
         "title": "ApprovalCreate",
+        "type": "object"
+      },
+      "ApprovalView": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ActionRequest"
+          },
+          "action_digest": {
+            "title": "Action Digest",
+            "type": "string"
+          },
+          "allowed_decisions": {
+            "items": {
+              "enum": [
+                "approve",
+                "deny"
+              ],
+              "type": "string"
+            },
+            "title": "Allowed Decisions",
+            "type": "array"
+          },
+          "assessment_id": {
+            "format": "uuid",
+            "title": "Assessment Id",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "execution_enabled": {
+            "const": false,
+            "default": false,
+            "title": "Execution Enabled",
+            "type": "boolean"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "parameter_hash": {
+            "title": "Parameter Hash",
+            "type": "string"
+          },
+          "policy_digest": {
+            "title": "Policy Digest",
+            "type": "string"
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer"
+          },
+          "scope_id": {
+            "format": "uuid",
+            "title": "Scope Id",
+            "type": "string"
+          },
+          "scope_revision": {
+            "title": "Scope Revision",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "pending-review",
+              "approved",
+              "denied",
+              "revoked",
+              "consumed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "valid_until": {
+            "title": "Valid Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "assessment_id",
+          "action",
+          "action_digest",
+          "parameter_hash",
+          "scope_id",
+          "scope_revision",
+          "policy_digest",
+          "valid_until",
+          "created_by",
+          "created_at",
+          "state",
+          "reviewer",
+          "expired",
+          "allowed_decisions"
+        ],
+        "title": "ApprovalView",
         "type": "object"
       },
       "Assessment": {
@@ -1369,6 +1603,31 @@
         "title": "ReportCreate",
         "type": "object"
       },
+      "ReviewDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "action_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Action Digest",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "approve",
+              "deny",
+              "revoke"
+            ],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "action_digest"
+        ],
+        "title": "ReviewDecision",
+        "type": "object"
+      },
       "RunCreate": {
         "additionalProperties": false,
         "properties": {
@@ -2208,6 +2467,518 @@
         "summary": "Get Assessment",
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/action-approvals": {
+      "get": {
+        "operationId": "listing_api_v1_assessments__assessment_id__action_approvals_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalView"
+                  },
+                  "title": "Response Listing Api V1 Assessments  Assessment Id  Action Approvals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Listing",
+        "tags": [
+          "human-approval"
+        ]
+      },
+      "post": {
+        "operationId": "create_api_v1_assessments__assessment_id__action_approvals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-ID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create",
+        "tags": [
+          "human-approval"
+        ]
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/action-approvals/{approval_id}": {
+      "get": {
+        "operationId": "read_api_v1_assessments__assessment_id__action_approvals__approval_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read",
+        "tags": [
+          "human-approval"
+        ]
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/action-approvals/{approval_id}/decision": {
+      "post": {
+        "operationId": "review_api_v1_assessments__assessment_id__action_approvals__approval_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-ID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Review",
+        "tags": [
+          "human-approval"
         ]
       }
     },

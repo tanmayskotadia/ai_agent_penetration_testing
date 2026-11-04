@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from aegistrace.api_contracts import ApiError
+from aegistrace.approval_api import approval_router
 from aegistrace.audit import AuditEvent, request_context
 from aegistrace.capabilities import Capability, capability_snapshot
 from aegistrace.db import make_engine
@@ -47,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ingestion_router(engine, config))
     app.include_router(policy_router(engine, config))
     app.include_router(identity_router(engine, config))
+    app.include_router(approval_router(engine, config))
     app.add_middleware(BodyLimitMiddleware)
 
     def contracts() -> dict[str, Any]:
@@ -158,7 +160,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0008_identity":
+            if revision != "0009_approvals":
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
         except SQLAlchemyError:
             return JSONResponse(
