@@ -70,7 +70,9 @@
       "adapter_implementation": null,
       "api_version": null,
       "demonstration_label": "Planned; no verified scanner integration",
-      "guarded_containers": [],
+      "guarded_containers": [
+        "nikto-json"
+      ],
       "installed_edition": null,
       "installed_version": null,
       "last_verified_at": null,

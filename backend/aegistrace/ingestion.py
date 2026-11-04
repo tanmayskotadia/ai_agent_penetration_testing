@@ -14,10 +14,12 @@ from aegistrace.evidence import EvidenceStore
 from aegistrace.ingestion_schema import inspections
 from aegistrace.mutations import mutation
 from aegistrace.native_intake import normalize_import
+from aegistrace.openapi_intake import normalize_openapi_import
 from aegistrace.platform_api import current_scope, record_request, resource
 from aegistrace.repository import get_record, require_access
 from aegistrace.safe_parse import canonical, isolated_inspection, mapped_assets
 from aegistrace.settings import Settings
+from aegistrace.web_intake import normalize_nikto_import, normalize_zap_import
 
 AssetString = Annotated[str, StringConstraints(min_length=1, max_length=500)]
 
@@ -59,6 +61,60 @@ def ingestion_router(engine: Engine, config: Settings) -> APIRouter:
             actor,
             body.model_dump(mode="json"),
             lambda connection: normalize_import(
+                connection, config, assessment_id, import_id, body.asset_mapping, actor
+            ),
+        )
+
+    @router.post("/{import_id}/normalize-zap")
+    def normalize_zap(
+        assessment_id: UUID,
+        import_id: UUID,
+        body: InspectionRequest,
+        request: Request,
+        actor: Identity = actor_dependency,
+    ) -> JSONResponse:
+        return mutation(
+            engine,
+            request,
+            actor,
+            body.model_dump(mode="json"),
+            lambda connection: normalize_zap_import(
+                connection, config, assessment_id, import_id, body.asset_mapping, actor
+            ),
+        )
+
+    @router.post("/{import_id}/normalize-nikto")
+    def normalize_nikto(
+        assessment_id: UUID,
+        import_id: UUID,
+        body: InspectionRequest,
+        request: Request,
+        actor: Identity = actor_dependency,
+    ) -> JSONResponse:
+        return mutation(
+            engine,
+            request,
+            actor,
+            body.model_dump(mode="json"),
+            lambda connection: normalize_nikto_import(
+                connection, config, assessment_id, import_id, body.asset_mapping, actor
+            ),
+        )
+
+    @router.post("/{import_id}/normalize-openapi")
+    def normalize_openapi(
+        assessment_id: UUID,
+        import_id: UUID,
+        body: InspectionRequest,
+        request: Request,
+        actor: Identity = actor_dependency,
+    ) -> JSONResponse:
+        return mutation(
+            engine,
+            request,
+            actor,
+            body.model_dump(mode="json"),
+            lambda connection: normalize_openapi_import(
                 connection, config, assessment_id, import_id, body.asset_mapping, actor
             ),
         )

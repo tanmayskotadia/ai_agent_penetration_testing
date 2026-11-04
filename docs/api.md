@@ -29,6 +29,11 @@ All routes below start `/api/v1`. POST/PUT payload contracts use schema version 
 | POST `/assessments/{id}/jobs` | Persist request with `blocked`, `execution-not-enabled`; never sends a scanner task |
 | POST `/assessments/{id}/imports` | Persist supported-tool/format/evidence request as `pending-ingestion`; T11 supplies the ingestion boundary |
 | POST `/assessments/{id}/imports/{import}/normalize-nmap` | Normalize user-supplied Nmap XML as `recorded-import`; no scan is invoked |
+| POST `/assessments/{id}/imports/{import}/normalize-zap` | Normalize bounded ZAP Alerts JSON as source-linked, suspected observations; no ZAP API or scanner call |
+| POST `/assessments/{id}/imports/{import}/normalize-nikto` | Normalize version-gated Nikto 2.6.x JSON observations; no Nikto process is started |
+| POST `/assessments/{id}/imports/{import}/normalize-openapi` | Catalog OpenAPI 3.0/3.1 JSON operations offline; never fetches servers or uses credentials |
+| GET `/assessments/{id}/coverage` | Show recorded runs, endpoint catalog/alert counts, capability matrix and explicit prototype acceptance checks; does not claim tested coverage |
+| GET `/assessments/{id}/action-approvals/profiles` | Read the scan-impact profile catalog; this is not an execution grant or live-scan switch |
 | POST `/assessments/{id}/replays` and `/replays/{manifest}/ingest` | Create a signed recorded-input manifest and replay the private capture without a network call |
 | POST `/assessments/{id}/approvals` | Persist request as `pending-review`; cannot grant approval or authorize an action |
 | POST `/assessments/{id}/reports` | Persist request as `blocked`, `report-renderer-not-enabled`; no invented PDF or findings |

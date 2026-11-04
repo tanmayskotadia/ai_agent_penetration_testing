@@ -31,7 +31,9 @@ class AssetCreate(ApiContract):
 
 class RunCreate(ApiContract):
     scope_id: UUID
-    tool: Literal["Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit"]
+    tool: Literal[
+        "Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit", "OpenAPI"
+    ]
     tool_version: str = Field(min_length=1, max_length=100)
     captured_at: AwareDatetime
     mode: Literal["recorded-import"] = "recorded-import"
@@ -59,7 +61,9 @@ class JobCreate(ApiContract):
 class ImportCreate(ApiContract):
     scope_id: UUID
     scope_revision: int = Field(ge=1)
-    tool: Literal["Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit"]
+    tool: Literal[
+        "Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit", "OpenAPI"
+    ]
     format: str = Field(min_length=1, max_length=100)
     evidence_id: UUID
 

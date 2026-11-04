@@ -7,12 +7,12 @@ The API, frontend and report snapshot helper use `aegistrace.capabilities.capabi
 | Nmap | planned | unverified | No normalizer/live adapter; bounded XML container guard only |
 | Nessus | planned | unverified | No entitled product API/export adapter verified |
 | Greenbone / OpenVAS | planned | unverified | No installed manager/feed/API adapter verified |
-| Nikto | planned | unverified | No version-specific native adapter verified |
-| OWASP ZAP | planned | unverified | No normalizer/live adapter; bounded alerts-JSON container guard only |
+| Nikto | planned | unverified | Candidate offline 2.6.x JSON import normalizer; no verified adapter or live runner; genuine versioned capture and permitted lab demonstration pending |
+| OWASP ZAP | planned | unverified | Candidate offline Alerts JSON normalizer; no verified adapter or live runner; genuine versioned capture and permitted lab demonstration pending |
 | Burp Suite | planned | unverified | Edition/export/API entitlement unverified |
 | Metasploit | planned | unverified | No module execution or validation adapter enabled |
 
-**Verified working integration count: 0.** The PDF's minimum three native integrations/imports with network and web coverage remains an M05 gate. The full seven-tool target remains M06 work. Neither mock classes nor container recognition satisfies those gates.
+**Verified working integration count: 0.** Nmap and ZAP now have candidate offline import paths, but handcrafted contracts and user-uploaded files do not verify source authenticity or establish scanner integration. The PDF's minimum three native integrations/imports with network and web coverage remains an M05 gate. The full seven-tool target remains M06 work. Neither mock classes nor container recognition satisfies those gates.
 
 ## Typed adapter boundary
 

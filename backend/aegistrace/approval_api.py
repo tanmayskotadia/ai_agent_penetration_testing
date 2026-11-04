@@ -19,6 +19,7 @@ from aegistrace.approvals import (
 from aegistrace.auth import Identity, identity_dependency
 from aegistrace.mutations import mutation
 from aegistrace.repository import require_access
+from aegistrace.scan_profiles import profile_snapshot
 from aegistrace.settings import Settings
 
 
@@ -33,6 +34,17 @@ def approval_router(engine: Engine, config: Settings) -> APIRouter:
         prefix="/api/v1/assessments/{assessment_id}/action-approvals", tags=["human-approval"]
     )
     actor_dependency = Depends(identity_dependency(config))
+
+    @router.get("/profiles")
+    def profiles(
+        assessment_id: UUID, actor: Identity = actor_dependency
+    ) -> list[dict[str, object]]:
+        try:
+            with engine.connect() as connection:
+                require_access(connection, assessment_id, actor.subject)
+                return profile_snapshot()
+        except LookupError as error:
+            raise HTTPException(404, "Resource not found") from error
 
     @router.post("", status_code=201, response_model=ApprovalView)
     def create(

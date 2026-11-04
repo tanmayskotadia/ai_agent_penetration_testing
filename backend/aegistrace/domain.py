@@ -6,7 +6,9 @@ from uuid import UUID, uuid4
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
-ToolName = Literal["Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit"]
+ToolName = Literal[
+    "Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit", "OpenAPI"
+]
 ValidationState = Literal["suspected", "confirmed", "false-positive", "contradictory", "unknown"]
 
 

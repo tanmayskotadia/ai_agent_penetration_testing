@@ -7,7 +7,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-Tool = Literal["Nmap", "OWASP ZAP", "Nikto", "Nessus", "Greenbone", "Burp Suite", "Metasploit"]
+Tool = Literal[
+    "Nmap", "OWASP ZAP", "Nikto", "Nessus", "Greenbone", "Burp Suite", "Metasploit", "OpenAPI"
+]
 
 
 class Fixture(BaseModel):

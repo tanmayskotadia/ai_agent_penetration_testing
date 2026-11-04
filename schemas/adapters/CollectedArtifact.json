@@ -40,7 +40,8 @@
         "Nikto",
         "OWASP ZAP",
         "Burp Suite",
-        "Metasploit"
+        "Metasploit",
+        "OpenAPI"
       ],
       "title": "Tool",
       "type": "string"

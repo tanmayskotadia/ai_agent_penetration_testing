@@ -83,6 +83,7 @@ class CapabilityRegistry:
     def __init__(self) -> None:
         guards: dict[ToolName, tuple[str, ...]] = {
             "Nmap": ("nmap-xml",),
+            "Nikto": ("nikto-json",),
             "OWASP ZAP": ("zap-alerts-json",),
         }
         self._entries = {

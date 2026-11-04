@@ -16,6 +16,7 @@ from aegistrace.approval_api import approval_router
 from aegistrace.audit import AuditEvent, request_context
 from aegistrace.capabilities import Capability, capability_snapshot
 from aegistrace.control_api import control_router
+from aegistrace.coverage_api import coverage_router
 from aegistrace.db import make_engine
 from aegistrace.evidence_api import evidence_router
 from aegistrace.http_limits import BodyLimitMiddleware
@@ -60,6 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(job_router(engine, config))
     app.include_router(replay_router(engine, config))
     app.include_router(result_router(engine, config))
+    app.include_router(coverage_router(engine, config))
     app.add_middleware(BodyLimitMiddleware)
 
     def contracts() -> dict[str, Any]:

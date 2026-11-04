@@ -225,6 +225,50 @@ def inspect_container(raw: bytes, tool: str, format_name: str, tool_version: str
                 records += 1
                 if len(assets) > MAX_ASSETS:
                     raise ParseRejected("asset-limit")
+        elif (tool, format_name) == ("Nikto", "nikto-json"):
+            if not tool_version.startswith("2.6."):
+                raise ParseRejected("unsupported-tool-version")
+            text = raw.decode("utf-8")
+            _json_depth(text)
+            data = json.loads(text, object_pairs_hook=_json_pairs, parse_constant=_bad_constant)
+            if not isinstance(data, list) or len(data) > MAX_ASSETS:
+                raise ParseRejected("unsupported-format-or-host-limit")
+            stack = [data]
+            nodes = 0
+            while stack:
+                value = stack.pop()
+                nodes += 1
+                if nodes > MAX_NODES:
+                    raise ParseRejected("structure-limit")
+                if isinstance(value, str) and (
+                    len(value) > 65536 or any(ord(c) < 32 and c not in "\t\n\r" for c in value)
+                ):
+                    raise ParseRejected("invalid-string")
+                if isinstance(value, dict):
+                    stack.extend(value.keys())
+                    stack.extend(value.values())
+                elif isinstance(value, list):
+                    stack.extend(value)
+            for host in data:
+                if not isinstance(host, dict) or not isinstance(host.get("vulnerabilities"), list):
+                    raise ParseRejected("invalid-host-record")
+                for observation in host["vulnerabilities"]:
+                    if not isinstance(observation, dict) or not isinstance(
+                        observation.get("url"), str
+                    ):
+                        raise ParseRejected("invalid-observation")
+                    assets.add(canonical(observation["url"]))
+                    records += 1
+                    if len(assets) > MAX_ASSETS:
+                        raise ParseRejected("asset-limit")
+        elif (tool, format_name) == ("OpenAPI", "openapi-json"):
+            from aegistrace.openapi_parse import parse_openapi
+
+            normalized = parse_openapi(raw, tool_version)
+            if normalized["state"] != "normalized":
+                raise ParseRejected(str(normalized["code"]))
+            assets.update(normalized["assets"])
+            records = normalized["parsed_records"]
         else:
             raise ParseRejected("unsupported-format")
         if not assets:
@@ -260,6 +304,18 @@ def _worker(pipe: Connection, raw: bytes, tool: str, format_name: str, version: 
             from aegistrace.nmap_parse import normalize_nmap
 
             value = normalize_nmap(raw, version)
+        elif tool == "OWASP ZAP" and format_name == "zap-alerts-normalize-v1":
+            from aegistrace.zap_parse import normalize_zap
+
+            value = normalize_zap(raw, version)
+        elif tool == "Nikto" and format_name == "nikto-json-normalize-v1":
+            from aegistrace.nikto_parse import normalize_nikto
+
+            value = normalize_nikto(raw, version)
+        elif tool == "OpenAPI" and format_name == "openapi-json-normalize-v1":
+            from aegistrace.openapi_parse import parse_openapi
+
+            value = parse_openapi(raw, version)
         else:
             value = inspect_container(raw, tool, format_name, version)
         payload = json.dumps(value).encode()
