@@ -1,6 +1,6 @@
 {
   "task": "T03",
-  "status": "local-checks-passed-services-CI-pending",
+  "status": "local-and-real-service-container-CI-passed",
   "local_environment": {
     "python": "3.12.5",
     "node": "24.14.1",
@@ -39,5 +39,13 @@
     "postgres_migration_and_api_internal_health": "passed",
     "host_http_access": "failed with internal-only network; added workspace ingress network only to API/frontend, keeping database/broker/worker on the internal control network",
     "retest": "pending"
+  },
+  "successful_ci": {
+    "url": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/actions/runs/41809017700",
+    "commit": "87041b965542e9bae5944167c6b03ae5c7c2189b",
+    "postgresql_migration": "passed",
+    "redis_celery_roundtrip": "passed",
+    "frontend_build": "passed",
+    "container_build_start_and_http_proxy": "passed"
   }
 }

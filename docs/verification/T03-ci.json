@@ -1,0 +1,99 @@
+{
+  "task": "T03",
+  "status": "passed",
+  "CI_url": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/actions/runs/41809017700",
+  "tested_commit": "87041b965542e9bae5944167c6b03ae5c7c2189b",
+  "environment": "Fresh GitHub-hosted Linux runner; pinned PostgreSQL/Redis services and complete Compose profile",
+  "steps": [
+    {
+      "name": "Set up job",
+      "conclusion": "success"
+    },
+    {
+      "name": "Initialize containers",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
+      "conclusion": "success"
+    },
+    {
+      "name": "Install locked Python environment",
+      "conclusion": "success"
+    },
+    {
+      "name": "Generate ephemeral CI application secret",
+      "conclusion": "success"
+    },
+    {
+      "name": "Python quality checks",
+      "conclusion": "success"
+    },
+    {
+      "name": "Verify requirements baseline",
+      "conclusion": "success"
+    },
+    {
+      "name": "Migrate real PostgreSQL",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run API, migration and configuration checks",
+      "conclusion": "success"
+    },
+    {
+      "name": "Verify actual Redis/Celery round trip",
+      "conclusion": "success"
+    },
+    {
+      "name": "Build workspace",
+      "conclusion": "success"
+    },
+    {
+      "name": "Validate Compose development profile",
+      "conclusion": "success"
+    },
+    {
+      "name": "Build and start fresh container profile",
+      "conclusion": "success"
+    },
+    {
+      "name": "Container diagnostics on failure",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Stop container profile",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Run actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Run actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+      "conclusion": "success"
+    },
+    {
+      "name": "Stop containers",
+      "conclusion": "success"
+    },
+    {
+      "name": "Complete job",
+      "conclusion": "success"
+    }
+  ],
+  "manual_intervention": "None required for verified CI. Local Docker is not installed; optional if local full Compose execution is desired.",
+  "limitations": "Foundation only; scanner integrations and organizer-authorized testing remain unimplemented/unavailable."
+}
