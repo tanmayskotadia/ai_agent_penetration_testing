@@ -1,0 +1,7 @@
+{
+  "task": "T09",
+  "requirements": ["R02", "R09", "R12", "R18", "R26", "R31", "R34"],
+  "verification": ["tests/test_audit.py", "tests/test_evidence.py", "tests/test_foundation.py"],
+  "manual_intervention": "None for engineering acceptance. Retain exported checkpoints independently before relying on administrator-rollback detection in a real deployment.",
+  "limits": ["Database owners can disable triggers or rebuild unanchored chains", "External independent checkpoint retention is available via export, not automatically provisioned", "Later live scanner and report producers must use this audit contract"]
+}

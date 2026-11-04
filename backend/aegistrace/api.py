@@ -1,12 +1,14 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
+from uuid import UUID, uuid4
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from aegistrace.audit import request_context
 from aegistrace.db import make_engine
 from aegistrace.evidence import evidence_router
 from aegistrace.settings import Settings
@@ -26,6 +28,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="AegisTrace", version="0.1.0", lifespan=lifespan)
     app.include_router(evidence_router(engine, config))
 
+    @app.middleware("http")
+    async def attribution(request: Request, call_next: Any) -> Any:
+        try:
+            request_id = UUID(request.headers.get("X-Request-ID", str(uuid4())))
+            correlation_id = UUID(request.headers.get("X-Correlation-ID", str(request_id)))
+        except ValueError:
+            return JSONResponse(
+                {"code": "invalid-request-id", "message": "Request IDs must be UUIDs"}, 422
+            )
+        token = request_context.set((request_id, correlation_id))
+        try:
+            response = await call_next(request)
+            response.headers["X-Request-ID"] = str(request_id)
+            return response
+        finally:
+            request_context.reset(token)
+
     @app.get("/health/live")
     def liveness() -> dict[str, str]:
         return {"status": "alive"}
@@ -37,7 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0003_evidence":
+            if revision != "0004_audit":
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
         except SQLAlchemyError:
             return JSONResponse(

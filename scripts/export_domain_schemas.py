@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from aegistrace.audit import AuditEvent
 from aegistrace.domain import CONTRACTS
 
 
@@ -21,6 +22,14 @@ def main() -> None:
                 raise SystemExit(f"schema drift: {path.name}")
         else:
             path.write_text(value, encoding="utf-8")
+    audit_path = root.parent / "events" / "audit-event.json"
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    audit_value = json.dumps(AuditEvent.model_json_schema(), indent=2, sort_keys=True) + "\n"
+    if args.check:
+        if not audit_path.is_file() or audit_path.read_text(encoding="utf-8") != audit_value:
+            raise SystemExit("audit schema drift")
+    else:
+        audit_path.write_text(audit_value, encoding="utf-8")
 
 
 if __name__ == "__main__":

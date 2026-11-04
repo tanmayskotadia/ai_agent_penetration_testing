@@ -6,7 +6,7 @@ import re
 import secrets
 import time
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from sqlalchemy import Connection, Engine, select
 from sqlalchemy.exc import IntegrityError
 
+from aegistrace.audit import AuditEvent, append_event, request_context
 from aegistrace.auth import Identity, identity_dependency, seal, unseal
 from aegistrace.evidence_schema import access_events, objects
 from aegistrace.repository import get_record, require_owner
@@ -67,6 +68,20 @@ class EvidenceStore:
     def event(
         connection: Connection, assessment_id: UUID, evidence_id: UUID, actor: str, action: str
     ) -> None:
+        context = request_context.get() or (uuid4(), uuid4())
+        append_event(
+            connection,
+            AuditEvent(
+                assessment_id=assessment_id,
+                actor_id=actor,
+                request_id=context[0],
+                correlation_id=context[1],
+                action=f"evidence.{action}",
+                resource_id=evidence_id,
+                action_digest=hashlib.sha256(f"{action}:{evidence_id}".encode()).hexdigest(),
+                outcome="completed",
+            ),
+        )
         connection.execute(
             access_events.insert().values(
                 assessment_id=str(assessment_id),

@@ -1,0 +1,133 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "pattern": "^[a-z][a-z0-9.-]{0,99}$",
+      "title": "Action",
+      "type": "string"
+    },
+    "action_digest": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Action Digest",
+      "type": "string"
+    },
+    "actor_id": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Actor Id",
+      "type": "string"
+    },
+    "actor_kind": {
+      "default": "human",
+      "enum": [
+        "human",
+        "service",
+        "ai-proposal"
+      ],
+      "title": "Actor Kind",
+      "type": "string"
+    },
+    "assessment_id": {
+      "format": "uuid",
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "correlation_id": {
+      "format": "uuid",
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "requested",
+        "accepted",
+        "denied",
+        "pending",
+        "completed",
+        "partial",
+        "failed",
+        "unknown"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "plan_revision": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Plan Revision"
+    },
+    "policy_version": {
+      "default": "m02-v1",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Policy Version",
+      "type": "string"
+    },
+    "request_id": {
+      "format": "uuid",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "resource_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Resource Id"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope_revision": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scope Revision"
+    }
+  },
+  "required": [
+    "assessment_id",
+    "actor_id",
+    "correlation_id",
+    "request_id",
+    "action",
+    "action_digest",
+    "outcome"
+  ],
+  "title": "AuditEvent",
+  "type": "object"
+}
