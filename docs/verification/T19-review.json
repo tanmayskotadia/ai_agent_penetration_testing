@@ -1,0 +1,7 @@
+{
+  "task": "T19",
+  "requirements": ["R02", "R10", "R28", "R33", "R34"],
+  "verification": ["tests/test_jobs.py", "actual PostgreSQL/outbox/Celery/Redis job delivery and redelivery in hosted CI", "two-worker single-start race", "publish-before-commit rollback", "encrypted partial output survives worker loss", "expiry and cancellation boundaries"],
+  "manual_intervention_now": "None; no participant local setup",
+  "limits": ["Native consumer is explicitly blocked until verified adapter/runner acceptance", "Crash fixtures are test-only, not genuine scanner evidence", "Unknown external work never automatically retries", "Trusted hosted dispatcher/reconciler deployment is required for operation", "Temporary encrypted chunks expire after one hour; canonical evidence collection is separate"]
+}
