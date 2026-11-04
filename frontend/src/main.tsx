@@ -7,6 +7,25 @@ import "./style.css";
 
 type Status = { stage: string; live_scans_enabled: boolean; tools: ApiSchemas["Capability"][] };
 type JobSnapshot = ApiSchemas["JobStatusSnapshot"];
+type RecordedResult = Record<string, unknown>;
+
+async function apiJson<T>(token: string, path: string, method: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-Request-ID": crypto.randomUUID(),
+      "Idempotency-Key": crypto.randomUUID(),
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null) as { message?: string } | null;
+    throw new Error(error?.message ?? `Request failed (${response.status}).`);
+  }
+  return response.json() as Promise<T>;
+}
 
 function formatDuration(milliseconds: number | null | undefined): string {
   if (milliseconds == null) return "Not started";
@@ -22,6 +41,20 @@ function HumanReview() {
   const [selected, setSelected] = useState("");
   const [queue, setQueue] = useState<ApiSchemas["ApprovalView"][]>([]);
   const [jobs, setJobs] = useState<JobSnapshot[]>([]);
+  const [newAssessmentName, setNewAssessmentName] = useState("");
+  const [artifact, setArtifact] = useState<File | null>(null);
+  const [targets, setTargets] = useState("");
+  const [exclusions, setExclusions] = useState("");
+  const [authorizationReference, setAuthorizationReference] = useState("");
+  const [toolVersion, setToolVersion] = useState("7.95");
+  const [capturedAt, setCapturedAt] = useState("");
+  const [recordedResult, setRecordedResult] = useState<RecordedResult | null>(null);
+  const [recordedImportId, setRecordedImportId] = useState("");
+  const [captureReference, setCaptureReference] = useState("");
+  const [rightsBasis, setRightsBasis] = useState("");
+  const [replayResult, setReplayResult] = useState<RecordedResult | null>(null);
+  const [intakeBusy, setIntakeBusy] = useState(false);
+  const [intakeMessage, setIntakeMessage] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -56,6 +89,12 @@ function HumanReview() {
       .catch(failure => { if (!controller.signal.aborted) setMessage(failure instanceof Error ? failure.message : "Unable to load reviews."); });
     return () => controller.abort();
   }, [selected, token, refresh]);
+  useEffect(() => {
+    setRecordedResult(null);
+    setRecordedImportId("");
+    setReplayResult(null);
+    setIntakeMessage("");
+  }, [selected]);
   useEffect(() => {
     setJobs([]);
     if (!selected || !token) return;
@@ -105,6 +144,96 @@ function HumanReview() {
     catch { /* Local sign-out still clears the in-memory credential. */ }
     finally { setToken(""); setAssessments([]); setSelected(""); setQueue([]); setJobs([]); keys.current.clear(); jobCursors.current.clear(); setMessage(revoked ? "Signed out; server session revoked." : "Signed out in this browser. Server revocation was not confirmed; sessions also expire automatically."); }
   }
+  async function createAssessment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token || !newAssessmentName.trim()) return;
+    setBusy(true);
+    try {
+      const created = await apiJson<ApiSchemas["Assessment"]>(token, "/api/v1/assessments", "POST", { name: newAssessmentName.trim() });
+      setAssessments(values => [...values, created]);
+      setSelected(created.id ?? "");
+      setNewAssessmentName("");
+      setMessage("Assessment created.");
+    } catch (failure) { setMessage(failure instanceof Error ? failure.message : "Unable to create assessment."); }
+    finally { setBusy(false); }
+  }
+  async function importNmap(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token || !selected || !artifact) return;
+    if (artifact.size < 1 || artifact.size > 2 * 1024 * 1024) {
+      setIntakeMessage("Choose a non-empty Nmap XML file up to 2 MiB.");
+      return;
+    }
+    const targetList = targets.split(/[\n,]/).map(value => value.trim()).filter(Boolean);
+    if (!targetList.length) { setIntakeMessage("Enter at least one in-scope host or address."); return; }
+    if (!authorizationReference.trim()) { setIntakeMessage("Enter the source or authorization reference. It is recorded as supplied and is not independently verified."); return; }
+    if (!capturedAt) { setIntakeMessage("Enter the capture time reported by the source artifact."); return; }
+    setIntakeBusy(true); setIntakeMessage("Saving encrypted artifact and normalizing recorded input…"); setRecordedResult(null); setReplayResult(null); setRecordedImportId("");
+    try {
+      const assessmentBase = `/api/v1/assessments/${encodeURIComponent(selected)}`;
+      const priorScopes = await apiJson<ApiSchemas["ScopeVersion"][]>(token, `${assessmentBase}/scopes`, "GET");
+      const scope = await apiJson<ApiSchemas["ScopeVersion"]>(token, `${assessmentBase}/scopes`, "POST", {
+        revision: (priorScopes.at(-1)?.revision ?? 0) + 1,
+        targets: targetList,
+        exclusions: exclusions.split(/[\n,]/).map(value => value.trim()).filter(Boolean),
+        authorization_reference: authorizationReference.trim(),
+        mode: "recorded-import",
+      });
+      const run = await apiJson<ApiSchemas["ToolRun"]>(token, `${assessmentBase}/runs`, "POST", {
+        scope_id: scope.id,
+        tool: "Nmap",
+        tool_version: toolVersion.trim(),
+        captured_at: new Date(capturedAt).toISOString(),
+        mode: "recorded-import",
+      });
+      const bytes = await artifact.arrayBuffer();
+      const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))).map(value => value.toString(16).padStart(2, "0")).join("");
+      const evidence = await apiJson<ApiSchemas["EvidenceReference"]>(token, `${assessmentBase}/runs/${run.id}/evidence`, "POST", {
+        sha256: digest,
+        pointer: "/",
+        pointer_type: "whole-file",
+        captured_at: new Date(capturedAt).toISOString(),
+      });
+      const expiry = new URLSearchParams({ expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() });
+      const uploaded = await fetch(`${assessmentBase}/evidence/${evidence.id}/original?${expiry}`, {
+        method: "PUT", body: bytes,
+        headers: { Authorization: `Bearer ${token}`, "X-Request-ID": crypto.randomUUID(), "Idempotency-Key": crypto.randomUUID() },
+      });
+      if (!uploaded.ok) throw new Error(`Encrypted evidence upload failed (${uploaded.status}).`);
+      const imported = await apiJson<ApiSchemas["WorkflowResource"]>(token, `${assessmentBase}/imports`, "POST", {
+        scope_id: scope.id, scope_revision: scope.revision, tool: "Nmap", format: "nmap-xml", evidence_id: evidence.id,
+      });
+      setRecordedImportId(imported.id);
+      const normalized = await apiJson<RecordedResult>(token, `${assessmentBase}/imports/${imported.id}/normalize-nmap`, "POST", { asset_mapping: {} });
+      setRecordedResult(normalized);
+      setIntakeMessage("Recorded XML processed. No network scan was run; source authenticity and rights are not independently verified.");
+      setRefresh(value => value + 1);
+    } catch (failure) {
+      setIntakeMessage(failure instanceof Error ? failure.message : "The artifact could not be processed. Check the saved source metadata and retry with a new import.");
+    } finally { setIntakeBusy(false); }
+  }
+  async function replayNmap() {
+    if (!token || !selected || !recordedImportId) return;
+    if (!captureReference.trim() || !rightsBasis.trim() || !authorizationReference.trim()) {
+      setIntakeMessage("Add the capture, rights and authorization references to create a reviewer-declared replay.");
+      return;
+    }
+    setIntakeBusy(true); setIntakeMessage("Creating immutable replay manifest and replaying the recorded import…");
+    try {
+      const base = `/api/v1/assessments/${encodeURIComponent(selected)}/replays`;
+      const manifest = await apiJson<RecordedResult>(token, base, "POST", {
+        import_id: recordedImportId,
+        provenance: "reviewer-declared-capture",
+        capture_reference: captureReference.trim(),
+        rights_basis: rightsBasis.trim(),
+        authorization_reference: authorizationReference.trim(),
+      });
+      const result = await apiJson<RecordedResult>(token, `${base}/${String(manifest.id)}/ingest`, "POST", {});
+      setReplayResult(result);
+      setIntakeMessage("Replay finished with recorded provenance. It did not request approval or contact a target.");
+    } catch (failure) { setIntakeMessage(failure instanceof Error ? failure.message : "Recorded replay failed."); }
+    finally { setIntakeBusy(false); }
+  }
   async function stopAssessment() {
     if (!selected) return;
     setBusy(true);
@@ -119,7 +248,8 @@ function HumanReview() {
   }
   return <section aria-labelledby="human-review"><h2 id="human-review">Human action review</h2>
     <p>Review the exact destination, impact and rollback before recording a decision. Scanner execution remains disabled.</p>
-    {!token ? <form onSubmit={signIn}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required minLength={12} maxLength={128} /></label><button disabled={busy}>Sign in</button></form> : <><label>Assessment<select value={selected} onChange={event => setSelected(event.target.value)}><option value="">Select an assessment</option>{assessments.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><button onClick={signOut} disabled={busy}>Sign out</button><button disabled={busy || !selected} onClick={stopAssessment}>Stop assessment</button><button disabled={busy || !selected} onClick={() => setRefresh(value => value + 1)}>Refresh reviews</button>{selected && queue.length === 0 && <p>No action reviews are available for this assessment.</p>}{queue.map(item => <article className="review-card" key={item.id}><h3>{item.action.tool} Ã‚Â· {item.action.profile}</h3><p><strong>Destination:</strong> <code>{item.action.destination_url}</code></p><p><strong>Impact:</strong> {item.action.expected_impact}</p><p><strong>Parameters:</strong> <code>{JSON.stringify(item.action.parameters)}</code></p><p><strong>Rollback:</strong> {item.action.rollback_instructions}</p><p><strong>Maximum runtime:</strong> {item.action.max_runtime_seconds} seconds</p><p><strong>Scope revision:</strong> {item.scope_revision} Ã‚Â· <strong>Expires:</strong> {item.valid_until}</p><p className="digest"><strong>Action digest:</strong> <code>{item.action_digest}</code></p><p>Status: {item.expired ? "expired" : item.state}</p>{item.allowed_decisions.map(choice => <button key={choice} disabled={busy || item.expired} onClick={() => decide(item, choice)}>{choice === "approve" ? "Approve this action" : "Deny this action"}</button>)}</article>)}</>}
+    {!token ? <form onSubmit={signIn}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required minLength={12} maxLength={128} /></label><button disabled={busy}>Sign in</button></form> : <><form onSubmit={createAssessment}><label>New assessment<input value={newAssessmentName} onChange={event => setNewAssessmentName(event.target.value)} maxLength={200} required /></label><button disabled={busy}>Create assessment</button></form><label>Assessment<select value={selected} onChange={event => setSelected(event.target.value)}><option value="">Select an assessment</option>{assessments.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><button onClick={signOut} disabled={busy}>Sign out</button><button disabled={busy || !selected} onClick={stopAssessment}>Stop assessment</button><button disabled={busy || !selected} onClick={() => setRefresh(value => value + 1)}>Refresh reviews</button>{selected && queue.length === 0 && <p>No action reviews are available for this assessment.</p>}{queue.map(item => <article className="review-card" key={item.id}><h3>{item.action.tool} Ã‚Â· {item.action.profile}</h3><p><strong>Destination:</strong> <code>{item.action.destination_url}</code></p><p><strong>Impact:</strong> {item.action.expected_impact}</p><p><strong>Parameters:</strong> <code>{JSON.stringify(item.action.parameters)}</code></p><p><strong>Rollback:</strong> {item.action.rollback_instructions}</p><p><strong>Maximum runtime:</strong> {item.action.max_runtime_seconds} seconds</p><p><strong>Scope revision:</strong> {item.scope_revision} Ã‚Â· <strong>Expires:</strong> {item.valid_until}</p><p className="digest"><strong>Action digest:</strong> <code>{item.action_digest}</code></p><p>Status: {item.expired ? "expired" : item.state}</p>{item.allowed_decisions.map(choice => <button key={choice} disabled={busy || item.expired} onClick={() => decide(item, choice)}>{choice === "approve" ? "Approve this action" : "Deny this action"}</button>)}</article>)}</>}
+    {token && selected && <section aria-labelledby="recorded-import"><h3 id="recorded-import">Import Nmap XML (recorded input)</h3><p>Upload an existing capture you are authorized to process. This flow does not run Nmap or contact any target. Captures are encrypted at rest, hashed, scope-checked and labeled as recorded input. A supplied authorization reference is recorded but not independently verified.</p><form onSubmit={importNmap}><label>Nmap XML file<input type="file" accept=".xml,application/xml,text/xml" onChange={event => setArtifact(event.target.files?.[0] ?? null)} required /></label><label>Targets represented in the input<textarea value={targets} onChange={event => setTargets(event.target.value)} placeholder="One host/address per line" required /></label><label>Excluded hosts/addresses<textarea value={exclusions} onChange={event => setExclusions(event.target.value)} placeholder="Optional; one per line" /></label><label>Source / authorization reference<input value={authorizationReference} onChange={event => setAuthorizationReference(event.target.value)} maxLength={500} required /></label><label>Nmap version reported by source<input value={toolVersion} onChange={event => setToolVersion(event.target.value)} maxLength={100} required /></label><label>Capture time reported by source<input type="datetime-local" value={capturedAt} onChange={event => setCapturedAt(event.target.value)} required /></label><button disabled={intakeBusy || !artifact}>Store and normalize recorded XML</button></form>{intakeMessage && <p role="status" aria-live="polite">{intakeMessage}</p>}{recordedResult && <article className="review-card"><h4>IMPORTED / RECORDED · {String(recordedResult.state ?? "unknown")}</h4><p>The system does not report this input as a live scan. Findings created: {String(recordedResult.findings_created ?? 0)}.</p><pre>{JSON.stringify(recordedResult, null, 2)}</pre><label>Capture reference<input value={captureReference} onChange={event => setCaptureReference(event.target.value)} maxLength={300} /></label><label>Rights basis<input value={rightsBasis} onChange={event => setRightsBasis(event.target.value)} maxLength={300} /></label><button disabled={intakeBusy || !recordedImportId || !captureReference || !rightsBasis} onClick={() => void replayNmap()}>Create manifest and replay recorded input</button></article>}{replayResult && <article className="review-card"><h4>{String(replayResult.replay_label ?? "RECORDED / provenance unverified")}</h4><pre>{JSON.stringify(replayResult, null, 2)}</pre></article>}</section>}
     {token && selected && <section aria-labelledby="scan-jobs"><h3 id="scan-jobs">Scan job status</h3><p>Statuses come from persisted worker events. No estimated completion percentage is shown.</p>{jobs.length === 0 ? <p>No scan jobs are recorded for this assessment.</p> : jobs.map(job => <article className="review-card" key={job.id}><h4>{job.status === job.state ? job.state : `${job.status} (last stored: ${job.state})`}</h4><p><strong>Attempt:</strong> {job.attempt} · <strong>Elapsed:</strong> {formatDuration(job.duration_ms)}</p>{job.heartbeat_at !== null && <p><strong>Worker heartbeat:</strong> {job.heartbeat_stale ? `stale (${job.heartbeat_age_seconds}s ago)` : `${job.heartbeat_age_seconds}s ago`}</p>}{job.tool_version && <p><strong>Tool version:</strong> {job.tool_version}</p>}{job.exit_code !== null && <p><strong>Exit code:</strong> {job.exit_code}</p>}{job.diagnostic && <p role="status"><strong>{job.diagnostic_code}:</strong> {job.diagnostic}</p>}{job.latest_event_kind && job.latest_event_at && <small>Latest persisted event: {job.latest_event_kind} · {new Date(job.latest_event_at * 1000).toLocaleString()}</small>}</article>)}</section>}
     <p role="status" aria-live="polite">{message}</p>
   </section>;
@@ -138,7 +268,7 @@ function App() {
   }, []);
   return <main>
     <header><p className="eyebrow">EVIDENCE. REASONING. HUMAN CONTROL.</p><h1>AegisTrace</h1><p>A clearer path from security evidence to action.</p></header>
-    <section aria-labelledby="readiness"><h2 id="readiness">Evidence platform</h2><p>Authenticated assessment, evidence and audit APIs are available. Analyst screens and scanner integrations are being built.</p><p className="notice">Live testing is disabled. Authorized scope and verified execution controls are required before live testing.</p>
+    <section aria-labelledby="readiness"><h2 id="readiness">Evidence platform</h2><p>Authenticated assessment, evidence and audit APIs are available. Recorded Nmap XML intake and replay are available for user-supplied artifacts.</p><p className="notice">Live testing is disabled. Authorized scope and verified execution controls are required before live testing.</p>
       <div role="status" aria-live="polite">{error || (status ? "Connected to the workspace" : "Connecting to the workspaceÃ¢â‚¬Â¦")}</div>
     </section>
     {status && <section aria-labelledby="coverage"><h2 id="coverage">Integration capabilities</h2><ul>{status.tools.map((tool) => <li key={tool.name}><div><span>{tool.name}</span><small className="capability-description">{tool.demonstration_label}</small><small className="capability-description">{(tool.limitations ?? []).join(". ")}</small></div><span className="badge">{tool.mode ?? "planned"}</span></li>)}</ul><p>Container inspection does not count as a working native integration. Recorded imports remain distinct from live scans.</p></section>}

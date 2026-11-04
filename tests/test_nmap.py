@@ -89,6 +89,8 @@ def test_port_states_ipv6_missing_versions_and_incomplete_output():
 def test_import_normalization_provenance_dedup_and_scope(import_context):
     client, _ = import_context
     base, headers, imported, request, run, evidence = source(import_context)
+    scopes = client.get(base + "/scopes", headers=headers())
+    assert scopes.status_code == 200 and scopes.json()[0]["id"] == run["scope_id"]
     response = client.post(
         base + "/imports/" + imported["id"] + "/normalize-nmap", json={}, headers=headers()
     )

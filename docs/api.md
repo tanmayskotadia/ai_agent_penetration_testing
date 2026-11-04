@@ -1,6 +1,6 @@
 # Authenticated API v1 — T10
 
-`schemas/openapi.json` is generated from the executable FastAPI app; `frontend/src/generated/api.ts` exposes matching schema types. `scripts/export_api_contracts.py --check` detects drift. The frontend client provides bearer-authenticated mutation calls and persisted-cursor SSE replay without putting tokens into URLs or local storage. Interactive analyst screens are M09 work.
+`schemas/openapi.json` is generated from the executable FastAPI app; `frontend/src/generated/api.ts` exposes matching schema types. `scripts/export_api_contracts.py --check` detects drift. The frontend provides authenticated assessment review, recorded Nmap XML upload/normalization/replay and persisted-cursor SSE without putting tokens into URLs or local storage. Live scanner controls remain disabled.
 
 ## Identity and resource authorization
 
@@ -15,6 +15,7 @@ All routes below start `/api/v1`. POST/PUT payload contracts use schema version 
 | POST/GET `/assessments` | Create/list owning user's runtime assessment; list capped at 100 |
 | GET `/assessments/{id}` | Read owning user's assessment |
 | POST `/assessments/{id}/scopes` | Create next immutable scope revision with runtime targets/exclusions and authorization reference; this is not live authorization verification |
+| GET `/assessments/{id}/scopes` | List the owning user's immutable scope revisions in order |
 | GET `/assessments/{id}/scopes/{scope}` | Read a versioned scope |
 | POST `/assessments/{id}/assets` | Record an asset identity without contacting it |
 | POST `/assessments/{id}/runs` | Record supplied tool version/capture time as `recorded-import`; cannot create a live run |
@@ -27,6 +28,8 @@ All routes below start `/api/v1`. POST/PUT payload contracts use schema version 
 | POST `/assessments/{id}/plans` | Persist draft revision-1 plan steps for current scope; no model or execution implied |
 | POST `/assessments/{id}/jobs` | Persist request with `blocked`, `execution-not-enabled`; never sends a scanner task |
 | POST `/assessments/{id}/imports` | Persist supported-tool/format/evidence request as `pending-ingestion`; T11 supplies the ingestion boundary |
+| POST `/assessments/{id}/imports/{import}/normalize-nmap` | Normalize user-supplied Nmap XML as `recorded-import`; no scan is invoked |
+| POST `/assessments/{id}/replays` and `/replays/{manifest}/ingest` | Create a signed recorded-input manifest and replay the private capture without a network call |
 | POST `/assessments/{id}/approvals` | Persist request as `pending-review`; cannot grant approval or authorize an action |
 | POST `/assessments/{id}/reports` | Persist request as `blocked`, `report-renderer-not-enabled`; no invented PDF or findings |
 | GET `/assessments/{id}/resources/{kind}/{resource}` | Read workflow request and explicit state |
