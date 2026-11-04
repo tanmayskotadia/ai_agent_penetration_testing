@@ -513,6 +513,33 @@
         "title": "Capability",
         "type": "object"
       },
+      "DestinationCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "enum": [
+              "discovery",
+              "passive-web",
+              "active-web",
+              "controlled-validation"
+            ],
+            "title": "Profile",
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2500,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "profile"
+        ],
+        "title": "DestinationCheck",
+        "type": "object"
+      },
       "EvidenceCreate": {
         "additionalProperties": false,
         "properties": {
@@ -618,6 +645,153 @@
           "captured_at"
         ],
         "title": "EvidenceReference",
+        "type": "object"
+      },
+      "ExecutionPolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_networks": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Allowed Networks",
+            "type": "array"
+          },
+          "allowed_profiles": {
+            "items": {
+              "enum": [
+                "discovery",
+                "passive-web",
+                "active-web",
+                "controlled-validation"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Allowed Profiles",
+            "type": "array"
+          },
+          "assessment_id": {
+            "format": "uuid",
+            "title": "Assessment Id",
+            "type": "string"
+          },
+          "authorization_document_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Authorization Document Sha256",
+            "type": "string"
+          },
+          "authorization_reference": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Authorization Reference",
+            "type": "string"
+          },
+          "authorization_source": {
+            "enum": [
+              "asset-owner",
+              "organizer"
+            ],
+            "title": "Authorization Source",
+            "type": "string"
+          },
+          "concurrent_jobs": {
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Concurrent Jobs",
+            "type": "integer"
+          },
+          "context": {
+            "enum": [
+              "general",
+              "hackathon"
+            ],
+            "title": "Context",
+            "type": "string"
+          },
+          "exclusions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Exclusions",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requests_per_second": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Requests Per Second",
+            "type": "integer"
+          },
+          "reviewed_by": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reviewed By",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "scope_id": {
+            "format": "uuid",
+            "title": "Scope Id",
+            "type": "string"
+          },
+          "scope_revision": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Scope Revision",
+            "type": "integer"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/TargetRule"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Targets",
+            "type": "array"
+          },
+          "valid_from": {
+            "format": "date-time",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_until": {
+            "format": "date-time",
+            "title": "Valid Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment_id",
+          "scope_id",
+          "scope_revision",
+          "context",
+          "authorization_source",
+          "authorization_reference",
+          "authorization_document_sha256",
+          "reviewed_by",
+          "valid_from",
+          "valid_until",
+          "targets",
+          "allowed_networks",
+          "allowed_profiles",
+          "requests_per_second",
+          "concurrent_jobs"
+        ],
+        "title": "ExecutionPolicy",
         "type": "object"
       },
       "Finding": {
@@ -957,6 +1131,135 @@
         "title": "PlanCreate",
         "type": "object"
       },
+      "PolicyCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_networks": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Allowed Networks",
+            "type": "array"
+          },
+          "allowed_profiles": {
+            "items": {
+              "enum": [
+                "discovery",
+                "passive-web",
+                "active-web",
+                "controlled-validation"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Allowed Profiles",
+            "type": "array"
+          },
+          "authorization_document_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Authorization Document Sha256",
+            "type": "string"
+          },
+          "authorization_reference": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Authorization Reference",
+            "type": "string"
+          },
+          "authorization_source": {
+            "enum": [
+              "asset-owner",
+              "organizer"
+            ],
+            "title": "Authorization Source",
+            "type": "string"
+          },
+          "concurrent_jobs": {
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Concurrent Jobs",
+            "type": "integer"
+          },
+          "context": {
+            "enum": [
+              "general",
+              "hackathon"
+            ],
+            "title": "Context",
+            "type": "string"
+          },
+          "exclusions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Exclusions",
+            "type": "array"
+          },
+          "requests_per_second": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Requests Per Second",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "scope_id": {
+            "format": "uuid",
+            "title": "Scope Id",
+            "type": "string"
+          },
+          "scope_revision": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Scope Revision",
+            "type": "integer"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/TargetRule"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Targets",
+            "type": "array"
+          },
+          "valid_from": {
+            "format": "date-time",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_until": {
+            "format": "date-time",
+            "title": "Valid Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope_id",
+          "scope_revision",
+          "context",
+          "authorization_source",
+          "authorization_reference",
+          "authorization_document_sha256",
+          "valid_from",
+          "valid_until",
+          "targets",
+          "allowed_networks",
+          "allowed_profiles",
+          "requests_per_second",
+          "concurrent_jobs"
+        ],
+        "title": "PolicyCreate",
+        "type": "object"
+      },
       "ReportCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1186,6 +1489,53 @@
           "targets"
         ],
         "title": "ScopeVersion",
+        "type": "object"
+      },
+      "TargetRule": {
+        "additionalProperties": false,
+        "properties": {
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "path_prefix": {
+            "default": "/",
+            "title": "Path Prefix",
+            "type": "string"
+          },
+          "pinned_addresses": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Pinned Addresses",
+            "type": "array"
+          },
+          "port": {
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Port",
+            "type": "integer"
+          },
+          "protocol": {
+            "enum": [
+              "http",
+              "https",
+              "tcp",
+              "udp"
+            ],
+            "title": "Protocol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "host",
+          "protocol",
+          "port",
+          "pinned_addresses"
+        ],
+        "title": "TargetRule",
         "type": "object"
       },
       "ToolRun": {
@@ -3929,6 +4279,288 @@
         "summary": "Plan",
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/policies": {
+      "post": {
+        "operationId": "create_api_v1_assessments__assessment_id__policies_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-ID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionPolicy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create",
+        "tags": [
+          "scope-policy"
+        ]
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/policies/{policy_id}/check": {
+      "post": {
+        "operationId": "check_api_v1_assessments__assessment_id__policies__policy_id__check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-ID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DestinationCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check",
+        "tags": [
+          "scope-policy"
         ]
       }
     },

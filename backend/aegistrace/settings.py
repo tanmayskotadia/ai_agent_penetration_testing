@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "ci"] = "development"
     evidence_key: SecretStr | None = None
     evidence_key_id: str = Field(default="primary-v1", min_length=1, max_length=100)
+    control_plane_networks: tuple[str, ...] = ("127.0.0.0/8", "::1/128")
 
     @field_validator("evidence_key")
     @classmethod
