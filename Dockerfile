@@ -7,6 +7,7 @@ COPY --chown=10001:10001 backend/ backend/
 COPY --chown=10001:10001 workers/ workers/
 COPY --chown=10001:10001 reports/ reports/
 COPY --chown=10001:10001 migrations/ migrations/
+RUN chown 10001:10001 /app
 USER 10001
 RUN uv sync --frozen --no-dev
 EXPOSE 8000
