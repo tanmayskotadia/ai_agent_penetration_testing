@@ -1,0 +1,51 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "assessment_id": {
+      "format": "uuid",
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "asset_id": {
+      "format": "uuid",
+      "title": "Asset Id",
+      "type": "string"
+    },
+    "concept_id": {
+      "format": "uuid",
+      "title": "Concept Id",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "location": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Location",
+      "type": "string"
+    },
+    "observation_id": {
+      "format": "uuid",
+      "title": "Observation Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assessment_id",
+    "concept_id",
+    "asset_id",
+    "observation_id",
+    "location"
+  ],
+  "title": "Occurrence",
+  "type": "object"
+}

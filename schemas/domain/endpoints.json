@@ -1,0 +1,45 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "assessment_id": {
+      "format": "uuid",
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "asset_id": {
+      "format": "uuid",
+      "title": "Asset Id",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "method": {
+      "pattern": "^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$",
+      "title": "Method",
+      "type": "string"
+    },
+    "path": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Path",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assessment_id",
+    "asset_id",
+    "path",
+    "method"
+  ],
+  "title": "Endpoint",
+  "type": "object"
+}

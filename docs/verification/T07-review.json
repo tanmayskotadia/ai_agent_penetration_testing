@@ -1,0 +1,7 @@
+{
+  "task": "T07",
+  "requirements": ["R07", "R08", "R09", "R10", "R11", "R16", "R17", "R18"],
+  "verification": ["tests/test_domain.py", "tests/test_foundation.py", "scripts/export_domain_schemas.py --check"],
+  "manual_intervention": "None for schema implementation; genuine corpus and measured accuracy remain T05/later evaluation work.",
+  "limits": ["Test records are handcrafted and labelled test-only", "No live scanner or report rendering implemented by T07", "Owner database access can bypass application contract validation"]
+}

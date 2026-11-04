@@ -52,6 +52,7 @@ jobs:
           python scripts/export_requirements.py --check
           python scripts/validate_requirements.py
           python scripts/check_source_hygiene.py
+          uv run python scripts/export_domain_schemas.py --check
       - name: Migrate real PostgreSQL
         run: uv run alembic upgrade head
       - name: Run API, migration and configuration checks

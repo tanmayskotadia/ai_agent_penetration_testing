@@ -1,0 +1,81 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "assessment_id": {
+      "format": "uuid",
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "captured_at": {
+      "format": "date-time",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "recorded-import",
+        "live"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope_id": {
+      "format": "uuid",
+      "title": "Scope Id",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "recorded",
+        "pending",
+        "running",
+        "partial",
+        "failed",
+        "completed"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "tool": {
+      "enum": [
+        "Nmap",
+        "Nessus",
+        "Greenbone",
+        "Nikto",
+        "OWASP ZAP",
+        "Burp Suite",
+        "Metasploit"
+      ],
+      "title": "Tool",
+      "type": "string"
+    },
+    "tool_version": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Tool Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assessment_id",
+    "scope_id",
+    "tool",
+    "tool_version",
+    "mode",
+    "captured_at",
+    "state"
+  ],
+  "title": "ToolRun",
+  "type": "object"
+}

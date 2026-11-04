@@ -1,0 +1,81 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "assessment_id": {
+      "format": "uuid",
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "concept_id": {
+      "format": "uuid",
+      "title": "Concept Id",
+      "type": "string"
+    },
+    "decision_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision Id"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "information_kind": {
+      "enum": [
+        "reviewer-decision",
+        "ai-inference"
+      ],
+      "title": "Information Kind",
+      "type": "string"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "title": "Limitations",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "title": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "validation_state": {
+      "default": "suspected",
+      "enum": [
+        "suspected",
+        "confirmed",
+        "false-positive",
+        "contradictory",
+        "unknown"
+      ],
+      "title": "Validation State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assessment_id",
+    "concept_id",
+    "title",
+    "information_kind"
+  ],
+  "title": "Finding",
+  "type": "object"
+}
