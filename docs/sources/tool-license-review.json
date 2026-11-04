@@ -1,0 +1,15 @@
+{
+  "review_date": "2026-11-04",
+  "scope": "Upstream references and current file observations; no scanner binary/feed or redistribution grant bundled",
+  "sources": [
+    {"tool": "Nmap", "url": "https://nmap.org/npsl/", "observation": "NPSL and release-specific terms; exact installed license/Npcap review still required"},
+    {"tool": "Nikto", "url": "https://github.com/sullo/nikto/blob/main/COPYING", "blob_sha": "740967f2c78c4f9538e58d28caed21ca415f8073", "automatic_spdx": "NOASSERTION", "reviewed_observation": "Code notice identifies GPLv3; database distribution and LibWhisker terms are separate"},
+    {"tool": "OWASP ZAP", "url": "https://github.com/zaproxy/zaproxy/blob/main/LICENSE", "blob_sha": "8dada3edaf50dbc082c9a125058f25def75e625a", "automatic_spdx": "Apache-2.0"},
+    {"tool": "Greenbone gvmd", "url": "https://github.com/greenbone/gvmd/blob/main/COPYING", "blob_sha": "bf7c3bffb7fc2fedcb419540f4de3c0bc6d8fc29", "automatic_spdx": "AGPL-3.0"},
+    {"tool": "OpenVAS scanner", "url": "https://github.com/greenbone/openvas-scanner/blob/main/COPYING", "blob_sha": "9efa6fbc962836e243e20f7f23db062e2c077d28", "automatic_spdx": "GPL-2.0"},
+    {"tool": "Metasploit Framework", "url": "https://github.com/rapid7/metasploit-framework/blob/master/LICENSE", "blob_sha": "d36847174368e119a5724ed604c430e12ab077a8", "automatic_spdx": "NOASSERTION", "reviewed_observation": "Framework BSD-3-clause notice explicitly distinguishes separately listed third-party components"},
+    {"tool": "Nessus", "url": "https://www.tenable.com/products/nessus", "observation": "Exact installed edition, agreement, feed and export/API entitlement unverified"},
+    {"tool": "Burp Suite", "url": "https://portswigger.net/burp", "observation": "Community/Professional/DAST capabilities are edition-specific; installed edition/terms unverified"}
+  ],
+  "limitations": ["Default branches can change; inspect exact installed releases", "GitHub automatic SPDX metadata is not a complete legal determination", "Component/feed/JavaScript/transitive/image terms require their own distribution review", "No agreement was accepted or purchase made"]
+}

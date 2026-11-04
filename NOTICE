@@ -1,0 +1,19 @@
+AegisTrace - dependency and distribution notice
+
+This repository contains the participant's project source, documentation and
+explicitly labelled test-only inputs. No commercial scanner, license key,
+scanner feed, exploit/payload binary or genuine private scan corpus is bundled.
+
+Third-party dependencies installed from the exact Python/npm locks and official
+container images retain their upstream copyright, license and notice terms.
+Preserve applicable notices when distributing a packaged application or image.
+See docs/licensing.md and docs/sources/runtime-dependency-licenses.json.
+
+Nmap/Npcap, Nikto databases/LibWhisker, Greenbone components/feeds, ZAP add-ons,
+Metasploit third-party components, and Nessus/Burp editions may have different
+terms and capabilities. No blanket redistribution permission or commercial
+API entitlement is asserted. No affiliation or endorsement is implied.
+
+An original-project redistribution license has not been selected on behalf of
+the participant. Public visibility does not replace an explicit licensing grant.
+This notice is not a substitute for exact upstream license files or legal review.

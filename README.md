@@ -56,11 +56,14 @@ CI installs from `uv.lock` and `frontend/package-lock.json`, verifies migrations
 - `migrations`: reversible foundation schema; no seeded vulnerabilities or assessments.
 - `frontend`: accessible workspace status and truthful seven-tool roadmap.
 - [Requirements](docs/requirements.md), [architecture](docs/architecture.md), [threat model](docs/threat-model.md), [ADRs](docs/adr/README.md), [submission gates](docs/submission-gates.md).
+- [Prerequisites and observed resources](docs/prerequisites.md), [licensing assumptions](docs/licensing.md), [model/data policy](docs/model-data-policy.md), [lab authorization](docs/lab-authorization.md), [fixture provenance](docs/fixture-provenance.md).
 
 ## Authorization, licenses and limitations
 
 The participant has no organizer lab authorization yet. Local/private targets are not automatically permitted. No live security testing is available in this foundation. Future active exploitation/offensive validation requires explicit human approval and deterministic policy outside the LLM. Model processing remains disabled; never put credentials in browser variables or public issues.
 
 Tool editions, scanner/feed licenses and model data policy must be documented in T06 before corresponding capabilities are promised. No commercial binary/feed/license or captured sensitive scan output is bundled. Original problem PDF, temporary planning artifacts, credentials and runtime data are excluded from source. Dependency licenses remain their upstream terms; a project redistribution license is not implied.
+
+Run `python scripts/check_prerequisites.py` for a non-invasive executable/runtime/free-space inventory. At the M01 review the workspace drive had about 5.8 GiB free and no Docker executable on PATH. Full local Docker/scanner/feed setup needs adequate storage and runtime installation; the native smoke path and verified hosted CI do not require installing Docker on this machine. T04/T05 still need genuine organizer authorization, actual captures and independent labels before their acceptance can pass.
 
 Exact package locks and image digests identify the tested dependency baseline. They do not establish formal security/framework compliance. See issue-specific verification records for what actually ran and what needs manual setup.

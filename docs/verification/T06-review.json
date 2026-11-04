@@ -1,0 +1,15 @@
+{
+  "task": "T06",
+  "status": "inventory-and-policy-complete",
+  "evidence": ["docs/tool-resource-inventory.json", "docs/verification/T06-prerequisites.json", "docs/sources/tool-license-review.json", "docs/sources/runtime-dependency-licenses.json", "docs/prerequisites.md", "docs/licensing.md", "docs/model-data-policy.md", "NOTICE"],
+  "acceptance": {
+    "seven_tools_and_editions_formats_assumptions_recorded": true,
+    "missing_tools_and_unknown_entitlements_disclosed": true,
+    "no_commercial_binary_feed_or_license_bundled": true,
+    "external_model_processing_disabled_and_private_data_policy_documented": true,
+    "noninvasive_prerequisite_inventory_executed": true
+  },
+  "manual_intervention_for_inventory": "None",
+  "future_manual_inputs": ["Organizer lab scope and permissions", "Genuine captured exports and independent labels", "Adequate storage and Docker/Linux setup if full local lab profile is selected", "Exact licensed tool/API/feed entitlement for optional integrations", "Approved model endpoint and data-handling policy before model use", "Project owner selects a distribution license before granting project-wide redistribution rights"],
+  "limitations": "PATH checks, file/license observations and policy documentation do not establish working scanner integrations, entitlement, model quality, deployed data controls or formal compliance."
+}

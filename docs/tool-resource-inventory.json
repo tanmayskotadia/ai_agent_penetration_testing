@@ -1,0 +1,92 @@
+{
+  "review_date": "2026-11-04",
+  "host_platform": "Windows",
+  "hardware": {
+    "logical_processors": 16,
+    "ram_gib": 15.7,
+    "workspace_drive_free_gib_at_review": 5.8
+  },
+  "executables": {
+    "docker": false,
+    "wsl": true,
+    "uv": true,
+    "node": true,
+    "npm": true
+  },
+  "tools": [
+    {
+      "name": "Nmap",
+      "executable_found_on_path": false,
+      "integration_status": "planned",
+      "edition": "unverified",
+      "license_entitlement": "unverified",
+      "live_api": "unverified",
+      "native_import": "planned; no genuine sample corpus yet"
+    },
+    {
+      "name": "Nessus",
+      "executable_found_on_path": false,
+      "integration_status": "planned",
+      "edition": "unverified",
+      "license_entitlement": "unverified",
+      "live_api": "unverified",
+      "native_import": "planned; no genuine sample corpus yet"
+    },
+    {
+      "name": "Greenbone",
+      "executable_found_on_path": false,
+      "integration_status": "planned",
+      "edition": "unverified",
+      "license_entitlement": "unverified",
+      "live_api": "unverified",
+      "native_import": "planned; no genuine sample corpus yet"
+    },
+    {
+      "name": "Nikto",
+      "executable_found_on_path": false,
+      "integration_status": "planned",
+      "edition": "unverified",
+      "license_entitlement": "unverified",
+      "live_api": "unverified",
+      "native_import": "planned; no genuine sample corpus yet"
+    },
+    {
+      "name": "OWASP ZAP",
+      "executable_found_on_path": false,
+      "integration_status": "planned",
+      "edition": "unverified",
+      "license_entitlement": "unverified",
+      "live_api": "unverified",
+      "native_import": "planned; no genuine sample corpus yet"
+    },
+    {
+      "name": "Burp Suite",
+      "executable_found_on_path": false,
+      "integration_status": "planned",
+      "edition": "unverified",
+      "license_entitlement": "unverified",
+      "live_api": "unverified",
+      "native_import": "planned; no genuine sample corpus yet"
+    },
+    {
+      "name": "Metasploit",
+      "executable_found_on_path": false,
+      "integration_status": "planned",
+      "edition": "unverified",
+      "license_entitlement": "unverified",
+      "live_api": "unverified",
+      "native_import": "planned; no genuine sample corpus yet"
+    }
+  ],
+  "model": {
+    "configured": false,
+    "external_processing_allowed": false,
+    "endpoint": "not-selected"
+  },
+  "lab_authorization": "participant confirmed none",
+  "limitations": [
+    "PATH absence does not prove a GUI/package is not installed elsewhere.",
+    "No credentials, machine identifiers, private paths or raw scanner data were collected.",
+    "Resource amounts are inventory, not performance benchmarks."
+  ]
+}

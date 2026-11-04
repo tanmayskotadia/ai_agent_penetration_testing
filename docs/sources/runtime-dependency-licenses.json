@@ -1,0 +1,62 @@
+{
+  "source": "T03 locked Python environment metadata",
+  "packages": [
+    {
+      "name": "fastapi",
+      "version": "0.162.0",
+      "license_expression": "MIT",
+      "license_label": null,
+      "verification": "Installed distribution metadata only; preserve exact upstream license/notice before redistribution."
+    },
+    {
+      "name": "uvicorn",
+      "version": "0.54.0",
+      "license_expression": "BSD-3-Clause",
+      "license_label": null,
+      "verification": "Installed distribution metadata only; preserve exact upstream license/notice before redistribution."
+    },
+    {
+      "name": "pydantic-settings",
+      "version": "2.16.2",
+      "license_expression": "MIT",
+      "license_label": null,
+      "verification": "Installed distribution metadata only; preserve exact upstream license/notice before redistribution."
+    },
+    {
+      "name": "sqlalchemy",
+      "version": "2.1.8",
+      "license_expression": "MIT",
+      "license_label": null,
+      "verification": "Installed distribution metadata only; preserve exact upstream license/notice before redistribution."
+    },
+    {
+      "name": "psycopg",
+      "version": "3.3.7",
+      "license_expression": "LGPL-3.0-only",
+      "license_label": null,
+      "verification": "Installed distribution metadata only; preserve exact upstream license/notice before redistribution."
+    },
+    {
+      "name": "alembic",
+      "version": "1.20.1",
+      "license_expression": "MIT",
+      "license_label": null,
+      "verification": "Installed distribution metadata only; preserve exact upstream license/notice before redistribution."
+    },
+    {
+      "name": "celery",
+      "version": "5.6.3",
+      "license_expression": null,
+      "license_label": "BSD-3-Clause",
+      "verification": "Installed distribution metadata only; preserve exact upstream license/notice before redistribution."
+    },
+    {
+      "name": "pyyaml",
+      "version": "6.0.3",
+      "license_expression": null,
+      "license_label": "MIT",
+      "verification": "Installed distribution metadata only; preserve exact upstream license/notice before redistribution."
+    }
+  ],
+  "scope": "Python application dependencies; JavaScript/transitive/image/scanner terms remain upstream and require distribution review."
+}

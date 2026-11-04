@@ -12,6 +12,7 @@
 | OQ-06 | Google Drive destination, recording/presentation tooling and eventual viewing access | T71 #84 | Participant-controlled artifacts and independently checked links | Not prepared; submission gates fail until verified |
 | OQ-07 | Commit/push authorization scope | All contribution work; T72 #85 | Participant instruction and scoped commit metadata | T01 published with approval; participant subsequently authorized completing M01 issue by issue and pushing verified work. Work beyond this scope still needs authorization. |
 | OQ-08 | Which future framework edition/category mappings are appropriate for actual findings | T58 #69 | Versioned authoritative references and applicability rationale | Deferred until findings/mapping implementation; PDF explicitly names CSF 2.0 |
+| OQ-09 | Storage capacity and optional full local container host | T03 #16, T04 #17, T06 #18 | More free storage/alternate location; Docker/Linux setup verified if selected | About 5.8 GiB free at review; Docker absent on PATH. Native smoke and hosted CI work; heavy local scanners/feeds need capacity/setup first. |
 
 Problem Statement 2 is a separate linked attachment, not part of the participant-selected Problem Statement 1 baseline. Do not merge another track's requirements without participant direction and source review.
 
