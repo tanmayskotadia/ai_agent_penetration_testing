@@ -1,0 +1,8 @@
+{
+  "task": "T22",
+  "status": "partial",
+  "verification": ["tests/test_replay.py", "private API/manifest/parser/database replay", "database update/delete protection", "source timestamps and hash preservation", "actual PostgreSQL immutable manifest acceptance in CI"],
+  "manual_intervention_now": "None; no local setup",
+  "remaining": ["Genuine permitted capture corpus and source comparison", "Required prototype/demo acceptance and downstream UI/report label integration"],
+  "limits": ["Test replay is explicitly handcrafted test-only", "Reviewer declarations do not authenticate capture origin", "Historical decisions never grant authority", "No tool/model/network execution or registry promotion"]
+}

@@ -156,6 +156,7 @@ def normalize_import(
         "evidence_id": str(evidence_id),
         "source_sha256": evidence["sha256"],
         "parser_revision": "nmap-v1",
+        "asset_mapping": mapping,
         "mode": "recorded-import",
         "information_kind": "observed-evidence",
         "authenticity": "not-verified",

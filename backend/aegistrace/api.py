@@ -26,6 +26,7 @@ from aegistrace.job_api import job_router
 from aegistrace.log_safety import protect_handlers
 from aegistrace.platform_api import platform_router
 from aegistrace.policy_api import policy_router
+from aegistrace.replay import replay_router
 from aegistrace.settings import Settings
 
 
@@ -55,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(control_router(engine, config))
     app.include_router(inference_router(engine, config))
     app.include_router(job_router(engine, config))
+    app.include_router(replay_router(engine, config))
     app.add_middleware(BodyLimitMiddleware)
 
     def contracts() -> dict[str, Any]:
@@ -166,7 +168,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0014_scheduler":
+            if revision != "0015_replay":
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
         except SQLAlchemyError:
             return JSONResponse(
