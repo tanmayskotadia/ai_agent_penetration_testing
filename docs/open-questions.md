@@ -4,13 +4,13 @@
 
 | ID | Input / uncertainty | Affected issues | Resolution evidence | Current status |
 |---|---|---|---|---|
-| OQ-01 | Organizer-provided and explicitly authorized targets, exclusions, permissions, rates and allowed validation actions | T04 #17, T13 #26, T28 #45, T34 #42 | Organizer scope/authorization manifest, validity period and rules of engagement | Not supplied; blocks live scans and validation |
+| OQ-01 | Organizer-provided and explicitly authorized targets, exclusions, permissions, rates and allowed validation actions | T04 #17, T13 #26, T28 #45, T34 #42 | Organizer scope/authorization manifest, validity period and rules of engagement | Participant confirmed no organizer authorization yet on 4 November 2026; blocks live scans and validation |
 | OQ-02 | Private Discord announcements or later rules that change the selected track | T01 #14, T71 #84, T72 #85 | Dated organizer text and participant confirmation of applicability | Unverified; recheck before delivery |
 | OQ-03 | Installed tool versions, editions, feeds, licenses and real API/export entitlement | T06 #18, T12 #25, T31-35 | Local prerequisite review and tool-specific verification record | Unverified; no live/commercial capability claim |
 | OQ-04 | Model endpoint availability and policy for external processing of scan data | T06 #18, T40 #53, T42 #64 | Chosen endpoint/configuration, approved data handling and measured evaluation | Unselected; no model quality or privacy claim |
 | OQ-05 | Genuine scanner fixtures with capture provenance, redaction/redistribution rights and independent labels | T05 #19, T48 #65 | Capture manifests, original hashes and reviewer labels | Not supplied; no accuracy/calibration claims |
 | OQ-06 | Google Drive destination, recording/presentation tooling and eventual viewing access | T71 #84 | Participant-controlled artifacts and independently checked links | Not prepared; submission gates fail until verified |
-| OQ-07 | Future source changes approved for commit | All contribution work; T72 #85 | Explicit approval of concrete files/diff plus intended commit metadata | Not approved; no commit/push |
+| OQ-07 | Commit/push authorization scope | All contribution work; T72 #85 | Participant instruction and scoped commit metadata | T01 published with approval; participant subsequently authorized completing M01 issue by issue and pushing verified work. Work beyond this scope still needs authorization. |
 | OQ-08 | Which future framework edition/category mappings are appropriate for actual findings | T58 #69 | Versioned authoritative references and applicability rationale | Deferred until findings/mapping implementation; PDF explicitly names CSF 2.0 |
 
 Problem Statement 2 is a separate linked attachment, not part of the participant-selected Problem Statement 1 baseline. Do not merge another track's requirements without participant direction and source review.
