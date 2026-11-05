@@ -145,6 +145,8 @@ def prepare(context, origin=ORIGIN):
             "selected_indices": [0, 1, 2],
             "credential_ids": {"bearer": secret["id"]},
             "max_runtime_seconds": 30,
+            "expected_impact": "Requests only to the disposable test-owned application",
+            "reset_instructions": "Close the disposable server and discard its temporary data",
         },
     )
     assert check["state"] == "pending-review"

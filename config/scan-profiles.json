@@ -1,0 +1,140 @@
+{
+  "profiles": [
+    {
+      "allowed_parameters": [
+        "timeout_seconds"
+      ],
+      "api_check_execution_available": false,
+      "description": "Bounded host and service discovery against an explicit reviewed target policy.",
+      "digest": "0560b16d49f846a386f7b286279f6b17d1041d796171d282a138ae65964888d2",
+      "enforcement_state": "review-bound",
+      "execution_enabled": false,
+      "explicit_human_approval_required": true,
+      "impact": "network-requests",
+      "limitations": [
+        "No scan runs are enabled by this service",
+        "Current Nmap adapter builds a request contract only"
+      ],
+      "maximum_concurrency": 8,
+      "profile": "discovery",
+      "prohibited_behaviors": [
+        "wildcard-expansion",
+        "arbitrary-command",
+        "unreviewed-targets"
+      ],
+      "rate_limit_source": "reviewed-policy",
+      "redirect_limit": 0,
+      "requests_generated": true,
+      "runtime_limit_seconds": 300,
+      "schema_version": "2.0",
+      "side_effects": [
+        "Connection attempts and service logs; no exploitation permission"
+      ],
+      "suggested_rate_per_second": 1,
+      "timeout_limit_seconds": 30
+    },
+    {
+      "allowed_parameters": [
+        "timeout_seconds"
+      ],
+      "api_check_execution_available": false,
+      "description": "Analyze an already captured or proxied HTTP conversation; importing or reviewing evidence itself sends no requests.",
+      "digest": "992acf023d5c19d886e185fb0cd754b3f225dce104342a3efdbe7ad64e2f0015",
+      "enforcement_state": "review-bound",
+      "execution_enabled": false,
+      "explicit_human_approval_required": true,
+      "impact": "no-network",
+      "limitations": [
+        "A future ZAP passive runner must not crawl or fetch targets under this profile",
+        "Current ZAP path accepts offline Alerts JSON only"
+      ],
+      "maximum_concurrency": 1,
+      "profile": "passive-web",
+      "prohibited_behaviors": [
+        "crawl",
+        "spider",
+        "fetch",
+        "redirect-following",
+        "active-scan",
+        "arbitrary-command"
+      ],
+      "rate_limit_source": "reviewed-policy",
+      "redirect_limit": 0,
+      "requests_generated": false,
+      "runtime_limit_seconds": 300,
+      "schema_version": "2.0",
+      "side_effects": [
+        "Private captured-data processing only; no target requests"
+      ],
+      "suggested_rate_per_second": 0,
+      "timeout_limit_seconds": 30
+    },
+    {
+      "allowed_parameters": [
+        "timeout_seconds",
+        "max_redirects"
+      ],
+      "api_check_execution_available": true,
+      "description": "Active web checks may send test payloads and can alter target state; require a fresh human approval bound to scope, policy, evidence and plan.",
+      "digest": "0a3632e784b20748e303b20a714e7816da672d39abb637dde27e5f05e6cad648",
+      "enforcement_state": "review-bound",
+      "execution_enabled": false,
+      "explicit_human_approval_required": true,
+      "impact": "network-requests",
+      "limitations": [
+        "Only reviewed concrete API operation checks have an execution path; native ZAP/Nikto scanners remain unavailable",
+        "Crawling and automatic route discovery are unsupported and never inferred from passive-web permission"
+      ],
+      "maximum_concurrency": 8,
+      "profile": "active-web",
+      "prohibited_behaviors": [
+        "wildcard-expansion",
+        "arbitrary-command",
+        "unreviewed-targets"
+      ],
+      "rate_limit_source": "reviewed-policy",
+      "redirect_limit": 3,
+      "requests_generated": true,
+      "runtime_limit_seconds": 300,
+      "schema_version": "2.0",
+      "side_effects": [
+        "Target requests may change state even for GET",
+        "Explicit impact and reset instructions required"
+      ],
+      "suggested_rate_per_second": 1,
+      "timeout_limit_seconds": 30
+    },
+    {
+      "allowed_parameters": [],
+      "api_check_execution_available": false,
+      "description": "Offensive validation is disabled; no Metasploit module or exploit is executed.",
+      "digest": "c7760754d8cef4bc1b6947f94a8f5b8f2cf47583928870739de5ef0fb62db619",
+      "enforcement_state": "review-bound",
+      "execution_enabled": false,
+      "explicit_human_approval_required": true,
+      "impact": "disabled",
+      "limitations": [
+        "Cannot be approved or consumed as an execution grant",
+        "Requires later isolated-lab implementation and human approval"
+      ],
+      "maximum_concurrency": 0,
+      "profile": "controlled-validation",
+      "prohibited_behaviors": [
+        "wildcard-expansion",
+        "arbitrary-command",
+        "unreviewed-targets"
+      ],
+      "rate_limit_source": "reviewed-policy",
+      "redirect_limit": 0,
+      "requests_generated": false,
+      "runtime_limit_seconds": 300,
+      "schema_version": "2.0",
+      "side_effects": [
+        "Offensive validation may alter state; execution is disabled"
+      ],
+      "suggested_rate_per_second": 0,
+      "timeout_limit_seconds": 30
+    }
+  ],
+  "schema_version": "2.0"
+}

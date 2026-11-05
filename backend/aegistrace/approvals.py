@@ -27,6 +27,7 @@ from aegistrace.policy import (
     reserve_policy,
 )
 from aegistrace.repository import get_record, require_access
+from aegistrace.scan_profiles import profile_digest, validate_profile_action
 from aegistrace.schema_v1 import assessments
 from aegistrace.settings import Settings
 
@@ -59,6 +60,8 @@ class ApprovalView(BaseModel):
     scope_id: UUID
     scope_revision: int
     policy_digest: str
+    profile_digest: str | None = None
+    profile_current: bool = False
     valid_until: str
     created_by: str
     created_at: str
@@ -75,7 +78,7 @@ def action_digest(value: dict[str, Any]) -> str:
     ).hexdigest()
 
 
-def verify_snapshot(row: Any) -> None:
+def verify_snapshot(row: Any, check_profile: bool = True) -> None:
     snapshot = {
         key: value
         for key, value in row["payload"].items()
@@ -86,6 +89,10 @@ def verify_snapshot(row: Any) -> None:
         or action_digest(snapshot["action"]["parameters"]) != snapshot["parameter_hash"]
     ):
         raise PolicyError("reviewed action integrity mismatch")
+    if check_profile and row["payload"].get("profile_digest") != profile_digest(
+        row["payload"]["action"]["profile"]
+    ):
+        raise PolicyError("impact profile changed; new human review required")
 
 
 def audit(
@@ -128,19 +135,13 @@ def validate_action(
         or plan["request"]["scope_revision"] != policy.scope_revision
     ):
         raise PolicyError("stale plan/scope")
-    combinations = {
-        "nmap.connect.v1": ("Nmap", "discovery"),
-        "zap.passive.v1": ("OWASP ZAP", "passive-web"),
-        "zap.active.v1": ("OWASP ZAP", "active-web"),
-        "metasploit.disabled": ("Metasploit", "controlled-validation"),
-    }
-    if combinations[body.template] != (body.tool, body.profile):
-        raise PolicyError("tool/template/profile mismatch")
-    if (
-        any(type(v) is not int or not 0 <= v <= 30 for v in body.parameters.values())
-        or body.parameters.get("max_redirects", 0) > 3
-    ):
-        raise PolicyError("parameters exceed bounded template")
+    validate_profile_action(
+        body.template,
+        body.tool,
+        body.profile,
+        {str(k): v for k, v in body.parameters.items()},
+        body.max_runtime_seconds,
+    )
     authorize(policy, body.destination_url, body.profile, resolver)
     for evidence_id in body.evidence_ids:
         get_record(connection, "evidence_references", assessment_id, evidence_id)
@@ -150,6 +151,7 @@ def validate_action(
         "scope_id": str(policy.scope_id),
         "scope_revision": policy.scope_revision,
         "policy_digest": policy_digest(policy),
+        "profile_digest": profile_digest(body.profile),
         "parameter_hash": action_digest(
             {str(key): value for key, value in body.parameters.items()}
         ),
@@ -211,8 +213,11 @@ def view_approval(
     if row is None:
         raise LookupError("approval not found")
     expired = datetime.fromisoformat(row["payload"]["valid_until"]) <= datetime.now(UTC)
+    profile_current = row["payload"].get("profile_digest") == profile_digest(
+        row["payload"]["action"]["profile"]
+    )
     allowed = (
-        ["approve", "deny"]
+        (["approve", "deny"] if profile_current else ["deny"])
         if not expired
         and row["state"] == "pending-review"
         and actor.principal_kind == "human"
@@ -226,6 +231,7 @@ def view_approval(
         "expired": expired,
         "allowed_decisions": allowed,
         "execution_enabled": False,
+        "profile_current": profile_current,
     }
 
 
@@ -262,7 +268,7 @@ def decide(
     )
     if row is None:
         raise LookupError("approval not found")
-    verify_snapshot(row)
+    verify_snapshot(row, check_profile=decision == "approve")
     if row["action_digest"] != expected_digest:
         raise PolicyError("reviewed action changed")
     allowed = {

@@ -1,0 +1,9 @@
+{
+  "task": "T28",
+  "issue": 45,
+  "requirements": ["R03", "R04", "R07", "R12", "R18", "R31", "W01"],
+  "verification": ["tests/test_scan_profiles.py", "tests/test_approvals.py", "tests/test_api_check_workflow.py", "tests/test_api_check_tls.py", "scripts/export_profiles.py --check"],
+  "manual_intervention_now": "None",
+  "limits": ["Native scanner execution remains blocked", "Crawling and offensive validation are not implemented", "Reset instructions are reviewed instructions, not reset proof", "Disposable test-owned HTTPS traffic is not competition demonstration evidence"],
+  "exact_commit_and_hosted_acceptance": "GitHub issue #45 delivery record"
+}

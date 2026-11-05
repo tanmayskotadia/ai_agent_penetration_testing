@@ -243,6 +243,22 @@
             "title": "Policy Digest",
             "type": "string"
           },
+          "profile_current": {
+            "default": false,
+            "title": "Profile Current",
+            "type": "boolean"
+          },
+          "profile_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Digest"
+          },
           "reviewer": {
             "anyOf": [
               {
@@ -761,6 +777,12 @@
             "title": "Credential Ids",
             "type": "object"
           },
+          "expected_impact": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Expected Impact",
+            "type": "string"
+          },
           "max_runtime_seconds": {
             "default": 60,
             "maximum": 300.0,
@@ -778,6 +800,18 @@
             "title": "Policy Id",
             "type": "string"
           },
+          "profile": {
+            "const": "active-web",
+            "default": "active-web",
+            "title": "Profile",
+            "type": "string"
+          },
+          "reset_instructions": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reset Instructions",
+            "type": "string"
+          },
           "selected_indices": {
             "items": {
               "type": "integer"
@@ -791,7 +825,9 @@
         "required": [
           "normalization_id",
           "policy_id",
-          "selected_indices"
+          "selected_indices",
+          "expected_impact",
+          "reset_instructions"
         ],
         "title": "CheckCreate",
         "type": "object"

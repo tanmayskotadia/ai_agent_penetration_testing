@@ -28,6 +28,7 @@ from aegistrace.policy import (
     policy_digest,
 )
 from aegistrace.repository import require_access
+from aegistrace.scan_profiles import profile_digest, profile_rule
 from aegistrace.schema_v1 import assessments
 from aegistrace.settings import Settings
 
@@ -39,6 +40,9 @@ class CheckCreate(BaseModel):
     selected_indices: tuple[int, ...] = Field(min_length=1, max_length=200)
     credential_ids: dict[str, UUID] = Field(default_factory=dict, max_length=20)
     max_runtime_seconds: int = Field(default=60, ge=1, le=300, strict=True)
+    profile: Literal["active-web"] = "active-web"
+    expected_impact: str = Field(min_length=1, max_length=1000)
+    reset_instructions: str = Field(min_length=1, max_length=2000)
 
 
 class CheckDecision(BaseModel):
@@ -206,6 +210,14 @@ def create_check(
     lock_assessment(connection, assessment_id)
     control = require_running(connection, assessment_id)
     policy = load_policy(connection, assessment_id, body.policy_id)
+    rule = profile_rule(body.profile)
+    if not rule.api_check_execution_available:
+        raise PolicyError("profile has no API check execution path")
+    if (
+        body.max_runtime_seconds > rule.runtime_limit_seconds
+        or policy.concurrent_jobs > rule.maximum_concurrency
+    ):
+        raise PolicyError("execution exceeds reviewed profile limits")
     source = connection.execute(
         select(normalizations.c.payload).where(
             normalizations.c.id == str(body.normalization_id),
@@ -260,6 +272,17 @@ def create_check(
         "endpoint_ids": [item["endpoint_id"] for item in source_operations],
         "policy_id": str(body.policy_id),
         "policy_digest": policy_digest(policy),
+        "profile": body.profile,
+        "profile_digest": profile_digest(body.profile),
+        "impact_rules": rule.model_dump(mode="json"),
+        "expected_impact": body.expected_impact,
+        "reset_instructions": body.reset_instructions,
+        "execution_limits": {
+            "requests_per_second": policy.requests_per_second,
+            "concurrent_jobs": policy.concurrent_jobs,
+            "max_runtime_seconds": body.max_runtime_seconds,
+            "max_redirects": 0,
+        },
         "epoch": control["epoch"],
         "operations": [op.model_dump(mode="json") for op in operations],
         "operation_digest": operation_digest(tuple(operations)),
@@ -291,7 +314,7 @@ def create_check(
     return view(check_row(connection, assessment_id, check_id))
 
 
-def verify_plan(plan: dict[str, Any]) -> None:
+def verify_plan(plan: dict[str, Any], check_profile: bool = True) -> None:
     unsigned = {
         name: value
         for name, value in plan.items()
@@ -309,6 +332,11 @@ def verify_plan(plan: dict[str, Any]) -> None:
     }
     if action_digest(unsigned) != plan["digest"]:
         raise PolicyError("API check plan changed")
+    if check_profile and (
+        plan.get("profile") != "active-web"
+        or plan.get("profile_digest") != profile_digest("active-web")
+    ):
+        raise PolicyError("impact profile changed; new human review required")
 
 
 def decide_check(
@@ -324,7 +352,7 @@ def decide_check(
     lock_assessment(connection, assessment_id)
     row = check_row(connection, assessment_id, check_id)
     plan = dict(row["payload"])
-    verify_plan(plan)
+    verify_plan(plan, check_profile=body.decision == "approve")
     if body.digest != plan["digest"]:
         raise PolicyError("reviewed digest mismatch")
     if body.decision == "cancel":
