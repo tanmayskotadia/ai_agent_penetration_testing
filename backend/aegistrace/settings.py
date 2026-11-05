@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     evidence_key: SecretStr | None = None
     evidence_key_id: str = Field(default="primary-v1", min_length=1, max_length=100)
     control_plane_networks: tuple[str, ...] = ("127.0.0.0/8", "::1/128")
+    web_scanner_candidate_enabled: bool = False
+    web_scanner_egress_gate_reference: str | None = Field(default=None, max_length=500)
+    zap_executable_path: str | None = Field(default=None, max_length=1000)
+    zap_executable_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    nikto_executable_path: str | None = Field(default=None, max_length=1000)
+    nikto_executable_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
     @field_validator("evidence_key")
     @classmethod

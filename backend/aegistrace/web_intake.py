@@ -54,7 +54,8 @@ def normalize_web_import(
         submitted["tool"] != tool
         or submitted["format"] != format_name
         or run["tool"] != tool
-        or run["mode"] != "recorded-import"
+        or run["mode"] not in {"recorded-import", "live"}
+        or (run["mode"] == "live" and run["state"] != "completed")
         or run["scope_id"] != submitted["scope_id"]
     ):
         raise ValueError("source metadata mismatch or unsupported candidate normalizer")
@@ -192,10 +193,10 @@ def normalize_web_import(
         "source_sha256": evidence["sha256"],
         "parser_revision": parser_revision,
         "asset_mapping": mapping,
-        "mode": "recorded-import",
+        "mode": run["mode"],
         "information_kind": "observed-evidence",
         "authenticity": "not-verified",
-        "native_live_execution": False,
+        "native_live_execution": run["mode"] == "live" and run["state"] == "completed",
         "tool_version": run["tool_version"],
         "captured_at": run["captured_at"],
         "asset_ids": sorted(set(asset_ids)),
@@ -208,7 +209,7 @@ def normalize_web_import(
         "out_of_scope_assets": excluded,
         "findings_created": 0,
         "limitations": [
-            "Recorded evidence import only; no scanner/API calls are made",
+            "Normalization itself is offline; run mode records whether the source artifact came from a completed native run or a recorded import",
             "Candidate parser requires genuine version-matched fixtures and an authorized demonstration for acceptance",
             "Source risk and confidence labels are preserved as scanner text; confidence is not a calibrated probability",
             "Imported alert does not prove exploitability or vulnerability confirmation",

@@ -70,8 +70,8 @@ CATALOG = (
         suggested_rate_per_second=0,
         maximum_concurrency=1,
         limitations=(
-            "A future ZAP passive runner must not crawl or fetch targets under this profile",
-            "Current ZAP path accepts offline Alerts JSON only",
+            "Candidate ZAP passive execution accepts one existing encrypted HAR artifact and disables request replay",
+            "The runner remains unavailable by default until its isolated runtime is operator-verified",
         ),
     ),
     ScanProfile(
@@ -139,6 +139,7 @@ def validate_profile_action(
         "nmap.connect.v1": ("Nmap", "discovery"),
         "zap.passive.v1": ("OWASP ZAP", "passive-web"),
         "zap.active.v1": ("OWASP ZAP", "active-web"),
+        "nikto.active.v1": ("Nikto", "active-web"),
         "metasploit.disabled": ("Metasploit", "controlled-validation"),
     }
     if combinations.get(template) != (tool, profile):
@@ -147,6 +148,8 @@ def validate_profile_action(
         raise PolicyError("profile runtime limit")
     if any(name not in rule.allowed_parameters for name in parameters):
         raise PolicyError("prohibited profile option")
+    if template == "nikto.active.v1" and parameters.get("max_redirects", 0) != 0:
+        raise PolicyError("Nikto redirects are not enabled")
     for name, value in parameters.items():
         maximum = (
             min(rule.timeout_limit_seconds, runtime)

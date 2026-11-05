@@ -39,7 +39,13 @@ class ActionRequest(BaseModel):
     plan_id: UUID
     plan_revision: int = Field(ge=1, le=2147483647)
     tool: ToolName
-    template: Literal["nmap.connect.v1", "zap.passive.v1", "zap.active.v1", "metasploit.disabled"]
+    template: Literal[
+        "nmap.connect.v1",
+        "zap.passive.v1",
+        "zap.active.v1",
+        "nikto.active.v1",
+        "metasploit.disabled",
+    ]
     profile: Profile
     destination_url: str = Field(min_length=1, max_length=2500)
     parameters: dict[Literal["timeout_seconds", "max_redirects"], StrictInt] = Field(

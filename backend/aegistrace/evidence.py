@@ -122,10 +122,73 @@ class EvidenceStore:
         )
         self.event(connection, assessment_id, evidence_id, actor, "original-stored")
 
+    def put_worker_output(
+        self,
+        connection: Connection,
+        assessment_id: UUID,
+        evidence_id: UUID,
+        job_id: UUID,
+        worker_id: UUID,
+        epoch: int,
+        raw: bytes,
+        expires_at: datetime,
+    ) -> None:
+        """Store a bounded artifact only while its scanner lease is current."""
+        from aegistrace.jobs import job_heartbeat
+
+        if job_heartbeat(connection, job_id, worker_id, epoch):
+            raise EvidenceError("job cancellation requested")
+        reference = get_record(connection, "evidence_references", assessment_id, evidence_id)
+        if not 0 < len(raw) <= MAX_BYTES:
+            raise EvidenceError("original must be 1 byte to 2 MiB")
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest != reference["sha256"]:
+            raise EvidenceError("original does not match source reference hash")
+        if expires_at.tzinfo is None or expires_at <= datetime.now(UTC):
+            raise EvidenceError("retention expiry must be timezone-aware and in the future")
+        nonce = secrets.token_bytes(12)
+        connection.execute(
+            objects.insert().values(
+                id=str(evidence_id),
+                assessment_id=str(assessment_id),
+                ciphertext=self.cipher.encrypt(nonce, raw, self.aad(assessment_id, evidence_id)),
+                nonce=nonce,
+                key_id=self.key_id,
+                sha256=digest,
+                size=len(raw),
+                expires_at=expires_at.isoformat(),
+                redaction_reviewed=False,
+            )
+        )
+        self.event(connection, assessment_id, evidence_id, f"scanner-worker:{worker_id}", "original-stored")
+
     def read(
         self, connection: Connection, assessment_id: UUID, evidence_id: UUID, actor: str
     ) -> bytes:
         require_access(connection, assessment_id, actor)
+        return self._read(connection, assessment_id, evidence_id, actor)
+
+    def read_worker_input(
+        self,
+        connection: Connection,
+        assessment_id: UUID,
+        evidence_id: UUID,
+        job_id: UUID,
+        worker_id: UUID,
+        epoch: int,
+    ) -> bytes:
+        """Read only under the active worker lease; caller binds ID to approved action."""
+        from aegistrace.jobs import job_heartbeat
+
+        if job_heartbeat(connection, job_id, worker_id, epoch):
+            raise EvidenceError("job cancellation requested")
+        return self._read(
+            connection, assessment_id, evidence_id, f"scanner-worker:{worker_id}"
+        )
+
+    def _read(
+        self, connection: Connection, assessment_id: UUID, evidence_id: UUID, actor: str
+    ) -> bytes:
         row = (
             connection.execute(
                 select(objects).where(
