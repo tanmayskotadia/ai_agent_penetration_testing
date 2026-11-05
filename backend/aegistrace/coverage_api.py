@@ -18,11 +18,12 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
 
     @router.get("")
     def snapshot(assessment_id: UUID, actor: Identity = actor_dependency) -> dict[str, Any]:
-        try:
-            with engine.begin() as connection:
+        with engine.begin() as connection:
+            try:
                 require_access(connection, assessment_id, actor.subject)
-                return assessment_coverage(connection, assessment_id)
-        except LookupError as error:
-            raise HTTPException(404, "Resource not found") from error
+            except LookupError as error:
+                raise HTTPException(404, "Resource not found") from error
+            return assessment_coverage(connection, assessment_id)
 
     return router
+

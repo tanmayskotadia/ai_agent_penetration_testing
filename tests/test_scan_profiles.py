@@ -5,7 +5,7 @@ from uuid import UUID
 import pytest
 from aegistrace import scan_profiles
 from aegistrace.api_check_worker import execute_check
-from aegistrace.approvals import consume
+from aegistrace.approvals import ActionRequest, consume
 from aegistrace.policy import PolicyError, TargetRule
 from aegistrace.scan_profiles import profile_rule, validate_profile_action
 from pydantic import ValidationError
@@ -25,6 +25,7 @@ pytest_plugins = ("test_policy", "test_identity", "test_ingestion")
         ("nmap.connect.v1", "Nmap", "discovery", {"timeout_seconds": 0}),
         ("nmap.connect.v1", "Nmap", "discovery", {"timeout_seconds": 21}),
         ("zap.active.v1", "OWASP ZAP", "active-web", {"max_redirects": 4}),
+        ("nikto.active.v1", "Nikto", "active-web", {"max_redirects": 1}),
     ],
 )
 def test_prohibited_settings_fail_closed(template, tool, profile, parameters):
@@ -44,6 +45,27 @@ def test_unknown_profiles_wildcards_and_false_passive_claims_are_denied():
     assert {"crawl", "spider", "fetch", "active-scan"}.issubset(passive.prohibited_behaviors)
     assert profile_rule("active-web").requests_generated is True
     assert profile_rule("controlled-validation").impact == "disabled"
+
+
+def test_nikto_active_template_is_explicitly_reviewable_but_redirects_are_off():
+    rule = validate_profile_action("nikto.active.v1", "Nikto", "active-web", {}, 30)
+    assert rule.explicit_human_approval_required is True
+    assert rule.requests_generated is True
+    action = ActionRequest.model_validate(
+        {
+            "policy_id": "3f7a1bf2-1273-4f8f-ad04-bb8439ab9827",
+            "plan_id": "c2d33365-3ad6-4afc-a9ea-b71d12b5d802",
+            "plan_revision": 1,
+            "tool": "Nikto",
+            "template": "nikto.active.v1",
+            "profile": "active-web",
+            "destination_url": "https://owned.example.test/",
+            "expected_impact": "Bounded, approved web server checks",
+            "rollback_instructions": "Reset the disposable test application",
+            "max_runtime_seconds": 30,
+        }
+    )
+    assert action.template == "nikto.active.v1"
 
 
 def change_rules(monkeypatch, profile):
@@ -119,3 +141,4 @@ def test_api_review_binds_rules_impact_reset_and_policy_limits(import_context, m
     for extra in ({"profile": "passive-web"}, {"crawl": True}, {"unknown_option": 1}):
         response = client.post(base + "/api-checks", json=original | extra, headers=headers())
         assert response.status_code == 422
+

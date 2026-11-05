@@ -155,10 +155,14 @@ def normalize_web_import(
                     asset_id=asset_id,
                     run_id=UUID(run["id"]),
                     evidence_id=evidence_id,
+                    endpoint_id=endpoint_id,
+                    parameter_names=instance.get("parameter_names", []),
                     source_key=source_key,
                     title=f"{tool}: {safe_name}",
                     observed_at=datetime.fromisoformat(run["captured_at"]),
                     source_severity=safe_risk or None,
+                    cve=alert.get("cve"),
+                    cwe=alert.get("cwe"),
                     validation_state="suspected",
                 )
                 observed_row = connection.execute(
@@ -283,3 +287,4 @@ def normalize_nikto_import(
         "nikto-json-normalize-v1",
         "nikto-v1",
     )
+

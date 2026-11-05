@@ -15,6 +15,8 @@ def _sample() -> bytes:
                     "pluginId": "10021",
                     "alertRef": "10021-1",
                     "alert": "Example alert",
+                    "cweid": 79,
+                    "cve": "cve-2024-12345",
                     "riskdesc": "Low (Medium)",
                     "confidence": "Medium",
                     "param": "session=must-not-appear",
@@ -43,6 +45,8 @@ def test_zap_alert_import_retains_ids_endpoints_and_parameter_names_only():
     assert alert["alert_id"] == "10021"
     assert alert["plugin_id"] == "10021"
     assert alert["alert_ref"] == "10021-1"
+    assert alert["cwe"] == "CWE-79"
+    assert alert["cve"] == "CVE-2024-12345"
     instance = alert["instances"][0]
     assert instance["method"] == "GET"
     assert instance["path"] == "/app"
@@ -58,6 +62,52 @@ def test_zap_alert_import_retains_ids_endpoints_and_parameter_names_only():
     ):
         assert private_value not in serialized
     assert parsed["assets"] == ["https://example.invalid/app"]
+
+
+def test_zap_traditional_json_report_projects_only_safe_alert_fields():
+    raw = json.dumps(
+        {
+            "@version": "Dev Build",
+            "@generated": "TEST ONLY",
+            "created": "2026-01-01T00:00:00Z",
+            "insights": [],
+            "site": [
+                {
+                    "@name": "https://example.invalid",
+                    "@host": "example.invalid",
+                    "@port": "443",
+                    "@ssl": "true",
+                    "alerts": [
+                        {
+                            "pluginid": "40012",
+                            "alertRef": "40012",
+                            "name": "TEST ONLY scanner alert",
+                            "riskdesc": "Low",
+                            "confidence": "2",
+                            "instances": [
+                                {
+                                    "uri": "https://example.invalid/app?q=secret",
+                                    "method": "GET",
+                                    "param": "q",
+                                    "attack": "TEST ONLY attack payload",
+                                    "evidence": "TEST ONLY matched response",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    ).encode()
+    parsed = normalize_zap(raw, "2.16.0")
+    assert parsed["state"] == "normalized"
+    alert = parsed["alerts"][0]
+    assert alert["plugin_id"] == "40012"
+    assert alert["alert_ref"] == "40012"
+    assert alert["instances"][0]["parameter_names"] == ["q"]
+    assert "TEST ONLY attack payload" not in json.dumps(parsed)
+    assert "TEST ONLY matched response" not in json.dumps(parsed)
+    assert "secret" not in json.dumps(parsed)
 
 
 @pytest.mark.parametrize(
@@ -91,3 +141,4 @@ def test_zap_query_parameter_count_is_bounded_and_bad_query_is_not_reflected():
     assert parsed["state"] == "normalized"
     assert parsed["alerts"][0]["instances"][0]["parameter_names"] == []
     assert "private" not in json.dumps(parsed)
+

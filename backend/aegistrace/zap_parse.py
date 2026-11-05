@@ -21,6 +21,22 @@ MAX_INSTANCES = 5000
 _METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 _VERSION = re.compile(r"^2\.\d{1,2}\.\d{1,3}(?:[-+][A-Za-z0-9.-]{1,40})?$")
 _PARAMETER_NAME = re.compile(r"^[A-Za-z0-9_.\[\]-]{1,100}$")
+_CVE = re.compile(r"^CVE-[0-9]{4}-[0-9]{4,}$", re.IGNORECASE)
+_CWE = re.compile(r"^CWE-[0-9]{1,6}$", re.IGNORECASE)
+
+
+def _source_cwe(value: Any) -> str | None:
+    if type(value) is int and 1 <= value <= 999999:
+        return f"CWE-{value}"
+    if isinstance(value, str) and _CWE.fullmatch(value.strip()):
+        return value.strip().upper()
+    return None
+
+
+def _source_cve(value: Any) -> str | None:
+    if isinstance(value, str) and _CVE.fullmatch(value.strip()):
+        return value.strip().upper()
+    return None
 
 
 def _parameter_names(uri: str, *labels: Any) -> list[str]:
@@ -42,6 +58,63 @@ def _parameter_names(uri: str, *labels: Any) -> list[str]:
         if candidate:
             names.add(candidate)
     return sorted(name for name in names if _PARAMETER_NAME.fullmatch(name))[:50]
+
+
+def _traditional_alerts(data: Any) -> dict[str, Any] | None:
+    """Project ZAP's traditional report onto the Alerts API shape without payload fields."""
+    if not isinstance(data, dict) or set(data) - {
+        "@version",
+        "@generated",
+        "created",
+        "site",
+        "insights",
+        "sequences",
+        "about",
+        "statistics",
+        "reportParameters",
+    }:
+        return None
+    sites = data.get("site")
+    if not isinstance(sites, list) or len(sites) > MAX_ASSETS:
+        return None
+    projected: list[dict[str, Any]] = []
+    instance_count = 0
+    for site in sites:
+        if not isinstance(site, dict) or not isinstance(site.get("alerts", []), list):
+            return None
+        alerts = site.get("alerts", [])
+        if len(alerts) > MAX_ALERTS:
+            return None
+        for alert in alerts:
+            if not isinstance(alert, dict) or not isinstance(alert.get("instances", []), list):
+                return None
+            instances = []
+            for instance in alert.get("instances", []):
+                instance_count += 1
+                if instance_count > MAX_INSTANCES or not isinstance(instance, dict):
+                    return None
+                # Do not copy `attack`, `evidence`, `otherinfo`, descriptions or responses.
+                instances.append(
+                    {
+                        "uri": instance.get("uri"),
+                        "method": instance.get("method", "GET"),
+                        "param": instance.get("param"),
+                    }
+                )
+            projected.append(
+                {
+                    "id": alert.get("pluginid", ""),
+                    "pluginId": alert.get("pluginid", ""),
+                    "alertRef": alert.get("alertRef", ""),
+                    "alert": alert.get("alert", alert.get("name", "Unlabelled ZAP alert")),
+                    "riskdesc": alert.get("riskdesc", "unknown"),
+                    "confidence": alert.get("confidence", "unknown"),
+                    "cweid": alert.get("cweid", alert.get("cwe")),
+                    "cve": alert.get("cve"),
+                    "instances": instances,
+                }
+            )
+    return {"alerts": projected}
 
 
 def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
@@ -90,11 +163,13 @@ def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
                 stack.extend(value.values())
             elif isinstance(value, list):
                 stack.extend(value)
-        if (
-            not isinstance(data, dict)
-            or set(data) != {"alerts"}
-            or not isinstance(data["alerts"], list)
-        ):
+        if isinstance(data, dict) and set(data) == {"alerts"}:
+            pass
+        else:
+            data = _traditional_alerts(data)
+            if data is None:
+                raise ParseRejected("unsupported-format")
+        if not isinstance(data.get("alerts"), list):
             raise ParseRejected("unsupported-format")
         if len(data["alerts"]) > MAX_ALERTS:
             raise ParseRejected("alert-limit")
@@ -148,6 +223,8 @@ def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
                     "name": str(alert.get("alert", "Unlabelled ZAP alert"))[:500],
                     "risk": str(alert.get("riskdesc", alert.get("risk", "unknown")))[:100],
                     "confidence_label": str(alert.get("confidence", "unknown"))[:100],
+                    "cwe": _source_cwe(alert.get("cweid", alert.get("cwe"))),
+                    "cve": _source_cve(alert.get("cve")),
                     "parameter_names": sorted(
                         {name for item in normalized_instances for name in item["parameter_names"]}
                     )[:50],
@@ -173,3 +250,4 @@ def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
     except Exception:
         result.update(code="unsafe-or-malformed", alerts=[], assets=[], parsed_records=0)
     return result
+
