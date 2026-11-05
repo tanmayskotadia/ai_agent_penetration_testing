@@ -14,6 +14,8 @@ COPY --chown=10001:10001 backend/ backend/
 COPY --chown=10001:10001 workers/ workers/
 COPY --chown=10001:10001 reports/ reports/
 COPY --chown=10001:10001 migrations/ migrations/
+COPY --chown=10001:10001 deploy/render-start.sh /app/render-start.sh
+RUN /bin/sh -n /app/render-start.sh
 COPY --from=frontend-build --chown=10001:10001 /frontend/dist/ frontend/dist/
 RUN chown 10001:10001 /app
 USER 10001

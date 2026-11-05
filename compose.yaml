@@ -34,6 +34,7 @@ services:
     command: [uv, run, --no-sync, alembic, upgrade, head]
   api:
     build: .
+    command: [/bin/sh, /app/render-start.sh]
     environment: *application-environment
     ports: [127.0.0.1:8000:8000]
     networks: [control, workspace]

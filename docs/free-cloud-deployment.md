@@ -13,7 +13,7 @@ This deploys the import-first AegisTrace application and its built React UI as o
 1. In Render, select **New → Blueprint**, connect `tanmayskotadia/ai_agent_penetration_testing`, and choose branch `main` after the implementation PR has been merged. Render reads the root `render.yaml` and creates one free Docker web service named `dataops`.
 2. When prompted, set `DATABASE_URL` to the Supabase Session-pooler URI from above.
 3. Set `EVIDENCE_KEY` to exactly 64 lowercase or uppercase hexadecimal characters representing 32 random bytes. Generate it in a trusted password manager or secret manager; do not put it in the repository, GitHub issues, screenshots or chat. Store a protected backup because previously encrypted originals cannot be decrypted after losing or replacing this key.
-4. Keep the generated `APP_SECRET` and `BOOTSTRAP_TOKEN` in Render's secret environment. The service command applies Alembic migrations before starting Uvicorn, and `/health/ready` remains unhealthy until the database reaches the current migration head.
+4. Keep the generated `APP_SECRET` and `BOOTSTRAP_TOKEN` in Render's secret environment. Render runs the checked-in `/app/render-start.sh`, which applies Alembic migrations and then starts Uvicorn on Render's `PORT`; `/health/ready` remains unhealthy until the database reaches the current migration head.
 5. Wait for Render's deploy to finish and check `${service-url}/health/ready`. Open `${service-url}/` for the same-origin UI. Free web services may sleep when idle, so the first request after inactivity can take time. Supabase free projects may pause after inactivity; resume the database in Supabase if readiness fails.
 
 ## Create the initial administrator once
