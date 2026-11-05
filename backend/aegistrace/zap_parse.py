@@ -1,8 +1,9 @@
 """Bounded OWASP ZAP Alerts JSON normalizer for privately supplied evidence."""
 
 import json
+import re
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 from aegistrace.safe_parse import (
     MAX_ASSETS,
@@ -18,6 +19,29 @@ from aegistrace.safe_parse import (
 MAX_ALERTS = 1000
 MAX_INSTANCES = 5000
 _METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+_VERSION = re.compile(r"^2\.\d{1,2}\.\d{1,3}(?:[-+][A-Za-z0-9.-]{1,40})?$")
+_PARAMETER_NAME = re.compile(r"^[A-Za-z0-9_.\[\]-]{1,100}$")
+
+
+def _parameter_names(uri: str, *labels: Any) -> list[str]:
+    """Return bounded parameter names only; never copy their values to normalized data."""
+    names: set[str] = set()
+    try:
+        names.update(
+            key
+            for key, _ in parse_qsl(urlsplit(uri).query, keep_blank_values=True, max_num_fields=50)
+        )
+    except ValueError:
+        return []
+    for label in labels:
+        if not isinstance(label, str):
+            continue
+        # ZAP's `param` is normally a name, but may contain an assignment. Treat anything
+        # after the first equals sign as secret evidence and discard it.
+        candidate = label.split("=", 1)[0].strip()
+        if candidate:
+            names.add(candidate)
+    return sorted(name for name in names if _PARAMETER_NAME.fullmatch(name))[:50]
 
 
 def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
@@ -29,7 +53,7 @@ def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
         "parsed_records": 0,
     }
     try:
-        if not 0 < len(raw) <= MAX_BYTES or not version.startswith("2."):
+        if not 0 < len(raw) <= MAX_BYTES or not _VERSION.fullmatch(version):
             raise ParseRejected("unsupported-version-or-size")
         text = raw.decode("utf-8")
         depth = 0
@@ -97,13 +121,18 @@ def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
                 if parsed.scheme not in {"http", "https"} or not parsed.hostname:
                     raise ParseRejected("invalid-instance-url")
                 origin = f"{parsed.scheme}://{parsed.netloc}"
-                assets.add(canonical_uri)
+                safe_uri = f"{origin}{parsed.path or '/'}"
+                assets.add(safe_uri)
                 normalized_instances.append(
                     {
-                        "uri": canonical_uri,
+                        "uri": safe_uri,
                         "origin": origin,
                         "path": parsed.path or "/",
                         "method": method,
+                        "parameter_names": _parameter_names(
+                            canonical_uri, instance.get("param"), alert.get("param")
+                        ),
+                        "request_response_evidence": "encrypted-original-only",
                         "pointer": f"/alerts/{index}/instances/{occurrence}",
                     }
                 )
@@ -113,11 +142,15 @@ def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
             # bodies, parameters and URLs with query strings stay only in encrypted evidence.
             alerts.append(
                 {
+                    "alert_id": str(alert.get("id", ""))[:100],
                     "plugin_id": str(alert.get("pluginId", ""))[:100],
                     "alert_ref": str(alert.get("alertRef", ""))[:100],
                     "name": str(alert.get("alert", "Unlabelled ZAP alert"))[:500],
                     "risk": str(alert.get("riskdesc", alert.get("risk", "unknown")))[:100],
                     "confidence_label": str(alert.get("confidence", "unknown"))[:100],
+                    "parameter_names": sorted(
+                        {name for item in normalized_instances for name in item["parameter_names"]}
+                    )[:50],
                     "instances": normalized_instances,
                     "pointer": f"/alerts/{index}",
                 }
@@ -140,3 +173,4 @@ def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
     except Exception:
         result.update(code="unsafe-or-malformed", alerts=[], assets=[], parsed_records=0)
     return result
+

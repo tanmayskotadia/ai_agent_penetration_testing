@@ -1,0 +1,28 @@
+{
+  "task": "T25",
+  "issue": 38,
+  "requirements": ["R04", "R05", "R06", "R09", "R10", "R12", "R24", "R27"],
+  "verification": [
+    "tests/test_zap.py",
+    "tests/test_ingestion.py (ZAP parser rejection cases)",
+    "tests/test_scanner_imports.py (end-to-end import test; hosted CI pending)",
+    "ruff check and format",
+    "mypy backend/aegistrace/zap_parse.py"
+  ],
+  "local_results": {
+    "zap_parser_and_rejection_tests": "6 passed",
+    "ingestion_rejection_tests": "9 passed",
+    "ruff": "passed",
+    "mypy": "passed",
+    "encrypted_import_api_integration": "local Windows TestClient did not complete; hosted CI pending"
+  },
+  "manual_intervention_now": "No live ZAP scan may be run. Before verified live acceptance, provision a private isolated ZAP runner with a pinned version/add-on set, internal-only API key, egress allowlist, and an exact-scope disposable authorized application. Supply genuine version-matched Alerts JSON and redaction review. Do not use organizer authorization that has not been provided.",
+  "limits": [
+    "This change improves recorded import only; it does not implement the ZAP API or Automation Framework runner.",
+    "Handcrafted parser fixtures prove software behavior, not source authenticity or scanner accuracy.",
+    "No live/passive/active ZAP scan has been run or represented as completed.",
+    "Active scanning, request generation, authentication coverage, cancellation, redirect enforcement, and live run evidence remain unverified."
+  ],
+  "exact_commit_and_hosted_acceptance": "Pending commit and GitHub Actions run"
+}
+

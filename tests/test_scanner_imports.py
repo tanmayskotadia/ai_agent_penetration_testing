@@ -49,6 +49,30 @@ BURP = (
 </issue></issues>"""
 )
 
+ZAP = json.dumps(
+    {
+        "alerts": [
+            {
+                "id": "10021",
+                "pluginId": "10021",
+                "alertRef": "10021-1",
+                "alert": "Handcrafted parser integration test only",
+                "riskdesc": "Low",
+                "confidence": "Medium",
+                "instances": [
+                    {
+                        "uri": "https://example.invalid/app?token=private-value",
+                        "method": "GET",
+                        "param": "token=private-value",
+                        "requestHeader": "Authorization: Bearer private-value",
+                        "responseBody": "private output",
+                    }
+                ],
+            }
+        ]
+    }
+).encode()
+
 
 def test_nessus_import_preserves_plugin_occurrences_cvss_and_host_identity():
     parsed = parse_scanner_export(NESSUS, "Nessus")
@@ -134,6 +158,15 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
             "source-declared",
             1,
         ),
+        (
+            "OWASP ZAP",
+            "zap-alerts-json",
+            "normalize-zap",
+            ZAP,
+            ["https://example.invalid/app"],
+            "2.16.0",
+            1,
+        ),
     ],
 )
 def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
@@ -202,3 +235,5 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
     assert normalized["out_of_scope_assets"] == []
     assert "private output" not in json.dumps(normalized)
     assert "secret-header" not in json.dumps(normalized)
+    assert "private-value" not in json.dumps(normalized)
+
