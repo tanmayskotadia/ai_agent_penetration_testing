@@ -133,6 +133,7 @@ def normalize_import(
                         asset_id=asset_id,
                         run_id=UUID(run["id"]),
                         evidence_id=evidence_id,
+                        service_id=UUID(service_id) if port["state"] == "open" else None,
                         source_key=f"{evidence_id}:{asset_id}:{source}:{port['pointer']}",
                         title=f"Nmap {port['protocol']}/{port['port']}: {port['state']}",
                         observed_at=datetime.fromisoformat(run["captured_at"]),

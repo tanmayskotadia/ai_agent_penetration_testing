@@ -23,6 +23,14 @@ def insert_record(connection: Connection, collection: str, record: Contract) -> 
         )
         if evidence["run_id"] != str(record.run_id):
             raise ValueError("observation evidence belongs to another run")
+        if record.endpoint_id is not None:
+            endpoint = get_record(connection, "endpoints", record.assessment_id, record.endpoint_id)
+            if endpoint["asset_id"] != str(record.asset_id):
+                raise ValueError("observation endpoint belongs to another asset")
+        if record.service_id is not None:
+            service = get_record(connection, "services", record.assessment_id, record.service_id)
+            if service["asset_id"] != str(record.asset_id):
+                raise ValueError("observation service belongs to another asset")
     if isinstance(record, Occurrence):
         observation = get_record(
             connection, "observations", record.assessment_id, record.observation_id

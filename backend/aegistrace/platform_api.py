@@ -15,10 +15,12 @@ from aegistrace.api_contracts import (
     ApprovalCreate,
     AssessmentCreate,
     AssetCreate,
+    AssetRiskContextCreate,
     EvidenceCreate,
     ImportCreate,
     JobCreate,
     PlanCreate,
+    PlanIntake,
     ReportCreate,
     RunCreate,
     ScopeCreate,
@@ -30,8 +32,10 @@ from aegistrace.auth import Identity, identity_dependency
 from aegistrace.domain import Assessment, Asset, EvidenceReference, Finding, ScopeVersion, ToolRun
 from aegistrace.identity_schema import members
 from aegistrace.mutations import mutation
+from aegistrace.planning_intake import build_intake_plan
 from aegistrace.repository import get_record, insert_record, require_access
-from aegistrace.schema_v1 import assessments, findings, scope_versions
+from aegistrace.result_schema import revisions
+from aegistrace.schema_v1 import assessments, assets, findings, scope_versions
 from aegistrace.settings import Settings
 
 
@@ -220,6 +224,10 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
                 plan = resource(connection, assessment_id, "plans", body.plan_id)
                 if plan["revision"] != body.plan_revision:
                     raise HTTPException(409, "Stale plan revision")
+                if plan["state"] != "draft":
+                    raise HTTPException(409, "Blocked plans cannot be scheduled or approved")
+                if not plan.get("request", {}).get("scope_id"):
+                    raise HTTPException(409, "Plan has no bound scope revision")
                 current_scope(
                     connection,
                     assessment_id,
@@ -272,6 +280,247 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
         assessment_id: UUID, body: PlanCreate, request: Request, actor: Identity = actor_dependency
     ) -> JSONResponse:
         return create_workflow("plans", assessment_id, body, request, actor)
+
+    @router.post(
+        "/assessments/{assessment_id}/plans/intake",
+        response_model=WorkflowResource,
+        status_code=202,
+    )
+    def intake_plan(
+        assessment_id: UUID,
+        body: PlanIntake,
+        request: Request,
+        actor: Identity = actor_dependency,
+    ) -> JSONResponse:
+        """Persist an explainable import-only plan revision; never executes tools."""
+        conversation_id = body.conversation_id or uuid4()
+        request_payload = body.model_dump(mode="json") | {"conversation_id": str(conversation_id)}
+
+        def apply(connection: Connection) -> dict[str, Any]:
+            require_access(connection, assessment_id, actor.subject)
+            connection.execute(
+                select(assessments.c.id)
+                .where(assessments.c.id == str(assessment_id))
+                .with_for_update()
+            ).one()
+            scope: dict[str, Any] | None = None
+            if body.scope_id is not None and body.scope_revision is not None:
+                scope = current_scope(connection, assessment_id, body.scope_id, body.scope_revision)
+            prior_results: list[dict[str, Any]] = []
+            for revision_id in body.prior_result_revision_ids:
+                revision_payload = connection.execute(
+                    select(revisions.c.payload).where(
+                        revisions.c.id == str(revision_id),
+                        revisions.c.assessment_id == str(assessment_id),
+                    )
+                ).scalar_one_or_none()
+                if revision_payload is None:
+                    raise HTTPException(422, "Prior result revision is not part of this assessment")
+                prior_revision = dict(revision_payload)
+                prior_run = get_record(
+                    connection, "tool_runs", assessment_id, UUID(prior_revision["run_id"])
+                )
+                prior_scope = get_record(
+                    connection, "scope_versions", assessment_id, UUID(prior_run["scope_id"])
+                )
+                same_scope = bool(
+                    scope is not None
+                    and prior_scope["id"] == scope["id"]
+                    and prior_scope["revision"] == scope["revision"]
+                )
+                prior_results.append(
+                    {
+                        "id": str(revision_id),
+                        "tool": prior_revision["tool"],
+                        "state": prior_revision["state"],
+                        "same_scope": same_scope,
+                    }
+                )
+            previous_values = connection.execute(
+                select(resources.c.payload).where(
+                    resources.c.assessment_id == str(assessment_id),
+                    resources.c.kind == "plans",
+                )
+            ).scalars()
+            previous = [
+                dict(value)
+                for value in previous_values
+                if value.get("request", {}).get("conversation_id") == str(conversation_id)
+            ]
+            prior = max(previous, key=lambda item: int(item.get("revision", 0)), default=None)
+            revision = int(prior["revision"]) + 1 if prior else 1
+            proposal = build_intake_plan(
+                body.message,
+                scope=scope,
+                constraints=body.constraints,
+                prior_results=prior_results,
+            )
+            stored_request = request_payload | {
+                "scope_id": str(body.scope_id) if body.scope_id else None,
+                "scope_revision": body.scope_revision,
+                "conversation_id": str(conversation_id),
+                "supersedes_plan_id": prior["id"] if prior else None,
+                "proposal": proposal,
+            }
+            proposal_blockers = proposal.get("blockers")
+            blockers = proposal_blockers if isinstance(proposal_blockers, list) else []
+            value = WorkflowResource.model_validate(
+                {
+                    "id": uuid4(),
+                    "assessment_id": assessment_id,
+                    "kind": "plans",
+                    "revision": revision,
+                    "state": "blocked" if blockers else "draft",
+                    "reason": ",".join(str(item) for item in blockers) or None,
+                    "mode": "request-only",
+                    "request": stored_request,
+                }
+            ).model_dump(mode="json")
+            connection.execute(
+                resources.insert().values(
+                    id=value["id"], assessment_id=str(assessment_id), kind="plans", payload=value
+                )
+            )
+            record_request(
+                connection, assessment_id, actor, "plan.intake-created", UUID(value["id"]), value
+            )
+            return value
+
+        return mutation(engine, request, actor, request_payload, apply, 202)
+
+    @router.get("/assessments/{assessment_id}/plans", response_model=list[WorkflowResource])
+    def list_plans(assessment_id: UUID, actor: Identity = actor_dependency) -> list[dict[str, Any]]:
+        try:
+            with engine.connect() as connection:
+                require_access(connection, assessment_id, actor.subject)
+                return [
+                    dict(value)
+                    for value in connection.execute(
+                        select(resources.c.payload).where(
+                            resources.c.assessment_id == str(assessment_id),
+                            resources.c.kind == "plans",
+                        )
+                    ).scalars()
+                ]
+        except LookupError as error:
+            raise HTTPException(404, "Resource not found") from error
+
+    @router.get("/assessments/{assessment_id}/assets")
+    def list_assets(
+        assessment_id: UUID, actor: Identity = actor_dependency
+    ) -> list[dict[str, Any]]:
+        try:
+            with engine.connect() as connection:
+                require_access(connection, assessment_id, actor.subject)
+                return [
+                    dict(value)
+                    for value in connection.execute(
+                        select(assets.c.payload)
+                        .where(assets.c.assessment_id == str(assessment_id))
+                        .order_by(assets.c.identifier)
+                    ).scalars()
+                ]
+        except LookupError as error:
+            raise HTTPException(404, "Resource not found") from error
+
+    @router.get("/assessments/{assessment_id}/asset-contexts")
+    def list_asset_contexts(
+        assessment_id: UUID, actor: Identity = actor_dependency
+    ) -> list[dict[str, Any]]:
+        try:
+            with engine.connect() as connection:
+                require_access(connection, assessment_id, actor.subject)
+                rows = connection.execute(
+                    select(resources.c.payload).where(
+                        resources.c.assessment_id == str(assessment_id),
+                        resources.c.kind == "asset-contexts",
+                    )
+                ).scalars()
+                latest: dict[str, dict[str, Any]] = {}
+                for row in rows:
+                    value = dict(row)
+                    asset_id = str(value["request"]["asset_id"])
+                    if asset_id not in latest or value["revision"] > latest[asset_id]["revision"]:
+                        latest[asset_id] = value
+                return list(latest.values())
+        except LookupError as error:
+            raise HTTPException(404, "Resource not found") from error
+
+    @router.post(
+        "/assessments/{assessment_id}/asset-contexts",
+        response_model=WorkflowResource,
+        status_code=201,
+    )
+    def save_asset_context(
+        assessment_id: UUID,
+        body: AssetRiskContextCreate,
+        request: Request,
+        actor: Identity = actor_dependency,
+    ) -> JSONResponse:
+        request_payload = body.model_dump(mode="json")
+
+        def apply(connection: Connection) -> dict[str, Any]:
+            require_access(connection, assessment_id, actor.subject)
+            if actor.principal_kind != "human" or actor.role not in {"reviewer", "admin"}:
+                raise HTTPException(403, "Reviewer or administrator role required for risk context")
+            try:
+                get_record(connection, "assets", assessment_id, body.asset_id)
+            except LookupError as error:
+                raise HTTPException(404, "Asset not found in this assessment") from error
+            connection.execute(
+                select(assessments.c.id)
+                .where(assessments.c.id == str(assessment_id))
+                .with_for_update()
+            ).one()
+            existing = [
+                dict(value)
+                for value in connection.execute(
+                    select(resources.c.payload).where(
+                        resources.c.assessment_id == str(assessment_id),
+                        resources.c.kind == "asset-contexts",
+                    )
+                ).scalars()
+                if str(value["request"].get("asset_id")) == str(body.asset_id)
+            ]
+            prior = max(existing, key=lambda value: int(value["revision"]), default=None)
+            if body.revision != (int(prior["revision"]) + 1 if prior else 1):
+                raise HTTPException(409, "Context revision must follow the latest revision")
+            stored = request_payload | {
+                "supersedes_context_id": prior["id"] if prior else None,
+                "recorded_by": actor.subject,
+                "recorded_at": datetime.now(UTC).isoformat(),
+                "provenance_kind": "reviewer-supplied; not independently verified",
+            }
+            value = WorkflowResource.model_validate(
+                {
+                    "id": uuid4(),
+                    "assessment_id": assessment_id,
+                    "kind": "asset-contexts",
+                    "revision": body.revision,
+                    "state": "draft",
+                    "mode": "request-only",
+                    "request": stored,
+                }
+            ).model_dump(mode="json")
+            connection.execute(
+                resources.insert().values(
+                    id=value["id"],
+                    assessment_id=str(assessment_id),
+                    kind="asset-contexts",
+                    payload=value,
+                )
+            )
+            record_request(
+                connection,
+                assessment_id,
+                actor,
+                "asset.risk-context-recorded",
+                UUID(value["id"]),
+                value,
+            )
+            return value
+
+        return mutation(engine, request, actor, request_payload, apply, 201)
 
     @router.post(
         "/assessments/{assessment_id}/jobs", response_model=WorkflowResource, status_code=202

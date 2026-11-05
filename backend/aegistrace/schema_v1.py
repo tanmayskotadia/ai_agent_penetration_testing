@@ -70,10 +70,14 @@ observations = entity(
     sa.Column("run_id", sa.String(36), nullable=False),
     sa.Column("asset_id", sa.String(36), nullable=False),
     sa.Column("evidence_id", sa.String(36), nullable=False),
+    sa.Column("service_id", sa.String(36)),
+    sa.Column("endpoint_id", sa.String(36)),
     sa.Column("source_key", sa.String(500), nullable=False),
     link("run_id", "tool_runs"),
     link("asset_id", "assets"),
     link("evidence_id", "evidence_references"),
+    link("service_id", "services"),
+    link("endpoint_id", "endpoints"),
     sa.UniqueConstraint("assessment_id", "run_id", "source_key"),
 )
 vulnerability_concepts = entity("vulnerability_concepts")

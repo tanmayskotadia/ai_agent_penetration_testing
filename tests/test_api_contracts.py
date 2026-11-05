@@ -128,6 +128,123 @@ def test_stale_scope_plan_and_other_owner_denied(api_context):
     )
 
 
+def test_plan_intake_persists_revisions_scope_checks_and_owner_access(api_context):
+    client, settings, engine = api_context
+    assessment = client.post(
+        "/api/v1/assessments", json={"name": "Planning test only"}, headers=headers(settings)
+    ).json()
+    base = f"/api/v1/assessments/{assessment['id']}"
+    conversation_id = str(uuid4())
+    blocked = client.post(
+        base + "/plans/intake",
+        json={"message": "Review https://example.test", "conversation_id": conversation_id},
+        headers=headers(settings),
+    )
+    assert blocked.status_code == 202
+    assert blocked.json()["state"] == "blocked"
+    assert blocked.json()["request"]["proposal"]["steps"] == []
+    cannot_schedule = client.post(
+        base + "/jobs",
+        json={"plan_id": blocked.json()["id"], "plan_revision": 1},
+        headers=headers(settings),
+    )
+    assert cannot_schedule.status_code == 409
+
+    scope = client.post(
+        base + "/scopes",
+        json={"revision": 1, "targets": ["example.test"], "exclusions": ["admin.example.test"]},
+        headers=headers(settings),
+    ).json()
+    created = client.post(
+        base + "/plans/intake",
+        json={
+            "message": "Review network and web API evidence",
+            "conversation_id": conversation_id,
+            "scope_id": scope["id"],
+            "scope_revision": scope["revision"],
+        },
+        headers=headers(settings),
+    )
+    assert created.status_code == 202
+    assert created.json()["revision"] == 2
+    assert created.json()["state"] == "draft"
+    persisted = client.get(base + "/plans", headers=headers(settings))
+    assert persisted.status_code == 200
+    assert persisted.json()[-1] == created.json()
+    assert client.get(base + "/plans", headers=headers(settings, "other")).status_code == 404
+
+    client.post(
+        base + "/scopes",
+        json={"revision": 2, "targets": ["new.example.test"]},
+        headers=headers(settings),
+    )
+    stale = client.post(
+        base + "/plans/intake",
+        json={
+            "message": "Review the existing evidence",
+            "conversation_id": conversation_id,
+            "scope_id": scope["id"],
+            "scope_revision": scope["revision"],
+        },
+        headers=headers(settings),
+    )
+    assert stale.status_code == 409
+    with engine.connect() as connection:
+        values = connection.execute(
+            select(resources.c.payload).where(
+                resources.c.assessment_id == assessment["id"], resources.c.kind == "plans"
+            )
+        ).scalars()
+        assert len(list(values)) == 2
+
+
+def test_asset_risk_context_requires_reviewer_and_provenance_revisions(api_context):
+    client, settings, _ = api_context
+    assessment = client.post(
+        "/api/v1/assessments", json={"name": "Context test only"}, headers=headers(settings)
+    ).json()
+    base = f"/api/v1/assessments/{assessment['id']}"
+    asset = client.post(
+        base + "/assets",
+        json={"identifier": "app.test.invalid", "kind": "host"},
+        headers=headers(settings),
+    ).json()
+    payload = {
+        "asset_id": asset["id"],
+        "revision": 1,
+        "exposure": "internet-facing",
+        "exposure_reference": "test-only approved inventory row",
+        "exploitability": "unknown",
+        "criticality": 4,
+        "criticality_reference": "test-only reviewer classification",
+        "reviewer_note": "Synthetic test context; not real risk evidence.",
+    }
+    denied = client.post(base + "/asset-contexts", json=payload, headers=headers(settings))
+    assert denied.status_code == 403
+    reviewer_headers = headers(settings, key=str(uuid4())) | {
+        "Authorization": "Bearer " + issue_identity(settings, "owner", "reviewer")
+    }
+    first = client.post(base + "/asset-contexts", json=payload, headers=reviewer_headers)
+    assert first.status_code == 201 and first.json()["revision"] == 1
+    next_payload = payload | {"revision": 2, "exposure": "internal"}
+    second = client.post(
+        base + "/asset-contexts",
+        json=next_payload,
+        headers=headers(settings, "owner", str(uuid4()))
+        | {"Authorization": "Bearer " + issue_identity(settings, "owner", "reviewer")},
+    )
+    assert (
+        second.status_code == 201
+        and second.json()["request"]["supersedes_context_id"] == first.json()["id"]
+    )
+    latest = client.get(
+        base + "/asset-contexts",
+        headers=headers(settings, "owner")
+        | {"Authorization": "Bearer " + issue_identity(settings, "owner", "reviewer")},
+    )
+    assert len(latest.json()) == 1 and latest.json()[0]["revision"] == 2
+
+
 def test_sse_resumes_persisted_events_and_checkpoint_download(api_context):
     client, settings, _ = api_context
     _, _, _, base = assessment_scope_plan(client, settings)
