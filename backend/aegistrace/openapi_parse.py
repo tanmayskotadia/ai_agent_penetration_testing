@@ -19,6 +19,25 @@ _METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
 MAX_OPERATIONS = 200
 
 
+def server_bases(servers: Any) -> list[str]:
+    """Validate each effective server, including operation/path overrides."""
+    if not isinstance(servers, list) or not servers or len(servers) > MAX_ASSETS:
+        raise ParseRejected("server-list-required-or-limit")
+    bases = []
+    for server in servers:
+        if not isinstance(server, dict) or not isinstance(server.get("url"), str):
+            raise ParseRejected("invalid-server")
+        template = server["url"]
+        if "{" in template or "}" in template:
+            raise ParseRejected("server-variables-unsupported")
+        base = canonical(template)
+        parsed = urlsplit(base)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.query:
+            raise ParseRejected("invalid-server-url")
+        bases.append(urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", "")))
+    return bases
+
+
 def parse_openapi(raw: bytes, version: str) -> dict[str, Any]:
     result: dict[str, Any] = {
         "state": "quarantined",
@@ -74,22 +93,10 @@ def parse_openapi(raw: bytes, version: str) -> dict[str, Any]:
         ):
             raise ParseRejected("unsupported-openapi-version-or-shape")
         servers = data.get("servers")
-        if not isinstance(servers, list) or not servers or len(servers) > MAX_ASSETS:
-            raise ParseRejected("server-list-required-or-limit")
-        bases = []
-        for server in servers:
-            if not isinstance(server, dict) or not isinstance(server.get("url"), str):
-                raise ParseRejected("invalid-server")
-            template = server["url"]
-            if "{" in template or "}" in template:
-                raise ParseRejected("server-variables-unsupported")
-            base = canonical(template)
-            parsed = urlsplit(base)
-            if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.query:
-                raise ParseRejected("invalid-server-url")
-            bases.append(
-                urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", ""))
-            )
+        bases = server_bases(servers)
+        # Include declared servers even when an operation overrides them: scope
+        # review must see every declared destination, not only selected URLs.
+        declared_assets = set(bases)
         security_schemes = (
             data.get("components", {}).get("securitySchemes", {})
             if isinstance(data.get("components", {}), dict)
@@ -107,15 +114,28 @@ def parse_openapi(raw: bytes, version: str) -> dict[str, Any]:
                 or not isinstance(path_item, dict)
             ):
                 raise ParseRejected("invalid-path-item")
+            if "$ref" in path_item:
+                raise ParseRejected("path-references-unsupported")
+            path_servers = path_item.get("servers", servers)
+            declared_assets.update(server_bases(path_servers))
             for method, operation in path_item.items():
                 if method.lower() not in _METHODS:
                     continue
                 if not isinstance(operation, dict):
                     raise ParseRejected("invalid-operation")
+                operation_bases = server_bases(operation.get("servers", path_servers))
+                declared_assets.update(operation_bases)
                 security = operation.get("security", global_security)
                 if not isinstance(security, list):
                     raise ParseRejected("invalid-operation-security")
                 if any(not isinstance(item, dict) for item in security):
+                    raise ParseRejected("invalid-operation-security")
+                if any(
+                    not isinstance(scopes, list)
+                    or any(not isinstance(scope, str) for scope in scopes)
+                    for item in security
+                    for scopes in item.values()
+                ):
                     raise ParseRejected("invalid-operation-security")
                 auth_names = sorted(
                     {
@@ -128,7 +148,7 @@ def parse_openapi(raw: bytes, version: str) -> dict[str, Any]:
                 )
                 if any(name not in security_schemes for name in auth_names):
                     raise ParseRejected("unresolved-security-scheme")
-                for server_index, base in enumerate(bases):
+                for server_index, base in enumerate(operation_bases):
                     full = canonical(base.rstrip("/") + path)
                     parsed = urlsplit(full)
                     origin = f"{parsed.scheme}://{parsed.netloc}"
@@ -139,7 +159,8 @@ def parse_openapi(raw: bytes, version: str) -> dict[str, Any]:
                             "origin": origin,
                             "path": parsed.path or "/",
                             "method": method.upper(),
-                            "authentication_required": bool(auth_names),
+                            "authentication_required": bool(security) and {} not in security,
+                            "security_alternatives": security,
                             "security_schemes": auth_names,
                             "pointer": f"/paths/{path}/{method}",
                             "server_index": server_index,
@@ -149,6 +170,7 @@ def parse_openapi(raw: bytes, version: str) -> dict[str, Any]:
                         raise ParseRejected("operation-limit")
         if not operations:
             raise ParseRejected("no-supported-operations")
+        assets.update(declared_assets)
         if len(assets) > MAX_ASSETS:
             raise ParseRejected("asset-limit")
         result.update(

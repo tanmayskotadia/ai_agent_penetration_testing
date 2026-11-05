@@ -114,8 +114,10 @@ def normalize_openapi_import(
                     "endpoint_id": str(endpoint_id),
                     "method": operation["method"],
                     "path": path,
+                    "url": mapped,
                     "authentication_required": operation["authentication_required"],
                     "security_schemes": operation["security_schemes"],
+                    "security_alternatives": operation["security_alternatives"],
                     "source_pointer": operation["pointer"],
                 }
             )
