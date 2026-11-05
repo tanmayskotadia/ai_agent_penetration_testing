@@ -39,14 +39,14 @@
       ],
       "api_check_execution_available": false,
       "description": "Analyze an already captured or proxied HTTP conversation; importing or reviewing evidence itself sends no requests.",
-      "digest": "992acf023d5c19d886e185fb0cd754b3f225dce104342a3efdbe7ad64e2f0015",
+      "digest": "6c0d659a82c63e5dd696bcf9f610280f5901a0e4df6d5acd7419decd40a5b1b2",
       "enforcement_state": "review-bound",
       "execution_enabled": false,
       "explicit_human_approval_required": true,
       "impact": "no-network",
       "limitations": [
-        "A future ZAP passive runner must not crawl or fetch targets under this profile",
-        "Current ZAP path accepts offline Alerts JSON only"
+        "Candidate ZAP passive execution accepts one existing encrypted HAR artifact and disables request replay",
+        "The runner remains unavailable by default until its isolated runtime is operator-verified"
       ],
       "maximum_concurrency": 1,
       "profile": "passive-web",
@@ -138,3 +138,4 @@
   ],
   "schema_version": "2.0"
 }
+
