@@ -15,7 +15,7 @@
     "ruff": "passed after import formatting",
     "mypy": "passed",
     "nikto_encrypted_import_api_integration": "Selected Windows TestClient invocation did not complete within 50 seconds; hosted CI required",
-    "hosted_foundation_ci": "pending"
+    "hosted_foundation_ci": "passed for commit 2dbf3a5b685956829b104aef9961639e7045bf26: 202 passed, 18 deselected; 18 services tests passed; frontend build and egress job passed"
   },
   "manual_intervention_now": "No user action is needed to exercise the handcrafted parser tests. Before genuine acceptance, provide a genuine version-matched Nikto 2.6.x JSON export from a target you own or are explicitly authorized to test, plus capture time and source version evidence. No organizer response is assumed or required for this code work.",
   "limits": [
@@ -24,5 +24,5 @@
     "No live Nikto run, authorized lab demonstration, or independent source authenticity check has been performed.",
     "The source-declared version string is only an input gate, not proof of the producing executable version."
   ],
-  "status": "Open until hosted integration passes and genuine version-matched evidence is reviewed"
+  "status": "Hosted software acceptance passed. Keep open until genuine version-matched evidence and the authorized demonstration are reviewed"
 }

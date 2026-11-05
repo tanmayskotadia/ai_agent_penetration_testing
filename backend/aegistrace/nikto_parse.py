@@ -99,6 +99,7 @@ def normalize_nikto(raw: bytes, version: str) -> dict[str, Any]:
                 assets.add(safe_uri)
                 alerts.append(
                     {
+                        "classification": "server-configuration-observation",
                         "plugin_id": str(item.get("id", ""))[:100],
                         "alert_ref": str(item.get("references", ""))[:100],
                         "name": str(item.get("msg", "Nikto server observation"))[:500],

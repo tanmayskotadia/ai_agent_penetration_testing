@@ -264,6 +264,7 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
     assert "secret-header" not in json.dumps(normalized)
     assert "private-value" not in json.dumps(normalized)
     if tool == "Nikto":
+        assert normalized["alerts"][0]["classification"] == ("server-configuration-observation")
         assert normalized["alerts"][0]["plugin_id"] == "OSVDB-12345"
         assert normalized["alerts"][0]["risk"] == "unknown"
         assert "cves" not in normalized["alerts"][0]

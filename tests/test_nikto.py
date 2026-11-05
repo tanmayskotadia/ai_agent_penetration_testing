@@ -29,6 +29,7 @@ def test_nikto_preserves_source_labels_without_inventing_severity_or_cves():
 
     assert parsed["state"] == "normalized"
     alert = parsed["alerts"][0]
+    assert alert["classification"] == "server-configuration-observation"
     assert alert["plugin_id"] == "OSVDB-12345"
     assert alert["alert_ref"] == "CVE-2024-12345; CWE-79"
     assert alert["name"] == "Handcrafted Nikto parser test message"
