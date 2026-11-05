@@ -15,7 +15,7 @@ The automated vertical-slice test at `tests/e2e/minimum-prototype/test_minimum_p
 7. Reviewer-supplied asset context, frozen result revisions, and a PDF export.
 8. A false acceptance gate: the synthetic inputs do not count as genuine integrations and cannot make the three-import criterion pass.
 
-The test makes no network requests to targets and creates no scanner output. The complete non-service suite passed on this Windows host (**241 passed, 6 skipped, 18 deselected**), including this journey, when run with the loopback access required by Starlette `TestClient`. Hosted CI must still execute it on the published implementation revision. On this Windows host, the test runner needs permission to create the local loopback self-pipe used by `TestClient`.
+The test makes no network requests to targets and creates no scanner output. It verifies the downloadable PDF returned by the assessment export route, its required sections, its source tools, its `TEST ONLY` provenance, and its explicit unknown-coverage language. The previous full non-service run passed on this Windows host (**241 passed, 6 skipped, 18 deselected**). Hosted CI run [42094651351](https://github.com/tanmayskotadia/ai_agent_penetration_testing/actions/runs/42094651351) passed on commit `2dbe256f156919bd888994a072f76c68c865aa3e`; this new end-to-end PDF-content assertion must also pass hosted CI before its evidence is recorded. On this Windows host, the test runner needs permission to create the local loopback self-pipe used by Starlette `TestClient`.
 
 ## Participant-owned genuine-evidence run
 
@@ -34,7 +34,7 @@ Complete these steps only with a target and test actions the participant is auth
 
 ## T30 closure evidence checklist
 
-- [ ] Hosted integration test for the test-only vertical slice passes on the exact implementation commit (local Windows run passed; hosted CI evidence remains pending).
+- [ ] Hosted integration test for the test-only vertical slice passes on the exact implementation commit (the prior commit passed CI; verify the new PDF-content assertion on the next CI run).
 - [ ] One genuine participant-owned authorized assessment contains at least three version-matched network/web sources (Nmap plus web scanner/import sources); synthetic tests and an OpenAPI definition alone do not satisfy this count.
 - [ ] Reviewer has inspected and correctly classified each original source and its authorization basis.
 - [ ] A real end-to-end run demonstrates scope rejection, safe denial, normalized evidence links, correlation/risk review, a complete reviewed PDF, and one truthful failure path.

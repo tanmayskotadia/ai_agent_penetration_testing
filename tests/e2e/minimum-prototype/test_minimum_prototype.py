@@ -282,3 +282,24 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
     assert frozen.json()["snapshot"]["correlation"]["reviewed_cluster_count"] == 1
     pdf = client.get(base + "/result-exports/" + export["id"] + "/pdf", headers=headers())
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF-1.4")
+    assert pdf.content.rstrip().endswith(b"%%EOF")
+    pdf_text = pdf.content.decode("latin-1")
+    for heading in (
+        "Executive summary",
+        "Assessment scope and rules of engagement",
+        "Methodology",
+        "Asset inventory",
+        "Tool execution summary",
+        "Severity distribution (source-reported)",
+        "Prioritized observations and reviewer findings",
+        "Reviewer correlation decisions",
+        "Business impact, recommendations and references",
+        "Human approvals and decisions",
+        "Assumptions, scan failures and limitations",
+        "Evidence manifest",
+    ):
+        escaped = heading.replace("(", "\\(").replace(")", "\\)")
+        assert escaped in pdf_text
+    assert "OWASP ZAP" in pdf_text and "Nikto" in pdf_text
+    assert "Coverage status: NOT ESTABLISHED" in pdf_text
+    assert "TEST ONLY" in pdf_text
