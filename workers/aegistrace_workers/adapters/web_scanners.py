@@ -90,9 +90,7 @@ def discover_version(binary: PinnedBinary, tool: Literal["Nikto", "OWASP ZAP"]) 
 def _target(destination: Destination) -> str:
     if destination.protocol not in {"http", "https"} or not destination.pinned_addresses:
         raise PolicyError("pinned HTTP(S) target required")
-    if not destination.path.startswith("/") or any(
-        char in destination.path for char in "?#\\"
-    ):
+    if not destination.path.startswith("/") or any(char in destination.path for char in "?#\\"):
         raise PolicyError("path-only target required")
     host = f"[{destination.host}]" if ":" in destination.host else destination.host
     default_port = 443 if destination.protocol == "https" else 80
@@ -194,12 +192,8 @@ def zap_automation_plan(
     context = {
         "name": "aegistrace-action",
         "urls": [origin],
-        "includePaths": [
-            f"^{escaped_origin}{re.escape(path)}(?:$|/)" for path in included_paths
-        ],
-        "excludePaths": [
-            f"^{escaped_origin}{re.escape(path)}(?:$|/)" for path in excluded_paths
-        ],
+        "includePaths": [f"^{escaped_origin}{re.escape(path)}(?:$|/)" for path in included_paths],
+        "excludePaths": [f"^{escaped_origin}{re.escape(path)}(?:$|/)" for path in excluded_paths],
         "authentication": {"method": "manual"},
         "sessionManagement": {"method": "cookie"},
     }
@@ -217,7 +211,10 @@ def zap_automation_plan(
                     "maxMessages": 200,
                 },
             },
-            {"type": "passiveScan-wait", "parameters": {"maxDuration": max(1, (runtime_seconds + 59) // 60)}},
+            {
+                "type": "passiveScan-wait",
+                "parameters": {"maxDuration": max(1, (runtime_seconds + 59) // 60)},
+            },
         ]
         config = {"pscans.scanOnlyInScope": "true", "pscans.maxBodySizeInBytes": "1048576"}
         env: dict[str, Any] = {

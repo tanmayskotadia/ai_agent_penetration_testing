@@ -40,9 +40,7 @@ from aegistrace_workers.adapters.web_scanners import (
 from aegistrace_workers.command_builder import RegisteredExecutable, build_command
 
 
-def _executables(
-    config: Settings, selected_tool: str
-) -> dict[str, RegisteredExecutable]:
+def _executables(config: Settings, selected_tool: str) -> dict[str, RegisteredExecutable]:
     values: dict[str, RegisteredExecutable] = {}
     for tool, path_value, sha256 in (
         ("OWASP ZAP", config.zap_executable_path, config.zap_executable_sha256),

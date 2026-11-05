@@ -160,7 +160,9 @@ class EvidenceStore:
                 redaction_reviewed=False,
             )
         )
-        self.event(connection, assessment_id, evidence_id, f"scanner-worker:{worker_id}", "original-stored")
+        self.event(
+            connection, assessment_id, evidence_id, f"scanner-worker:{worker_id}", "original-stored"
+        )
 
     def read(
         self, connection: Connection, assessment_id: UUID, evidence_id: UUID, actor: str
@@ -182,9 +184,7 @@ class EvidenceStore:
 
         if job_heartbeat(connection, job_id, worker_id, epoch):
             raise EvidenceError("job cancellation requested")
-        return self._read(
-            connection, assessment_id, evidence_id, f"scanner-worker:{worker_id}"
-        )
+        return self._read(connection, assessment_id, evidence_id, f"scanner-worker:{worker_id}")
 
     def _read(
         self, connection: Connection, assessment_id: UUID, evidence_id: UUID, actor: str

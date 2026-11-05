@@ -136,10 +136,9 @@ def build_command(
         and action.tool in {"Nikto", "OWASP ZAP"}
         and action.template in {"nikto.active.v1", "zap.passive.v1", "zap.active.v1"}
     )
-    if (
-        not (verified_live or explicitly_enabled_candidate)
-        or action.template not in supported_templates.get(action.tool, set())
-    ):
+    if not (
+        verified_live or explicitly_enabled_candidate
+    ) or action.template not in supported_templates.get(action.tool, set()):
         raise PolicyError("verified native template unavailable; execution stays disabled")
     executable = executables.get(action.tool)
     if (
@@ -172,7 +171,11 @@ def build_command(
             payload["action_digest"],
         )
 
-    if output_directory is None or not output_directory.is_absolute() or output_directory.is_symlink():
+    if (
+        output_directory is None
+        or not output_directory.is_absolute()
+        or output_directory.is_symlink()
+    ):
         raise PolicyError("private scanner output workspace required")
     if not output_directory.is_dir():
         raise PolicyError("scanner output workspace must already exist")

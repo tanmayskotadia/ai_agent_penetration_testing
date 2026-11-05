@@ -103,7 +103,9 @@ class ProxyPolicy:
 
     @property
     def pins(self) -> tuple[str, ...]:
-        return tuple(str(ipaddress.ip_address(value)) for value in self.destination.pinned_addresses)
+        return tuple(
+            str(ipaddress.ip_address(value)) for value in self.destination.pinned_addresses
+        )
 
 
 class _Server(ThreadingHTTPServer):
@@ -144,7 +146,10 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _current(self) -> bool:
         try:
-            return time.monotonic() < self.server.policy.deadline and not self.server.policy.cancelled()
+            return (
+                time.monotonic() < self.server.policy.deadline
+                and not self.server.policy.cancelled()
+            )
         except Exception:
             return False
 

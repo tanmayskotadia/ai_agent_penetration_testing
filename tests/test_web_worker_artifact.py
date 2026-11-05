@@ -102,12 +102,12 @@ def test_web_worker_artifact_is_durable_encrypted_and_importable(monkeypatch: Mo
             evidence = get_record(
                 connection, "evidence_references", assessment_id, UUID(evidence_id)
             )
-            run = get_record(
-                connection, "tool_runs", assessment_id, UUID(evidence["run_id"])
+            run = get_record(connection, "tool_runs", assessment_id, UUID(evidence["run_id"]))
+            stored = (
+                connection.execute(select(objects).where(objects.c.id == evidence_id))
+                .mappings()
+                .one()
             )
-            stored = connection.execute(
-                select(objects).where(objects.c.id == evidence_id)
-            ).mappings().one()
             assert imported["state"] == "pending-ingestion"
             assert imported["mode"] == "recorded-import"
             assert imported["request"]["format"] == "zap-alerts-json"
@@ -115,10 +115,13 @@ def test_web_worker_artifact_is_durable_encrypted_and_importable(monkeypatch: Mo
             assert ToolRun.model_validate(run).captured_at <= datetime.now(UTC)
             assert evidence["sha256"] == hashlib.sha256(raw).hexdigest()
             assert raw not in stored["ciphertext"]
-            assert AESGCM(bytes.fromhex(config.evidence_key.get_secret_value())).decrypt(
-                stored["nonce"],
-                stored["ciphertext"],
-                EvidenceStore.aad(assessment_id, UUID(evidence_id)),
-            ) == raw
+            assert (
+                AESGCM(bytes.fromhex(config.evidence_key.get_secret_value())).decrypt(
+                    stored["nonce"],
+                    stored["ciphertext"],
+                    EvidenceStore.aad(assessment_id, UUID(evidence_id)),
+                )
+                == raw
+            )
     finally:
         engine.dispose()
