@@ -214,7 +214,9 @@ def execute_check(
             or current["payload"].get("worker_id") != worker_id
         ):
             raise PolicyError("late output after terminal reconciliation")
-        state = "cancelled" if was_cancelled else "completed"
+        state = (
+            "cancelled" if was_cancelled or current["state"] == "cancel-requested" else "completed"
+        )
         outcomes = result.get("operations")
         ambiguous = isinstance(outcomes, list) and any(
             op.get("attempted") and op.get("status_code") is None for op in outcomes

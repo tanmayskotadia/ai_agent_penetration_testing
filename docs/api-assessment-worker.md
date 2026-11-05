@@ -36,4 +36,6 @@ All paths below are under `/api/v1/assessments/{assessment_id}` and require an a
 
 ## Participant requirements
 
+Service regressions share one disposable PostgreSQL database. Evidence verification queries must filter both assessment and evidence ID; adding another valid assessment must not change the test's expected row count. The #44 PostgreSQL workflow runs alongside the evidence, approval and job service regressions.
+
 No manual action is required for engineering acceptance or disposable tests. No keys, local installation, licensed scanners or organizer responses were needed. To use the feature against an actual hosted API later, enter a dedicated restricted bearer/header API key through the private credential API, approve exact operations under valid authority, and deploy the private runner with verified networking (#28). Supabase/Render connection alone is not proof that the runner is deployed or isolated. Keep the general-purpose asset-owner profile distinct from any competition-specific demonstration requirements.

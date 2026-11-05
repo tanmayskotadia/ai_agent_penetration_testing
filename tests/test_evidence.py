@@ -100,12 +100,31 @@ def test_authenticated_trace_download_and_separate_reviewed_redaction(evidence_c
                 EvidenceStore.derivative(connection, assessment.id, evidence.id, "owner")
                 == redaction["snippet"]
             )
-            row = connection.execute(select(objects)).mappings().one()
+            row = (
+                connection.execute(
+                    select(objects).where(
+                        objects.c.assessment_id == str(assessment.id),
+                        objects.c.id == str(evidence.id),
+                    )
+                )
+                .mappings()
+                .one()
+            )
             assert raw not in row["ciphertext"]
             assert (
                 EvidenceStore(settings).read(connection, assessment.id, evidence.id, "owner") == raw
             )
-            assert len(connection.execute(select(access_events)).all()) >= 5
+            assert (
+                len(
+                    connection.execute(
+                        select(access_events).where(
+                            access_events.c.assessment_id == str(assessment.id),
+                            access_events.c.evidence_id == str(evidence.id),
+                        )
+                    ).all()
+                )
+                >= 5
+            )
 
 
 def test_expired_and_cross_resource_tickets_and_identity_rejected(evidence_context):
