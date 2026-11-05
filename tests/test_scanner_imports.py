@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from aegistrace import mutations, web_intake
+from aegistrace import ingestion, mutations, web_intake
 from aegistrace.auth import issue_identity
 from aegistrace.evidence import EvidenceStore
 from aegistrace.safe_parse import inspect_container, isolated_inspection
@@ -248,6 +248,21 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
         "require_access",
         track_lookup("mutation.require_access", mutations.require_access),
     )
+    original_mutation = ingestion.mutation
+
+    def tracked_mutation(engine, request, actor, payload, operation, *args, **kwargs):
+        def tracked_operation(connection):
+            try:
+                return operation(connection)
+            except LookupError:
+                lookup_trace.append("unclassified-operation-lookup")
+                raise
+
+        return original_mutation(
+            engine, request, actor, payload, tracked_operation, *args, **kwargs
+        )
+
+    monkeypatch.setattr(ingestion, "mutation", tracked_mutation)
     monkeypatch.setattr(
         EvidenceStore,
         "read",

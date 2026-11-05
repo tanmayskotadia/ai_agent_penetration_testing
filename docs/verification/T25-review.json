@@ -14,7 +14,7 @@
     "ingestion_rejection_tests": "9 passed",
     "ruff": "passed",
     "mypy": "passed",
-    "encrypted_import_api_integration": "The first hosted run stopped at formatting; the second exposed an endpoint payload lookup bug after 187 tests passed. The third run passed formatting and exposed a remaining 404 in the same import route (187 passed, 1 failed). Web-import lookup tracing did not locate it; the next run also traces the mutation access guard. Local Windows TestClient did not complete."
+    "encrypted_import_api_integration": "The first hosted run stopped at formatting; the second exposed an endpoint payload lookup bug after 187 tests passed. The third and fourth runs passed formatting and exposed a remaining 404 in the same import route (187 passed, 1 failed each). The fourth trace ruled out web-import lookups and the mutation access guard; the next run instruments the operation boundary. Local Windows TestClient did not complete."
   },
   "manual_intervention_now": "No live ZAP scan may be run. Before verified live acceptance, provision a private isolated ZAP runner with a pinned version/add-on set, internal-only API key, egress allowlist, and an exact-scope disposable authorized application. Supply genuine version-matched Alerts JSON and redaction review. Do not use organizer authorization that has not been provided.",
   "limits": [
@@ -23,5 +23,5 @@
     "No live/passive/active ZAP scan has been run or represented as completed.",
     "Active scanning, request generation, authentication coverage, cancellation, redirect enforcement, and live run evidence remain unverified."
   ],
-  "exact_commit_and_hosted_acceptance": "Mutation-access diagnostic follow-up commit and hosted acceptance run pending"
+  "exact_commit_and_hosted_acceptance": "Operation-boundary diagnostic follow-up commit and hosted acceptance run pending"
 }
