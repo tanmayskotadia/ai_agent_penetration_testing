@@ -1,6 +1,8 @@
 """Export packaged enforcement rules for review; JSON is not execution consent."""
 
 import argparse
+import difflib
+import hashlib
 import json
 from pathlib import Path
 
@@ -19,11 +21,26 @@ def main() -> None:
     )
     path = Path(__file__).resolve().parents[1] / "config" / "scan-profiles.json"
     if args.check:
-        if not path.exists() or path.read_text(encoding="utf-8") != content:
-            raise SystemExit("Scan profile export drift; run scripts/export_profiles.py")
+        current = path.read_text(encoding="utf-8") if path.exists() else ""
+        if current != content:
+            diff = "".join(
+                difflib.unified_diff(
+                    current.splitlines(keepends=True),
+                    content.splitlines(keepends=True),
+                    fromfile="config/scan-profiles.json",
+                    tofile="generated scan profile export",
+                )
+            )
+            raise SystemExit(
+                "Scan profile export drift; run scripts/export_profiles.py\n"
+                f"current_sha256={hashlib.sha256(current.encode()).hexdigest()} "
+                f"expected_sha256={hashlib.sha256(content.encode()).hexdigest()}\n"
+                f"{''.join(diff.splitlines(keepends=True)[:80])}"
+            )
     else:
         path.write_text(content, encoding="utf-8")
 
 
 if __name__ == "__main__":
     main()
+
