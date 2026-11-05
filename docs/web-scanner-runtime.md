@@ -10,6 +10,8 @@ This document describes the candidate worker path for T25 and T26. It is disable
 - A successful run creates a live-mode `ToolRun`, a hash-linked `EvidenceReference`, a 30-day encrypted original, and a pending import resource in one transaction. Normalization remains an offline step and labels source observations as suspected; it does not confirm vulnerabilities or create findings.
 - The integration registry remains `planned` until genuine tool/version, license, live-run, source-evidence, authorization, and runtime-gate verification are reviewed. Parser fixtures and generated plans are test-only evidence.
 
+The candidate does not configure authenticated target sessions or credentials. Active ZAP and Nikto should therefore only be approved for routes that are intentionally testable without target authentication. Passive ZAP can inspect an existing HAR, but session contents remain encrypted source evidence and are not proof that the capture is authentic. The launcher version probe does not verify optional ZAP add-ons or software licensing; missing Automation Framework/report support fails the run, and edition/license status remains unknown.
+
 ## Required operator configuration
 
 All are server-side secrets/configuration; never put values in a browser or commit them:
@@ -34,3 +36,7 @@ Do not set the candidate flag on a service whose platform cannot deny direct sca
 ## Not verified in this repository session
 
 No scanner binaries, disposable authorized target, private worker network, Render deployment, firewall proof, license evidence, or genuine captured output was available. Unit tests use synthetic test-only data. These limitations prevent a live acceptance claim and issue closure.
+
+## Run Foundation CI
+
+The repository's Foundation CI supports manual dispatch. Open the [Foundation CI workflow](https://github.com/tanmayskotadia/ai_agent_penetration_testing/actions/workflows/ci.yml), select branch `main`, and choose **Run workflow**. This runs the same PostgreSQL, Redis/Celery, frontend, container-startup and kernel-egress checks used for push events. The run must be green for the implementation commit before software CI acceptance is claimed.
