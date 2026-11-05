@@ -4,6 +4,13 @@ import sqlalchemy as sa
 
 from aegistrace.schema_v1 import metadata
 
+bootstrap_state = sa.Table(
+    "identity_bootstrap_state",
+    metadata,
+    sa.Column("id", sa.Integer(), primary_key=True),
+    sa.Column("consumed", sa.Boolean(), nullable=False),
+)
+
 principals = sa.Table(
     "principals",
     metadata,

@@ -115,6 +115,32 @@ def test_modes_assets_and_unknown_endpoint_denominator_are_separate():
     assert {row["asset_id"] for row in result["live-request"]["operations"]} == {"host-a", "host-b"}
 
 
+def test_protected_session_coverage_requires_credentials_and_success_for_each_declared_route():
+    check, endpoints, sources = sample_result()
+    sources[0]["operations"] = [
+        {
+            "endpoint_id": "one",
+            "authentication_required": True,
+            "security_alternatives": [{"bearer": []}],
+        }
+    ]
+    result = operation_coverage([check], endpoints, sources)["live-request"]
+
+    assert result["protected_session_coverage"] == {
+        "declared_protected_count": 1,
+        "attempted_with_credentials_count": 1,
+        "successful_response_count": 1,
+        "identity_verification": "credentials-sent-unverified",
+    }
+
+    check["result"]["operations"][0]["authentication"] = "unavailable-or-expired"
+    check["result"]["sha256"] = snapshot_digest(
+        {key: value for key, value in check["result"].items() if key != "sha256"}
+    )
+    result = operation_coverage([check], endpoints, sources)["live-request"]
+    assert result["protected_session_coverage"]["attempted_with_credentials_count"] == 0
+
+
 @pytest.mark.parametrize(
     "case", ["hash", "foreign-source", "pending", "unknown-mode", "impossible-success"]
 )

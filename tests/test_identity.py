@@ -11,7 +11,7 @@ import pytest
 from aegistrace.api import create_app
 from aegistrace.auth import issue_identity, seal, unseal
 from aegistrace.db import make_engine
-from aegistrace.identity_schema import principals, sessions
+from aegistrace.identity_schema import bootstrap_state, principals, sessions
 from aegistrace.identity_service import create_principal, issue_session, set_membership
 from aegistrace.log_safety import SafeFormatter
 from aegistrace.schema_v1 import metadata
@@ -185,6 +185,54 @@ def test_invalid_login_rate_limit_and_expired_session(identity_context):
         client.get("/api/v1/assessments", headers=headers(session["access_token"])).status_code
         == 401
     )
+
+
+def test_hosted_first_admin_bootstrap_is_secret_gated_and_single_use(tmp_path):
+    token = secrets.token_urlsafe(32)
+    password = secrets.token_urlsafe(24)
+    config = Settings(
+        _env_file=None,
+        environment="production",
+        app_secret=secrets.token_hex(32),
+        bootstrap_token=token,
+        database_url=f"sqlite:///{tmp_path / 'bootstrap.db'}",
+    )
+    engine = make_engine(config)
+    metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.execute(bootstrap_state.insert().values(id=1, consumed=False))
+
+    with TestClient(create_app(config), base_url="https://testserver") as client:
+        payload = {"username": "first-admin", "password": password}
+        assert client.post("/api/v1/auth/bootstrap", json=payload).status_code == 404
+        assert (
+            client.post(
+                "/api/v1/auth/bootstrap",
+                json=payload,
+                headers={"X-Bootstrap-Token": "incorrect-bootstrap-secret"},
+            ).status_code
+            == 404
+        )
+        response = client.post(
+            "/api/v1/auth/bootstrap", json=payload, headers={"X-Bootstrap-Token": token}
+        )
+        assert response.status_code == 201, response.text
+        assert response.headers["Cache-Control"] == "no-store"
+        assert password not in response.text and token not in response.text
+        session_token = response.json()["access_token"]
+        assert client.get("/api/v1/assessments", headers=headers(session_token)).status_code == 200
+        assert (
+            client.post(
+                "/api/v1/auth/bootstrap", json=payload, headers={"X-Bootstrap-Token": token}
+            ).status_code
+            == 404
+        )
+
+    with engine.connect() as connection:
+        admin_rows = connection.execute(select(principals.c.id)).all()
+        consumed = connection.execute(select(bootstrap_state.c.consumed)).scalar_one()
+        assert len(admin_rows) == 1 and consumed is True
+    engine.dispose()
 
 
 def test_log_formatter_masks_credentials_and_exception_text():

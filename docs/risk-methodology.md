@@ -1,0 +1,9 @@
+# Contextual priority methodology
+
+The review API retains source CVSS as received. A separate `aegistrace-context-priority-v1` index is computed only from factors with explicit provenance: source CVSS and version (weight 0.40), exposure (0.20), exploitability state (0.20), analyst-recorded asset criticality 1–5 (0.15), and method-disclosed source confidence (0.05). The index renormalizes over available factors only when at least one contextual factor is present. It is not CVSS, calibrated risk, or exploitability probability.
+
+Exposure, exploitability and asset criticality are unknown unless supplied with a provenance reference. Missing factors are listed. Unknown-only input receives no numeric local priority; source CVSS remains a secondary ordering signal. Severe CVSS combined with disclosed low source confidence receives a high-review-attention flag so uncertainty does not silently hide a potentially serious report.
+
+The current assessment stores no reviewed asset-context inputs, so current snapshots will normally show `context-insufficient`. This is the honest state until provenance-backed context is collected. The ranking is deterministic and versioned but not calibrated; independent outcome labels are needed before any accuracy claim.
+
+Reviewer/admin users can record context with `POST /api/v1/assessments/{assessment_id}/asset-contexts`. The target asset must exist in the assessment, and each non-unknown context field requires a provenance reference plus reviewer rationale. Revisions are append-only API records with an audit event and the prior revision link; `GET .../asset-contexts` returns the latest revision per asset. References are participant/reviewer supplied and are not independently authenticated. A regular analyst can view coverage and priority results but cannot write risk context.

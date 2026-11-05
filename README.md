@@ -2,9 +2,9 @@
 
 An evidence-driven, analyst-controlled Unified VAPT Agent for the DataOps Innovation Hackathon.
 
-**Current status:** M02 evidence-platform implementation: versioned canonical records, authenticated runtime assessment inputs, encrypted bounded originals, reviewed redactions, chained audit, atomic API idempotency, resumable events, hostile-file quarantine and a shared capability registry. All seven native scanner integrations remain **planned**. Live execution, model assessment, full analyst screens and client-ready PDF generation are later milestones.
+**Current status:** The T30 software-only vertical slice is implemented in the open T30 PR and exercises scope-bound intake, recorded Nmap/ZAP/Nikto/OpenAPI imports, reviewer provenance, cross-tool correlation, risk/coverage review and PDF export. Synthetic fixtures are test-only; genuine scanner evidence and an authorized participant demonstration are still required for acceptance. Native scanner execution remains disabled by default.
 
-The participant requires cloud hosting without local setup. Render `My Workspace` and the separate Supabase `dataops` project are selected; application deployment/integration is not yet performed. Local commands below are optional developer workflows. See [cloud direction](docs/runtime-input-cloud-direction.md), [M02 status](docs/milestone-2-status.md) and [API contracts](docs/api.md).
+The participant requires cloud hosting without local setup. A Render Blueprint and Supabase deployment runbook are provided in [free cloud deployment](docs/free-cloud-deployment.md); creating the hosted service and entering database/encryption secrets remains participant-side setup. Local commands below are optional developer workflows. See [T30 prototype status](docs/prototype-status.md), [cloud direction](docs/runtime-input-cloud-direction.md) and [API contracts](docs/api.md).
 
 ## Quick start: native API/UI smoke mode
 

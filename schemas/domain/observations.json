@@ -109,6 +109,19 @@
       "default": null,
       "title": "Cwe"
     },
+    "endpoint_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Endpoint Id"
+    },
     "evidence_id": {
       "format": "uuid",
       "title": "Evidence Id",
@@ -130,6 +143,14 @@
       "title": "Observed At",
       "type": "string"
     },
+    "parameter_names": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 50,
+      "title": "Parameter Names",
+      "type": "array"
+    },
     "run_id": {
       "format": "uuid",
       "title": "Run Id",
@@ -140,6 +161,19 @@
       "default": "1.0",
       "title": "Schema Version",
       "type": "string"
+    },
+    "service_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Service Id"
     },
     "source_key": {
       "maxLength": 500,

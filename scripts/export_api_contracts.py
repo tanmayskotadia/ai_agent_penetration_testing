@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from aegistrace.api import create_app
+from aegistrace.report_content import VaptReportContent
 from aegistrace.settings import Settings
 
 
@@ -65,6 +66,10 @@ def main() -> None:
     for path, value in [
         (root / "schemas/openapi.json", json.dumps(schema, indent=2, sort_keys=True) + "\n"),
         (root / "frontend/src/generated/api.ts", types),
+        (
+            root / "schemas/report-content.json",
+            json.dumps(VaptReportContent.model_json_schema(), indent=2, sort_keys=True) + "\n",
+        ),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         expected = value.encode("utf-8")

@@ -43,6 +43,14 @@ def _wrap(value: Any, width: int = 74) -> list[str]:
     return lines
 
 
+def _display(value: Any) -> str:
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value) if value else "none"
+    if value is None:
+        return "unknown"
+    return str(value)
+
+
 def _content_stream(lines: list[tuple[str, int]], page_number: int, page_count: int) -> bytes:
     commands: list[bytes] = []
 
@@ -59,7 +67,7 @@ def _content_stream(lines: list[tuple[str, int]], page_number: int, page_count: 
             ]
         )
 
-    draw("AegisTrace - Recorded Evidence Report", 788, 16, True, "0.08 0.20 0.32")
+    draw("AegisTrace - Vulnerability Assessment Review Report", 788, 14, True, "0.08 0.20 0.32")
     draw(
         "Reviewer export | Source records only | Not a complete VAPT report",
         769,
@@ -124,9 +132,160 @@ def render_evidence_report(
             ),
         ]
     )
-    for limitation in snapshot.get("limitations", []):
-        for wrapped in _wrap(f"Limitation: {limitation}"):
-            lines.append((wrapped, 2))
+    content = snapshot.get("content")
+    if isinstance(content, dict):
+        lines.append(("Executive summary", 0))
+        lines.extend((part, 2) for part in _wrap(content.get("executive_summary", "Unknown")))
+        lines.append(("Assessment scope and rules of engagement", 0))
+        scope = content.get("scope", {})
+        for label, value in [
+            ("Scope revision", scope.get("revision", "unknown")),
+            ("Targets", scope.get("targets", [])),
+            ("Exclusions", scope.get("exclusions", [])),
+            ("Authorization", scope.get("authorization_status", "unknown")),
+            ("Authorization reference", scope.get("authorization_reference") or "not supplied"),
+            ("Validity", scope.get("valid_until") or "not supplied"),
+        ]:
+            lines.extend((part, 2) for part in _wrap(f"{label}: {_display(value)}"))
+        methodology = content.get("methodology", {})
+        lines.append(("Methodology", 0))
+        for label, value in [
+            ("Selected source tools", methodology.get("tools_with_selected_sources", [])),
+            ("Processing", methodology.get("processing", "unknown")),
+            ("Correlation", methodology.get("correlation", "unknown")),
+            ("Priority policy", methodology.get("priority_policy", "unknown")),
+            (
+                "Live testing",
+                "not claimed"
+                if not methodology.get("live_scanning_claimed")
+                else "see source record",
+            ),
+            ("Rules of engagement", methodology.get("rules_of_engagement", "unknown")),
+        ]:
+            lines.extend((part, 2) for part in _wrap(f"{label}: {_display(value)}"))
+        lines.append(("Asset inventory", 0))
+        if not content.get("assets"):
+            lines.append(("No in-scope assets were linked to the selected source revisions.", 2))
+        for asset in content.get("assets", []):
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"{asset.get('identifier', 'unknown asset')} | {asset.get('kind', 'unknown')} | asset ID {asset.get('id', 'unknown')}"
+                )
+            )
+        lines.append(("Tool execution summary", 0))
+        if not content.get("tool_runs"):
+            lines.append(("No source tool runs were linked to the selected revisions.", 2))
+        for run in content.get("tool_runs", []):
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"{run.get('tool', 'unknown')} {run.get('tool_version', 'unknown version')} | "
+                    f"{run.get('mode', 'unknown mode')} | {run.get('state', 'unknown state')} | "
+                    f"run {run.get('id', 'unknown')} | captured {run.get('captured_at', 'unknown')}"
+                )
+            )
+        lines.append(("Severity distribution (source-reported)", 0))
+        severity = content.get("source_severity_distribution", {})
+        if not severity:
+            lines.append(("No source severity values were supplied.", 2))
+        for label, count in severity.items():
+            lines.extend((part, 2) for part in _wrap(f"{label}: {count} source observations"))
+        if severity:
+            lines.append(
+                ("Source-reported severity counts (each # represents one item, capped at 40)", 1)
+            )
+            for label, count in severity.items():
+                bar = "#" * min(int(count), 40)
+                suffix = " (bar capped)" if int(count) > 40 else ""
+                lines.extend((part, 2) for part in _wrap(f"{label}: |{bar}| {count}{suffix}"))
+        lines.append(("Prioritized observations and reviewer findings", 0))
+        lines.extend(
+            (part, 2)
+            for part in _wrap(
+                f"Source observations: {len(content.get('prioritized_observations', []))}; "
+                f"reviewer-recorded findings: {len(content.get('reviewed_findings', []))}; "
+                f"distinct occurrences: {content.get('occurrence_count', 0)}."
+            )
+        )
+        for item in content.get("prioritized_observations", []):
+            priority = item.get("priority", {})
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"Observation {item.get('observation_id', 'unknown')}: {item.get('title', 'untitled')} | "
+                    f"source CVSS {item.get('source_cvss_score', 'unknown')} | local index "
+                    f"{priority.get('local_priority_index', 'unknown')} ({priority.get('state', 'unknown')}) | "
+                    f"evidence {item.get('evidence_id', 'unknown')} | review {priority.get('review_attention', 'standard-review')}"
+                )
+            )
+        lines.append(("Reviewer correlation decisions", 0))
+        reviewed_correlations = content.get("reviewed_correlations", [])
+        if not reviewed_correlations:
+            lines.append(
+                ("No cross-tool duplicate groups have an explicit reviewer merge decision.", 2)
+            )
+        for group in reviewed_correlations:
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"Reviewer-merged cluster {group.get('cluster_id', 'unknown')}: "
+                    f"{group.get('occurrence_count', 0)} preserved source occurrences; "
+                    f"assets {group.get('asset_ids', [])}; tools {group.get('source_tools', [])}."
+                )
+            )
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"Rationale: {group.get('rationale', 'not supplied')}; "
+                    f"source observation IDs: {group.get('observation_ids', [])}."
+                )
+            )
+        for group in content.get("reviewed_splits", []):
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"Reviewer-split candidate {group.get('cluster_id', 'unknown')}: "
+                    f"partitions {group.get('partitions', [])}; rationale: "
+                    f"{group.get('rationale', 'not supplied')}."
+                )
+            )
+        impact = content.get("impact_and_remediation", {})
+        lines.append(("Business impact, recommendations and references", 0))
+        lines.extend((part, 2) for part in _wrap(f"Status: {impact.get('status', 'unknown')}"))
+        lines.extend(
+            (part, 2)
+            for part in _wrap(f"Business impact: {impact.get('business_impact', 'unknown')}")
+        )
+        lines.extend(
+            (part, 2) for part in _wrap(f"Remediation: {impact.get('remediation', 'unknown')}")
+        )
+        lines.extend((part, 2) for part in _wrap(f"References: {impact.get('references', [])}"))
+        decision_data = content.get("approvals_and_decisions", {})
+        lines.append(("Human approvals and decisions", 0))
+        lines.extend(
+            (part, 2)
+            for part in _wrap(
+                f"Recorded approvals: {len(decision_data.get('approvals', []))}; "
+                f"decisions: {len(decision_data.get('decisions', []))}. Full frozen records are available in the JSON manifest."
+            )
+        )
+        lines.append(("Assumptions, scan failures and limitations", 0))
+        if not content.get("limitations"):
+            lines.append(("No limitations were supplied.", 2))
+        for limitation in content.get("limitations", []):
+            lines.extend((part, 2) for part in _wrap(limitation))
+        lines.append(("Evidence manifest", 0))
+        lines.extend(
+            (part, 2)
+            for part in _wrap(
+                "Use the frozen JSON export and its SHA-256 digest to inspect revision IDs, evidence IDs, source hashes, parser revisions, and source observation references."
+            )
+        )
+    if not isinstance(content, dict):
+        for limitation in snapshot.get("limitations", []):
+            for wrapped in _wrap(f"Limitation: {limitation}"):
+                lines.append((wrapped, 2))
 
     coverage = snapshot.get("coverage_snapshot")
     if isinstance(coverage, dict):
@@ -206,7 +365,9 @@ def render_evidence_report(
         for line_number, wrapped in enumerate(_wrap(f"Observation {index}: {title}")):
             lines.append((wrapped, 1 if line_number == 0 else 2))
         for label, value in [
+            ("Source tool", observation.get("source_tool", "unknown")),
             ("Asset", asset),
+            ("Observed at", observation.get("observed_at", "unknown")),
             ("Source key", observation.get("source_key", "unknown")),
             ("Source severity", observation.get("source_severity") or "not supplied"),
             (
@@ -215,8 +376,17 @@ def render_evidence_report(
                 if observation.get("cvss_score") is not None
                 else "not supplied",
             ),
+            ("CVSS vector", observation.get("cvss_vector") or "not supplied"),
+            ("CVSS version", observation.get("cvss_version") or "not supplied"),
             ("CVE", observation.get("cve") or "not supplied"),
             ("CWE", observation.get("cwe") or "not supplied"),
+            (
+                "Source confidence",
+                observation.get("confidence")
+                if observation.get("confidence") is not None
+                else "not supplied",
+            ),
+            ("Confidence method", observation.get("confidence_method") or "not supplied"),
             ("Validation", observation.get("validation_state", "unknown")),
             ("Evidence ID", observation.get("evidence_id", "unknown")),
         ]:

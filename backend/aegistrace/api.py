@@ -1,12 +1,16 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
+from alembic.config import Config as AlembicConfig
+from alembic.script import ScriptDirectory
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -17,6 +21,7 @@ from aegistrace.approval_api import approval_router
 from aegistrace.audit import AuditEvent, request_context
 from aegistrace.capabilities import Capability, capability_snapshot
 from aegistrace.control_api import control_router
+from aegistrace.correlation_api import correlation_router
 from aegistrace.coverage_api import coverage_router
 from aegistrace.db import make_engine
 from aegistrace.evidence_api import evidence_router
@@ -32,6 +37,7 @@ from aegistrace.policy_api import policy_router
 from aegistrace.replay import replay_router
 from aegistrace.result_api import result_router
 from aegistrace.settings import Settings
+from aegistrace.source_review_api import source_review_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -40,6 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         (
             config.app_secret.get_secret_value(),
             config.evidence_key.get_secret_value() if config.evidence_key else "",
+            config.bootstrap_token.get_secret_value() if config.bootstrap_token else "",
         )
     )
     engine = make_engine(config)
@@ -63,6 +70,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(replay_router(engine, config))
     app.include_router(result_router(engine, config))
     app.include_router(coverage_router(engine, config))
+    app.include_router(correlation_router(engine, config))
+    app.include_router(source_review_router(engine, config))
     app.include_router(api_check_router(engine, config))
     app.add_middleware(BodyLimitMiddleware)
 
@@ -91,10 +100,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                 }
                             },
                         }
-                    if (
-                        method in {"post", "put", "patch", "delete"}
-                        and path != "/api/v1/auth/login"
-                    ):
+                    if method in {"post", "put", "patch", "delete"} and path not in {
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/bootstrap",
+                    }:
                         operation.setdefault("parameters", []).extend(
                             [
                                 {
@@ -172,17 +181,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health/ready")
     def readiness() -> JSONResponse:
         try:
+            project_root = Path(__file__).resolve().parents[2]
+            migration_heads = set(
+                ScriptDirectory.from_config(
+                    AlembicConfig(str(project_root / "alembic.ini"))
+                ).get_heads()
+            )
             with engine.connect() as connection:
-                revision = connection.execute(
-                    text("SELECT version_num FROM alembic_version")
-                ).scalar()
-            if revision != "0018_api_checks":
+                revisions = set(
+                    connection.execute(text("SELECT version_num FROM alembic_version")).scalars()
+                )
+            if not migration_heads or revisions != migration_heads:
                 return JSONResponse({"status": "not-ready", "reason": "migrations required"}, 503)
-        except SQLAlchemyError:
+        except (SQLAlchemyError, OSError, ValueError):
             return JSONResponse(
                 {"status": "not-ready", "reason": "database or migrations unavailable"}, 503
             )
-        return JSONResponse({"status": "ready", "database": "connected", "revision": revision})
+        return JSONResponse(
+            {"status": "ready", "database": "connected", "revisions": sorted(revisions)}
+        )
 
     @app.get("/api/v1/system/status")
     def status() -> dict[str, Any]:
@@ -197,5 +214,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/v1/system/capabilities", response_model=list[Capability])
     def capabilities() -> list[dict[str, object]]:
         return capability_snapshot()
+
+    frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    if frontend_dist.is_dir():
+        app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="workspace-ui")
 
     return app

@@ -1,10 +1,11 @@
 """Versioned canonical contracts. Observations are never confirmation decisions."""
 
+import re
 from datetime import datetime
 from typing import Literal, Self
 from uuid import UUID, uuid4
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 ToolName = Literal[
     "Nmap", "Nessus", "Greenbone", "Nikto", "OWASP ZAP", "Burp Suite", "Metasploit", "OpenAPI"
@@ -80,6 +81,9 @@ class Observation(Contract):
     asset_id: UUID
     run_id: UUID
     evidence_id: UUID
+    service_id: UUID | None = None
+    endpoint_id: UUID | None = None
+    parameter_names: list[str] = Field(default_factory=list, max_length=50)
     source_key: str = Field(min_length=1, max_length=500)
     title: str = Field(min_length=1, max_length=500)
     observed_at: AwareDatetime
@@ -93,6 +97,13 @@ class Observation(Contract):
     confidence_method: str | None = Field(default=None, max_length=200)
     information_kind: Literal["observed-evidence"] = "observed-evidence"
     validation_state: Literal["suspected", "unknown"] = "suspected"
+
+    @field_validator("parameter_names")
+    @classmethod
+    def parameter_labels_are_safe_names(cls, value: list[str]) -> list[str]:
+        if any(not re.fullmatch(r"[A-Za-z0-9_.\[\]-]{1,100}", item) for item in value):
+            raise ValueError("parameter names must be bounded labels without values")
+        return sorted(set(value))
 
     @model_validator(mode="after")
     def confidence_is_explained(self) -> Self:

@@ -166,6 +166,7 @@ def normalize_scanner_import(
                 asset_id=asset_id,
                 run_id=UUID(run["id"]),
                 evidence_id=evidence_id,
+                service_id=UUID(service_id) if service_id is not None else None,
                 source_key=source_key,
                 title=title or f"{tool} source observation",
                 observed_at=captured_at,
