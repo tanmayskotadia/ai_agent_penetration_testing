@@ -1,0 +1,9 @@
+{
+  "task": "T29",
+  "issue": 46,
+  "requirements": ["R05", "R06", "R23", "R27", "R29", "R34", "W07"],
+  "verification": ["tests/test_coverage.py", "tests/test_results.py", "tests/test_api_check_workflow.py", "frontend/scripts/check-coverage-ui.mjs", "PDF layout preview and pagination regression"],
+  "manual_intervention_now": "None",
+  "limits": ["Declared inventory is not hidden endpoint coverage", "HTTP status does not establish authenticated identity", "Disposable results never count as live coverage", "Capability registration is operator-reviewed and not inferred from file uploads", "Snapshots explicitly identify bounded collections", "Evidence summary remains distinct from full professional VAPT report"],
+  "exact_commit_and_hosted_acceptance": "GitHub issue #46 delivery record"
+}

@@ -128,6 +128,44 @@ def render_evidence_report(
         for wrapped in _wrap(f"Limitation: {limitation}"):
             lines.append((wrapped, 2))
 
+    coverage = snapshot.get("coverage_snapshot")
+    if isinstance(coverage, dict):
+        lines.append(("Coverage and capabilities at export time", 0))
+        for text in [
+            f"Captured: {coverage.get('captured_at', 'unknown')}",
+            f"Coverage digest: {coverage.get('snapshot_sha256', 'unknown')}",
+            f"Coverage state: {coverage.get('coverage_state', 'unknown')}",
+        ]:
+            lines.extend((part, 2) for part in _wrap(text))
+        for mode in ("live-request", "disposable-test"):
+            counts = coverage.get("operation_coverage", {}).get(mode, {})
+            lines.append(
+                (
+                    f"{mode}: {counts.get('attempted_count', 0)} attempted / {counts.get('declared_operation_count', 0)} declared operations",
+                    2,
+                )
+            )
+            lines.extend((part, 2) for part in _wrap(f"States: {counts.get('state_counts', {})}"))
+        for text in [
+            f"Credential states at export: {coverage.get('api_credential_states', {})}",
+            f"Native jobs: {coverage.get('native_job_states', {})}; API jobs: {coverage.get('api_job_states', {})}",
+        ]:
+            lines.extend((part, 2) for part in _wrap(text))
+        for capability in coverage.get("capabilities", []):
+            text = (
+                f"{capability.get('name')}: {capability.get('mode')} | license: {capability.get('license_status')} | "
+                f"edition: {capability.get('installed_edition') or 'unknown'} | last verification: {capability.get('last_verified_at') or 'none'}"
+            )
+            lines.extend((part, 2) for part in _wrap(text))
+            for detail in [
+                f"Verified formats: {capability.get('supported_formats') or 'none'}; candidate guards: {capability.get('guarded_containers') or 'none'}",
+                f"Verification run: {capability.get('last_verified_run_id') or 'none'}",
+                f"Limitations: {capability.get('limitations') or 'not supplied'}",
+            ]:
+                lines.extend((part, 2) for part in _wrap(detail))
+        for gap in coverage.get("gaps", []):
+            lines.extend((part, 2) for part in _wrap(f"Gap: {gap}"))
+
     lines.append(("Frozen source runs", 0))
     if not revisions:
         lines.append(("No source-result revisions were included in this export.", 2))
@@ -216,12 +254,29 @@ def render_evidence_report(
     current_height = 0
     for block in blocks:
         block_height = sum(22 if level == 0 else 15 if level == 1 else 13 for _, level in block)
-        if current_page and current_height + block_height > BODY_HEIGHT_PER_PAGE:
+        if current_page and (
+            block_height <= BODY_HEIGHT_PER_PAGE
+            and current_height + block_height > BODY_HEIGHT_PER_PAGE
+            or block_height > BODY_HEIGHT_PER_PAGE
+            and current_height + 50 > BODY_HEIGHT_PER_PAGE
+        ):
             pages.append(current_page)
             current_page = []
             current_height = 0
-        current_page.extend(block)
-        current_height += block_height
+        if block_height <= BODY_HEIGHT_PER_PAGE:
+            current_page.extend(block)
+            current_height += block_height
+        else:
+            # Long capability/limitation sections must split across pages rather
+            # than overflow beneath the footer as one indivisible block.
+            for line in block:
+                height = 22 if line[1] == 0 else 15 if line[1] == 1 else 13
+                if current_page and current_height + height > BODY_HEIGHT_PER_PAGE:
+                    pages.append(current_page)
+                    current_page = []
+                    current_height = 0
+                current_page.append(line)
+                current_height += height
     if current_page:
         pages.append(current_page)
     if not pages:

@@ -121,6 +121,9 @@ def freeze_export(
         if value is None:
             raise LookupError("revision not found")
         values.append(value)
+    from aegistrace.coverage import assessment_coverage
+
+    coverage = assessment_coverage(connection, assessment_id)
     limitations = [
         "Rendered evidence summary is not a complete VAPT report",
         "Recorded/imported sources retain original capture times",
@@ -131,6 +134,8 @@ def freeze_export(
         "created_at": datetime.now(UTC).isoformat(),
         "assessment_id": str(assessment_id),
         "result_revisions": values,
+        "coverage_snapshot": coverage,
+        "capabilities": coverage["capabilities"],
         "complete_assessment": False,
         "report_renderer_enabled": True,
         "limitations": limitations,
@@ -140,7 +145,12 @@ def freeze_export(
         assessment_id=assessment_id,
         created_at=datetime.now(UTC),
         source_digest=source_digest,
-        source_ids=[UUID(v["evidence_id"]) for v in values],
+        source_ids=list(
+            dict.fromkeys(
+                [UUID(v["evidence_id"]) for v in values]
+                + [UUID(value) for value in coverage["source_evidence_ids"]]
+            )
+        ),
         limitations=limitations,
     )
     insert_record(connection, "report_snapshots", snapshot)

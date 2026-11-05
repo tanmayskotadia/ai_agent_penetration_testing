@@ -68,7 +68,7 @@ jobs:
           RUN_SERVICE_TESTS=1 uv run pytest -m services
       - name: Build workspace
         working-directory: frontend
-        run: npm ci --no-audit --no-fund && npm run build
+        run: npm ci --no-audit --no-fund && npm run build && node scripts/check-coverage-ui.mjs
       - name: Validate Compose development profile
         env:
           POSTGRES_PASSWORD: ci-only-disposable

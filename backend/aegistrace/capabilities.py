@@ -97,6 +97,25 @@ class CapabilityRegistry:
     def snapshot(self) -> list[dict[str, object]]:
         return [self._entries[name].model_dump(mode="json") for name in TOOL_NAMES]
 
+    def revoke(self, name: ToolName, reason: str, *, license_missing: bool = False) -> None:
+        """Trusted operator hook; revocation never creates evidence of availability.
+
+        Installation/entitlement discovery remains adapter work. There is no public
+        switch that accepts a user's claim of a working integration.
+        """
+        if name not in self._entries or not reason.strip() or len(reason) > 500:
+            raise ValueError("known tool and bounded revocation reason required")
+        prior = self._entries[name]
+        value = prior.model_dump() | {
+            "mode": "unsupported",
+            "status": "unsupported",
+            "supported_formats": (),
+            "license_status": "missing" if license_missing else prior.license_status,
+            "demonstration_label": "Unavailable; new reviewed verification required",
+            "limitations": prior.limitations + (reason,),
+        }
+        self._entries[name] = Capability.model_validate(value)
+
     def verify_and_register(
         self,
         capability: Capability,
