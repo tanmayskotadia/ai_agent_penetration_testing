@@ -119,14 +119,21 @@ def normalize_web_import(
                         ),
                     )
                 asset_ids.append(str(asset_id))
-                endpoint_row = connection.execute(
-                    select(endpoints.c.id).where(
+                endpoint_rows = connection.execute(
+                    select(endpoints.c.id, endpoints.c.payload).where(
                         endpoints.c.assessment_id == str(assessment_id),
                         endpoints.c.asset_id == str(asset_id),
-                        endpoints.c.path == endpoint_path,
-                        endpoints.c.method == instance["method"],
                     )
-                ).scalar_one_or_none()
+                ).mappings()
+                endpoint_row = next(
+                    (
+                        row["id"]
+                        for row in endpoint_rows
+                        if row["payload"].get("path") == endpoint_path
+                        and row["payload"].get("method") == instance["method"]
+                    ),
+                    None,
+                )
                 endpoint_id = UUID(endpoint_row) if endpoint_row else uuid4()
                 if endpoint_row is None:
                     insert_record(
