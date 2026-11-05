@@ -1,0 +1,28 @@
+{
+  "task": "T26",
+  "issue": 39,
+  "requirements": ["R05", "R06", "R08", "R09", "R10", "R11", "R24"],
+  "verification": [
+    "tests/test_nikto.py (version gate, identifiers, messages, URL privacy, malformed input, isolated worker)",
+    "tests/test_scanner_imports.py (Nikto recorded import through encrypted evidence and scope)",
+    "tests/test_correlation.py (cross-tool duplicate and distinct evidence behavior)",
+    "ruff check and format",
+    "mypy backend/aegistrace/nikto_parse.py",
+    "Hosted Foundation CI"
+  ],
+  "local_results": {
+    "nikto_parser_tests": "13 passed",
+    "ruff": "passed after import formatting",
+    "mypy": "passed",
+    "nikto_encrypted_import_api_integration": "Selected Windows TestClient invocation did not complete within 50 seconds; hosted CI required",
+    "hosted_foundation_ci": "pending"
+  },
+  "manual_intervention_now": "No user action is needed to exercise the handcrafted parser tests. Before genuine acceptance, provide a genuine version-matched Nikto 2.6.x JSON export from a target you own or are explicitly authorized to test, plus capture time and source version evidence. No organizer response is assumed or required for this code work.",
+  "limits": [
+    "This delivers a bounded recorded JSON import only; the application does not install or execute Nikto.",
+    "Handcrafted test data is not genuine Nikto output and cannot promote capability status.",
+    "No live Nikto run, authorized lab demonstration, or independent source authenticity check has been performed.",
+    "The source-declared version string is only an input gate, not proof of the producing executable version."
+  ],
+  "status": "Open until hosted integration passes and genuine version-matched evidence is reviewed"
+}

@@ -1,6 +1,7 @@
 """Candidate parser for Nikto's 2.6.x JSON report array; never runs a scanner."""
 
 import json
+import re
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -18,6 +19,7 @@ from aegistrace.safe_parse import (
 MAX_HOSTS = 200
 MAX_OBSERVATIONS = 5000
 _METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+_VERSION = re.compile(r"^2\.6\.\d{1,3}(?:[-+][A-Za-z0-9.-]{1,40})?$")
 
 
 def normalize_nikto(raw: bytes, version: str) -> dict[str, Any]:
@@ -29,12 +31,7 @@ def normalize_nikto(raw: bytes, version: str) -> dict[str, Any]:
         "parsed_records": 0,
     }
     try:
-        parts_version = version.split(".")
-        if (
-            not 0 < len(raw) <= MAX_BYTES
-            or len(parts_version) < 2
-            or parts_version[:2] != ["2", "6"]
-        ):
+        if not 0 < len(raw) <= MAX_BYTES or not _VERSION.fullmatch(version):
             raise ParseRejected("unsupported-version-or-size")
         text = raw.decode("utf-8")
         depth = 0
@@ -96,7 +93,10 @@ def normalize_nikto(raw: bytes, version: str) -> dict[str, Any]:
                     or method not in _METHODS
                 ):
                     raise ParseRejected("invalid-observation-url-or-method")
-                assets.add(uri)
+                # Query strings can carry credentials or personal data; keep them only
+                # in the encrypted original evidence and scope against the safe endpoint.
+                safe_uri = f"{parsed.scheme}://{parsed.netloc}{parsed.path or '/'}"
+                assets.add(safe_uri)
                 alerts.append(
                     {
                         "plugin_id": str(item.get("id", ""))[:100],
@@ -106,7 +106,7 @@ def normalize_nikto(raw: bytes, version: str) -> dict[str, Any]:
                         "confidence_label": "unknown",
                         "instances": [
                             {
-                                "uri": uri,
+                                "uri": safe_uri,
                                 "origin": f"{parsed.scheme}://{parsed.netloc}",
                                 "path": parsed.path or "/",
                                 "method": method,

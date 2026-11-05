@@ -37,6 +37,23 @@ GREENBONE = b"""<get_reports_response><report id="report-1"><results>
     <severity>High</severity><qod><value>80</value><type>remote_banner</type></qod>
   </result></results></report></get_reports_response>"""
 
+NIKTO = json.dumps(
+    [
+        {
+            "host": "example.invalid",
+            "vulnerabilities": [
+                {
+                    "id": "OSVDB-12345",
+                    "references": "CVE-2024-12345",
+                    "method": "GET",
+                    "url": "https://example.invalid/app/check?token=private-value",
+                    "msg": "Handcrafted Nikto import integration test only",
+                }
+            ],
+        }
+    ]
+).encode()
+
 BURP = (
     b"""<?xml version="1.0"?><!DOCTYPE issues [<!ELEMENT issues ANY>]>
 <issues burpVersion="test"><issue><serialNumber>42</serialNumber><type>100</type>
@@ -150,6 +167,15 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
             1,
         ),
         (
+            "Nikto",
+            "nikto-json",
+            "normalize-nikto",
+            NIKTO,
+            ["https://example.invalid/app"],
+            "2.6.1",
+            1,
+        ),
+        (
             "Burp Suite",
             "burp-xml",
             "normalize-burp",
@@ -237,3 +263,10 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
     assert "private output" not in json.dumps(normalized)
     assert "secret-header" not in json.dumps(normalized)
     assert "private-value" not in json.dumps(normalized)
+    if tool == "Nikto":
+        assert normalized["alerts"][0]["plugin_id"] == "OSVDB-12345"
+        assert normalized["alerts"][0]["risk"] == "unknown"
+        assert "cves" not in normalized["alerts"][0]
+        assert normalized["alerts"][0]["instances"][0]["uri"] == (
+            "https://example.invalid/app/check"
+        )
