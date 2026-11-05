@@ -180,6 +180,15 @@ def parse_openapi(raw: bytes, version: str) -> dict[str, Any]:
             assets=sorted(assets),
             parsed_records=len(operations),
             security_schemes=sorted(security_schemes),
+            security_scheme_definitions={
+                name: {
+                    field: scheme[field]
+                    for field in ("type", "scheme", "in", "name")
+                    if field in scheme and isinstance(scheme[field], str)
+                }
+                for name, scheme in security_schemes.items()
+                if isinstance(scheme, dict)
+            },
         )
     except ParseRejected as error:
         result.update(

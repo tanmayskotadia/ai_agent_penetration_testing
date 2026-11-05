@@ -201,7 +201,12 @@ def assess_operations(
                 reason="redirect-not-followed" if 300 <= status < 400 else None,
             )
         except PolicyError:
-            row.update(state="blocked", reason="scope-or-policy-denied")
+            row.update(
+                state="failed" if row["attempted"] else "blocked",
+                reason="request-outcome-unconfirmed"
+                if row["attempted"]
+                else "scope-or-policy-denied",
+            )
         except Exception:
             # Transport/provider exception text can contain credential values.
             row.update(state="failed", reason="request-or-credential-provider-failed")

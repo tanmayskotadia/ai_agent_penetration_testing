@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import Engine, select
 
+from aegistrace.api_check_schema import api_checks
 from aegistrace.auth import Identity, identity_dependency
 from aegistrace.capabilities import capability_snapshot
 from aegistrace.correlation import correlate_observations
@@ -74,6 +75,13 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
                     .where(exports.c.assessment_id == str(assessment_id))
                     .limit(1)
                 ).first()
+                api_check_rows = (
+                    connection.execute(
+                        select(api_checks).where(api_checks.c.assessment_id == str(assessment_id))
+                    )
+                    .mappings()
+                    .all()
+                )
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error
         imports_by_tool = Counter(str(row.get("tool", "unknown")) for row in run_rows)
@@ -151,6 +159,10 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
                 "OpenAPI operations represent definition scope, not reachable or exercised endpoints",
             ],
             "capabilities": registry,
+            "api_operation_checks": [
+                {"check_id": row["id"], "state": row["state"], "result": row["result"]}
+                for row in api_check_rows
+            ],
         }
 
     return router

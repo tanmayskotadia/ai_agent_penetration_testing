@@ -27,7 +27,7 @@ GitHub's milestone aggregate counters were stale despite attached closed issues.
 | #5 | All six M04 engineering tasks closed with CI records | Integrated scanner/job/evidence acceptance on approved runner | Same lab/runner/source prerequisites; no new local setup |
 | #38 | Offline ZAP Alerts JSON parser | Versioned live/passive/active adapter, exact contexts/exclusions, auth and approval integration, bounded execution | Genuine version-matched exports; live entitlement/session and scope only for live claims |
 | #39 | Offline Nikto JSON parser | Installed-version negotiation, reviewed bounded runner, raw-message and cancellation acceptance | Genuine supported Nikto 2.6.x exports; approved target for execution |
-| #44 | Offline OpenAPI 3.0/3.1 JSON catalog | Secure session references/injection, session failure handling, per-method operation attempts and exclusions | API definition; dedicated restricted test account through secure secret store after runner exists |
+| #44 | OpenAPI catalog; encrypted credentials; reviewed durable jobs; supervised pinned HTTPS; source-linked method results, coverage and JSON exports; integrated disposable application and actual local HTTPS tests | Engineering implementation delivered; close only after exact-commit hosted acceptance passes. Production isolated runner deployment remains #28 | None for software acceptance; actual use later requires runtime API scope and restricted account entered privately |
 | #45 | Impact catalog and existing single-use approval controls | Bind concrete profile parameters to execution approval; deny unknown options, enforce actual rates/timeouts and verify no drift | Approved traffic/action limits for runtime acceptance |
 | #46 | Coverage snapshot, source labels, seven-tool status UI, explicit unknown coverage | Derive attempted/succeeded/blocked method coverage from actual runner events; verify status/report/UI integration | Real input records and independent review of resulting coverage |
 | #72 | Prototype gate, source-linked summaries and correlation candidates | Complete request/planning integration, minimum three verified imports, authenticated endpoint coverage, approved transition, professional VAPT PDF and integrated review | Genuine network/web exports, permitted demo scope and reviewer |
@@ -57,3 +57,4 @@ GitHub MCP and the approved CLI are sufficient for repository issue/commit/CI wo
 ## Correction shipped with this audit
 
 A frozen evidence-summary PDF previously set the professional-report prototype gate to passed. The gate now reports summary availability separately and remains unaccepted until full professional VAPT report generation/review exists. This removes a false acceptance signal; it does not claim the full report is implemented.
+

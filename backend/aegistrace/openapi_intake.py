@@ -91,8 +91,8 @@ def normalize_openapi_import(
                 select(endpoints.c.id).where(
                     endpoints.c.assessment_id == str(assessment_id),
                     endpoints.c.asset_id == str(asset_id),
-                    endpoints.c.path == path,
-                    endpoints.c.method == operation["method"],
+                    endpoints.c.payload["path"].as_string() == path,
+                    endpoints.c.payload["method"].as_string() == operation["method"],
                 )
             ).scalar_one_or_none()
             endpoint_id = UUID(endpoint_row) if endpoint_row else uuid4()
@@ -136,9 +136,13 @@ def normalize_openapi_import(
         "tool_version": run["tool_version"],
         "captured_at": run["captured_at"],
         "asset_ids": sorted(set(asset_ids)),
+        "asset_mapping": mapping,
+        "observation_ids": [],
+        "service_ids": [],
         "endpoint_ids": sorted(set(endpoint_ids)),
         "operations": operations,
         "security_scheme_names": parsed.get("security_schemes", []),
+        "security_scheme_definitions": parsed.get("security_scheme_definitions", {}),
         "tested_operations": 0,
         "coverage_state": "definition-only-untested",
         "state": parsed["state"],
