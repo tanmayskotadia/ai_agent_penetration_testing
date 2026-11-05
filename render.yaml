@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: dataops
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: >-
+      sh -c 'uv run --no-sync alembic upgrade head &&
+      exec uv run --no-sync uvicorn aegistrace.api:create_app --factory
+      --host 0.0.0.0 --port "${PORT:-10000}"'
+    healthCheckPath: /health/ready
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: ALLOW_OPERATOR_TOKENS
+        value: "false"
+      - key: APP_SECRET
+        generateValue: true
+      - key: BOOTSTRAP_TOKEN
+        generateValue: true
+      - key: EVIDENCE_KEY_ID
+        value: primary-v1
+      - key: EVIDENCE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false

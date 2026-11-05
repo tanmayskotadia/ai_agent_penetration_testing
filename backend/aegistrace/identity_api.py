@@ -6,13 +6,13 @@ import threading
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
-from sqlalchemy import Connection, Engine, select
+from sqlalchemy import Connection, Engine, select, update
 
 from aegistrace.auth import Identity, identity_dependency
-from aegistrace.identity_schema import principals, sessions
+from aegistrace.identity_schema import bootstrap_state, principals, sessions
 from aegistrace.identity_service import (
     PASSWORDS,
     create_principal,
@@ -39,6 +39,12 @@ class UserCreate(Login):
     role: Literal["analyst", "reviewer", "admin", "auditor"] = "analyst"
 
 
+class BootstrapCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
+    username: str = Field(min_length=3, max_length=200)
+    password: SecretStr = Field(min_length=12, max_length=128)
+
+
 class MembershipUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     subject: str = Field(min_length=1, max_length=200)
@@ -63,6 +69,73 @@ def credential_digest(config: Settings, password: SecretStr) -> str:
 def identity_router(engine: Engine, config: Settings) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["identity"])
     actor_dependency = Depends(identity_dependency(config))
+
+    @router.post("/auth/bootstrap", status_code=201)
+    def bootstrap(
+        body: BootstrapCreate,
+        request: Request,
+        bootstrap_token: str | None = Header(default=None, alias="X-Bootstrap-Token"),
+    ) -> JSONResponse:
+        """Create the first administrator from a secret supplied by the hosted operator."""
+        if config.bootstrap_token is None:
+            raise HTTPException(404, "Bootstrap is disabled")
+        if config.environment == "production" and request.url.scheme != "https":
+            raise HTTPException(403, "HTTPS required")
+
+        source = request.client.host if request.client else "unknown"
+        try:
+            with engine.begin() as connection:
+                login_attempt(connection, "bootstrap", source, config.app_secret.get_secret_value())
+        except ValueError as error:
+            raise HTTPException(429, "Bootstrap rate limit; retry later") from error
+
+        expected = config.bootstrap_token.get_secret_value()
+        if bootstrap_token is None or not hmac.compare_digest(bootstrap_token, expected):
+            raise HTTPException(404, "Bootstrap is unavailable")
+        try:
+            username = username_value(body.username)
+        except ValueError as error:
+            raise HTTPException(422, "Invalid username") from error
+
+        def apply(connection: Connection) -> dict[str, Any]:
+            # Conditional claim is atomic across API instances. The migration inserts the
+            # singleton; a pre-existing principal also makes the claim impossible.
+            claimed = connection.execute(
+                update(bootstrap_state)
+                .where(
+                    bootstrap_state.c.id == 1,
+                    bootstrap_state.c.consumed.is_(False),
+                    ~select(principals.c.id).exists(),
+                )
+                .values(consumed=True)
+            )
+            if claimed.rowcount != 1:
+                raise HTTPException(404, "Bootstrap is unavailable")
+            if not LOGIN_SLOTS.acquire(blocking=False):
+                raise HTTPException(429, "Bootstrap capacity; retry later")
+            try:
+                subject = create_principal(
+                    connection, username, body.password.get_secret_value(), "admin"
+                )
+            finally:
+                LOGIN_SLOTS.release()
+            return issue_session(connection, config, subject)
+
+        try:
+            with engine.begin() as connection:
+                result = apply(connection)
+        except HTTPException:
+            raise
+        except Exception as error:
+            # A duplicate username or transaction failure must not reveal database details.
+            raise HTTPException(
+                409, "Bootstrap could not create the initial administrator"
+            ) from error
+        return JSONResponse(
+            result,
+            status_code=201,
+            headers={"Cache-Control": "no-store", "Pragma": "no-cache"},
+        )
 
     @router.post("/auth/login")
     def login(body: Login, request: Request) -> JSONResponse:

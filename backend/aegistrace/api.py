@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -45,6 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         (
             config.app_secret.get_secret_value(),
             config.evidence_key.get_secret_value() if config.evidence_key else "",
+            config.bootstrap_token.get_secret_value() if config.bootstrap_token else "",
         )
     )
     engine = make_engine(config)
@@ -98,10 +100,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                 }
                             },
                         }
-                    if (
-                        method in {"post", "put", "patch", "delete"}
-                        and path != "/api/v1/auth/login"
-                    ):
+                    if method in {"post", "put", "patch", "delete"} and path not in {
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/bootstrap",
+                    }:
                         operation.setdefault("parameters", []).extend(
                             [
                                 {
@@ -212,5 +214,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/v1/system/capabilities", response_model=list[Capability])
     def capabilities() -> list[dict[str, object]]:
         return capability_snapshot()
+
+    frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    if frontend_dist.is_dir():
+        app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="workspace-ui")
 
     return app
