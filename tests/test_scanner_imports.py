@@ -236,4 +236,3 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
     assert "private output" not in json.dumps(normalized)
     assert "secret-header" not in json.dumps(normalized)
     assert "private-value" not in json.dumps(normalized)
-

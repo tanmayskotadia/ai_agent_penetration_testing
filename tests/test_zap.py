@@ -91,4 +91,3 @@ def test_zap_query_parameter_count_is_bounded_and_bad_query_is_not_reflected():
     assert parsed["state"] == "normalized"
     assert parsed["alerts"][0]["instances"][0]["parameter_names"] == []
     assert "private" not in json.dumps(parsed)
-

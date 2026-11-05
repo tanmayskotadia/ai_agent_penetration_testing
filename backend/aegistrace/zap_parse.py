@@ -173,4 +173,3 @@ def normalize_zap(raw: bytes, version: str) -> dict[str, Any]:
     except Exception:
         result.update(code="unsafe-or-malformed", alerts=[], assets=[], parsed_records=0)
     return result
-
