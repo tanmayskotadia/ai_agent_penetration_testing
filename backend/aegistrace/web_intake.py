@@ -200,6 +200,7 @@ def normalize_web_import(
         "captured_at": run["captured_at"],
         "asset_ids": sorted(set(asset_ids)),
         "endpoint_ids": sorted(set(endpoint_ids)),
+        "service_ids": [],
         "observation_ids": observation_ids,
         "state": parsed["state"],
         "code": parsed["code"],
