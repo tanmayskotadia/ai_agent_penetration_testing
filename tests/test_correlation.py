@@ -170,4 +170,3 @@ def test_context_priority_keeps_unknown_unknown_and_flags_severe_low_confidence(
     assert by_id["unscored"]["local_priority_index"] is None
     assert by_id["contextual"]["state"] == "contextual-index"
     assert by_id["contextual"]["factors"]["asset_criticality"]["reference"]
-

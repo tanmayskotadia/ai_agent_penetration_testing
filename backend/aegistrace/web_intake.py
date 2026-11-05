@@ -287,4 +287,3 @@ def normalize_nikto_import(
         "nikto-json-normalize-v1",
         "nikto-v1",
     )
-

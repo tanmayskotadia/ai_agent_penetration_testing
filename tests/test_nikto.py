@@ -187,4 +187,3 @@ def test_nikto_normalization_runs_in_isolated_parser_worker():
     assert parsed["state"] == "normalized"
     assert parsed["parsed_records"] == 1
     assert "private-value" not in json.dumps(parsed)
-

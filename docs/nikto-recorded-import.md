@@ -7,4 +7,3 @@ The normalizer captures each reported test ID, reference label, message, HTTP me
 This remains a candidate import normalizer, not a verified product integration. Genuine version-matched captures, redaction review and authorized demonstration evidence are still required before any registry status can change. Never treat the user-entered version string as proof of the source program.
 
 References: Nikto's [2.6.0 and 2.6.1 release notes](https://github.com/sullo/nikto/releases) describe the JSON/XML report changes; the [Export Formats guide](https://github.com/sullo/nikto/wiki/Export-Formats) lists JSON output; and the [current JSON reporter source](https://github.com/sullo/nikto/blob/main/program/plugins/nikto_report_json.plugin) shows the report array, host-level `vulnerabilities`, and their `id`, `references`, `method`, `url`, and `msg` fields. This source reference is format guidance, not an authenticity claim about an imported file.
-

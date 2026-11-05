@@ -755,4 +755,3 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
     }
     snapshot["snapshot_sha256"] = snapshot_digest(snapshot)
     return snapshot
-

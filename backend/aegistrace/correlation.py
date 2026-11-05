@@ -153,4 +153,3 @@ def correlate_observations(
             "Observations without explicit CVE or CWE and title identifiers are not correlated",
         ],
     }
-

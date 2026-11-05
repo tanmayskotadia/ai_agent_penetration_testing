@@ -499,4 +499,3 @@ def render_evidence_report(
         )
     )
     return bytes(output)
-

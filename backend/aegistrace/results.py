@@ -502,4 +502,3 @@ def review_late(
         diagnostic_code="late-output-reviewed",
     )
     return value
-

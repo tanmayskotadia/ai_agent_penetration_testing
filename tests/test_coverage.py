@@ -249,4 +249,3 @@ def test_workspace_export_and_pdf_share_frozen_status_and_source_counts(
         and bounded["coverage_state"] == "bounded-snapshot-incomplete"
     )
     assert "endpoints" in bounded["truncated_collections"]
-

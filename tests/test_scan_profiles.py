@@ -141,4 +141,3 @@ def test_api_review_binds_rules_impact_reset_and_policy_limits(import_context, m
     for extra in ({"profile": "passive-web"}, {"crawl": True}, {"unknown_option": 1}):
         response = client.post(base + "/api-checks", json=original | extra, headers=headers())
         assert response.status_code == 422
-

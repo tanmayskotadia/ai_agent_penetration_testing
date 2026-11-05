@@ -26,4 +26,3 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
             return assessment_coverage(connection, assessment_id)
 
     return router
-

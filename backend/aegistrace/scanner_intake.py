@@ -257,4 +257,3 @@ def normalize_scanner_import(
         },
     )
     return value
-
