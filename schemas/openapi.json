@@ -89,6 +89,7 @@
               "nmap.connect.v1",
               "zap.passive.v1",
               "zap.active.v1",
+              "nikto.active.v1",
               "metasploit.disabled"
             ],
             "title": "Template",
