@@ -121,10 +121,12 @@ def coverage_router(engine: Engine, config: Settings) -> APIRouter:
                 "limitation": "Implementation is available; source data and reviewer acceptance are still required",
             },
             "downloadable_pdf_report": {
-                "passed": report_export is not None,
-                "evidence": "reviewer-frozen export is available as a PDF"
+                "passed": False,
+                "summary_export_available": report_export is not None,
+                "evidence": "reviewer-frozen evidence summary is available as a PDF"
                 if report_export is not None
                 else None,
+                "limitation": "Evidence summaries do not satisfy professional VAPT report acceptance; full report generation and review remain pending",
             },
             "live_execution_safety": {
                 "passed": True,
