@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from aegistrace import ingestion, mutations, web_intake
+from aegistrace import ingestion, mutations, repository, web_intake
 from aegistrace.auth import issue_identity
 from aegistrace.evidence import EvidenceStore
 from aegistrace.safe_parse import inspect_container, isolated_inspection
@@ -243,6 +243,16 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
 
     for name in ("require_access", "resource", "current_scope", "get_record"):
         monkeypatch.setattr(web_intake, name, track_lookup(name, getattr(web_intake, name)))
+    repository_get_record = repository.get_record
+
+    def tracked_record(connection, collection, assessment_id, record_id):
+        try:
+            return repository_get_record(connection, collection, assessment_id, record_id)
+        except LookupError:
+            lookup_trace.append(f"repository.get_record:{collection}:{record_id}")
+            raise
+
+    monkeypatch.setattr(repository, "get_record", tracked_record)
     monkeypatch.setattr(
         mutations,
         "require_access",
