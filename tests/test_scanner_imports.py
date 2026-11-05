@@ -7,7 +7,9 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from aegistrace import web_intake
 from aegistrace.auth import issue_identity
+from aegistrace.evidence import EvidenceStore
 from aegistrace.safe_parse import inspect_container, isolated_inspection
 from aegistrace.scanner_parse import parse_scanner_export
 
@@ -170,9 +172,10 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
     ],
 )
 def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
-    import_context, tool, format_name, route, raw, targets, version, expected
+    import_context, monkeypatch, tool, format_name, route, raw, targets, version, expected
 ):
     client, settings = import_context
+    lookup_trace = []
 
     def headers():
         return {
@@ -183,7 +186,9 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
 
     def post(path, body):
         response = client.post(path, json=body, headers=headers())
-        assert response.status_code in {200, 201, 202}, response.text
+        assert response.status_code in {200, 201, 202}, (
+            f"{path}: {response.text}; lookup_trace={lookup_trace}"
+        )
         return response.json()
 
     assessment = post("/api/v1/assessments", {"name": "Handcrafted parser integration test only"})
@@ -224,6 +229,24 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
             "format": format_name,
             "evidence_id": evidence["id"],
         },
+    )
+
+    def track_lookup(name, operation):
+        def tracked(*args, **kwargs):
+            try:
+                return operation(*args, **kwargs)
+            except LookupError:
+                lookup_trace.append(name)
+                raise
+
+        return tracked
+
+    for name in ("require_access", "resource", "current_scope", "get_record"):
+        monkeypatch.setattr(web_intake, name, track_lookup(name, getattr(web_intake, name)))
+    monkeypatch.setattr(
+        EvidenceStore,
+        "read",
+        track_lookup("EvidenceStore.read", EvidenceStore.read),
     )
     normalized = post(base + f"/imports/{imported['id']}/{route}", {"asset_mapping": {}})
 
