@@ -1,27 +1,33 @@
 {
   "task": "T25",
   "issue": 38,
-  "requirements": ["R04", "R05", "R06", "R09", "R10", "R12", "R24", "R27"],
+  "scope_reset_date": "2026-11-06",
+  "current_scope": "Supported OWASP ZAP 2.x Alerts JSON recorded import, provenance references, exact-scope enforcement, safe parsing, normalization, source trace and honest import-only coverage. Native live/API execution is deferred.",
+  "requirements": ["R05", "R06", "R09", "R10", "R24", "R27", "R34"],
   "verification": [
-    "tests/test_zap.py",
-    "tests/test_ingestion.py (ZAP parser rejection cases)",
-    "tests/test_scanner_imports.py (end-to-end encrypted import and endpoint persistence; hosted rerun pending)",
-    "ruff check and format",
-    "mypy backend/aegistrace/zap_parse.py"
+    "tests/test_zap.py (bounded Alerts API and traditional JSON parsing, version and secret redaction)",
+    "tests/test_scanner_imports.py (encrypted import, source links, endpoint/observation normalization, scope quarantine)",
+    "tests/e2e/minimum-prototype/test_minimum_prototype.py (test-only ZAP import, source review and truthful coverage)",
+    "Hosted Foundation CI (PostgreSQL API tests, frontend, container and egress checks)",
+    "Ruff lint/format, mypy and generated API contract checks"
   ],
-  "local_results": {
-    "zap_parser_and_rejection_tests": "6 passed",
-    "ingestion_rejection_tests": "9 passed",
-    "ruff": "passed",
-    "mypy": "passed",
-    "encrypted_import_api_integration": "Hosted runs 42010667656 through 42013468631 passed formatting and exposed a 404 in ZAP normalization (187 passed, 1 failed per run). The fifth run confirmed the exception was inside normalization but not a repository lookup. Code inspection identified the missing service_ids field required by revision creation; the web normalization snapshot now supplies an empty list and temporary tracing has been removed. Hosted verification is pending. The local Windows TestClient did not complete."
+  "software_status": {
+    "implemented_on_main": true,
+    "implementation_pr": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/pull/86",
+    "baseline_hosted_ci": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/actions/runs/42101187808",
+    "issue_followup_pr": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/pull/92",
+    "issue_followup_head": "92704296f9341b195b4a5e65e27a1691582c5a9e",
+    "issue_followup_hosted_ci": "https://github.com/tanmayskotadia/ai_agent_penetration_testing/actions/runs/42207535605",
+    "issue_followup_hosted_ci_status": "passed",
+    "synthetic_fixture_tests_are_genuine_scanner_evidence": false,
+    "live_zap_execution_available": false
   },
-  "manual_intervention_now": "No live ZAP scan may be run. Before verified live acceptance, provision a private isolated ZAP runner with a pinned version/add-on set, internal-only API key, egress allowlist, and an exact-scope disposable authorized application. Supply genuine version-matched Alerts JSON and redaction review. Do not use organizer authorization that has not been provided.",
+  "manual_acceptance_remaining": "The participant must import one genuine ZAP 2.x Alerts JSON export from a permitted source through the deployed UI, verify its version/timestamp/scope and displayed SHA-256 against the private original, and record an attributable source-provenance review. If no such file exists, this genuine-source gate stays open. No local setup, scanner provisioning or new scan is required for the current import-only scope.",
   "limits": [
-    "This change improves recorded import only; it does not implement the ZAP API or Automation Framework runner.",
-    "Handcrafted parser fixtures prove software behavior, not source authenticity or scanner accuracy.",
-    "No live/passive/active ZAP scan has been run or represented as completed.",
-    "Active scanning, request generation, authentication coverage, cancellation, redirect enforcement, and live run evidence remain unverified."
+    "Parser and end-to-end test inputs are handcrafted and explicitly test-only.",
+    "A reviewer source decision is an attributable human assertion, not independent scanner or target-authorization proof.",
+    "No ZAP API/Automation Framework execution, passive traffic generation, active scan, authentication/session test or live cancellation was run or claimed.",
+    "The capability remains planned until the participant-supplied source is reviewed and any stronger native integration is separately authorized and verified."
   ],
-  "exact_commit_and_hosted_acceptance": "ZAP/Nikto snapshot contract fix prepared; hosted acceptance run pending"
+  "next_action": "Keep issue #38 open until the participant imports a genuine permitted ZAP Alerts JSON file through the deployed UI and records the digest-bound human provenance review. No live runner or new scan is required for the current scope."
 }
