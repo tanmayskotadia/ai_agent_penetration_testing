@@ -206,7 +206,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "stage": "evidence-platform",
             "live_scans_enabled": False,
-            "model_enabled": False,
+            "model_enabled": bool(
+                config.adaptive_planner_enabled
+                and config.groq_api_key
+                and config.groq_model
+                and config.model_data_policy_reference
+            ),
+            "model_provider": "groq" if config.adaptive_planner_enabled else None,
+            "model_acceptance": "configuration-only; not proof of a successful model run",
             "authorization": "not-configured",
             "tools": capability_snapshot(),
         }

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from aegistrace.adaptive_planner import ModelDecision
 from aegistrace.api import create_app
 from aegistrace.report_content import VaptReportContent
 from aegistrace.settings import Settings
@@ -64,6 +65,10 @@ def main() -> None:
     )
     types += "\n}\n"
     for path, value in [
+        (
+            root / "schemas/adaptive-decision.json",
+            json.dumps(ModelDecision.model_json_schema(), indent=2, sort_keys=True) + "\n",
+        ),
         (root / "schemas/openapi.json", json.dumps(schema, indent=2, sort_keys=True) + "\n"),
         (root / "frontend/src/generated/api.ts", types),
         (

@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Connection, Engine, select
 
+from aegistrace.adaptive_planner import ReplanRequest, replan
+from aegistrace.api_contracts import WorkflowResource
 from aegistrace.auth import Identity, identity_dependency
 from aegistrace.inference_guards import ReasoningProposal, model_context, store_proposal
 from aegistrace.mutations import mutation
@@ -26,6 +28,21 @@ def inference_router(engine: Engine, config: Settings) -> APIRouter:
         prefix="/api/v1/assessments/{assessment_id}/reasoning", tags=["inference-boundary"]
     )
     actor_dependency = Depends(identity_dependency(config))
+
+    @router.post("/replan", status_code=201, response_model=WorkflowResource)
+    def adaptive_plan(
+        assessment_id: UUID,
+        body: ReplanRequest,
+        request: Request,
+        actor: Identity = actor_dependency,
+    ) -> JSONResponse:
+        return mutation(
+            engine,
+            request,
+            actor,
+            body.model_dump(mode="json"),
+            lambda connection: replan(connection, config, assessment_id, body, actor),
+        )
 
     @router.post("/proposals", status_code=201)
     def propose(

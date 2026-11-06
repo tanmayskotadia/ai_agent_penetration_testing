@@ -1,6 +1,6 @@
 # Model, credentials and assessment-data policy - T06
 
-**Current implementation:** no model client/endpoint is configured; the foundation reports model processing disabled. No model reasoning result, confidence calibration or provider privacy guarantee is claimed. Model selection/evaluation is T42; domain authorization and evidence controls are later implementation issues.
+**Current implementation:** the bounded Groq planner in [reasoning-policy.md](reasoning-policy.md) is implemented but disabled by default. It requires private credentials, an explicit operator data-policy reference, human reviewer consent and reviewed/unexpired source derivatives. A synthetic live-provider acceptance record demonstrates the reasoning path; it does not establish calibrated confidence, provider privacy guarantees or production activation. Model comparison remains T42; scope/evidence controls stay outside the model.
 
 ## Data classes and allowed processing
 
