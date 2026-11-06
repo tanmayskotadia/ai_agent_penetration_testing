@@ -44,8 +44,12 @@ export async function eventBatch(base: string, assessmentId: string, token: stri
     const id = frame.split("\n").find(line => line.startsWith("id: "));
     const data = frame.split("\n").find(line => line.startsWith("data: "));
     if (id && data) {
-      cursor = Number(id.slice(4));
-      events.push(JSON.parse(data.slice(6)) as ApiSchemas["AuditEvent"]);
+      const sequence = Number(id.slice(4));
+      const event = JSON.parse(data.slice(6)) as ApiSchemas["AuditEvent"];
+      if (!Number.isSafeInteger(sequence) || sequence < 1 || event.assessment_id !== assessmentId || !event.event_id) throw new Error("Invalid audit event; reconnect to reconcile history.");
+      if (sequence <= cursor) continue;
+      cursor = sequence;
+      events.push(event);
     }
   }
   return { cursor, events };
@@ -62,8 +66,12 @@ export async function jobEventBatch(base: string, assessmentId: string, jobId: s
     const id = frame.split("\n").find(line => line.startsWith("id: "));
     const data = frame.split("\n").find(line => line.startsWith("data: "));
     if (id && data) {
-      cursor = Number(id.slice(4));
-      events.push(JSON.parse(data.slice(6)) as JobProgressEvent);
+      const sequence = Number(id.slice(4));
+      const event = JSON.parse(data.slice(6)) as JobProgressEvent;
+      if (!Number.isSafeInteger(sequence) || sequence < 1 || event.sequence !== sequence || event.job_id !== jobId || event.assessment_id !== assessmentId) throw new Error("Invalid job event; reconnect to reconcile history.");
+      if (sequence <= cursor) continue;
+      cursor = sequence;
+      events.push(event);
     }
   }
   return { cursor, events };
