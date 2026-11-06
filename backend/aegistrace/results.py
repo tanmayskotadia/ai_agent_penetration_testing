@@ -15,10 +15,12 @@ from aegistrace.api_schema import resources
 from aegistrace.auth import Identity
 from aegistrace.domain import ReportSnapshot
 from aegistrace.evidence import EvidenceStore
+from aegistrace.grounding import ground_claims
 from aegistrace.job_progress import append_progress
 from aegistrace.jobs import job_event, lock_job
 from aegistrace.platform_api import record_request
 from aegistrace.policy import PolicyError
+from aegistrace.reasoning_schema import proposals
 from aegistrace.report_content import build_vapt_content
 from aegistrace.repository import insert_record, require_access
 from aegistrace.result_schema import exports, late_outputs, revisions
@@ -346,6 +348,41 @@ def freeze_export(
         "correlation": correlations,
         "source_snapshot_truncated": snapshot_truncated,
     }
+    evidence_ids = {str(row["evidence_id"]) for row in values}
+    frozen_claims = []
+    for proposal in connection.execute(
+        select(proposals.c.payload)
+        .where(proposals.c.assessment_id == str(assessment_id))
+        .order_by(proposals.c.id)
+        .limit(1000)
+    ).scalars():
+        if not set(proposal.get("source_evidence_ids", [])).issubset(evidence_ids):
+            continue
+        claims = [
+            {
+                "type": claim["claim_type"],
+                "value": claim["value"],
+                "observation_id": claim["observation_id"],
+                "evidence_id": claim["evidence_id"],
+                "asset_id": claim["asset_id"],
+            }
+            for claim in proposal.get("claims", [])
+        ]
+        checked_claims = ground_claims(claims, selected_observations)
+        for checked, original in zip(checked_claims, proposal.get("claims", []), strict=True):
+            checked["reasons"] = list(
+                dict.fromkeys(original.get("reasons", []) + checked["reasons"])
+            )
+            if original.get("state") != "source-supported":
+                checked.update(value=None, state="unknown", information_kind="unknown")
+        frozen_claims.append(
+            {
+                "proposal_id": proposal["id"],
+                "narrative_status": "unreviewed-hypothesis; excluded from factual report prose",
+                "claims": checked_claims,
+            }
+        )
+    payload["grounded_proposals"] = frozen_claims
     payload["content"] = build_vapt_content(payload)
     source_digest = content_hash(payload)
     snapshot = ReportSnapshot(

@@ -275,6 +275,18 @@ def render_evidence_report(
             lines.append(("No limitations were supplied.", 2))
         for limitation in content.get("limitations", []):
             lines.extend((part, 2) for part in _wrap(limitation))
+        if content.get("grounded_claims"):
+            lines.append(("Structured claim checks", 0))
+            for claim in content["grounded_claims"]:
+                lines.extend(
+                    (part, 2)
+                    for part in _wrap(
+                        f"{claim.get('claim_type')}: {claim.get('value') if claim.get('state') == 'source-supported' else 'unknown'} | "
+                        f"state {claim.get('state')} | source-reported only; not independently verified | "
+                        f"asset {claim.get('asset_id')} | evidence {claim.get('evidence_id')} | "
+                        f"observation {claim.get('observation_id')} | reasons {claim.get('reasons', [])}."
+                    )
+                )
         lines.append(("Evidence manifest", 0))
         lines.extend(
             (part, 2)
