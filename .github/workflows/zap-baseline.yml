@@ -1,0 +1,25 @@
+name: ZAP Baseline Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "URL of an app you own or are authorized to test"
+        required: true
+        default: "https://your-app.onrender.com"
+
+permissions:
+  contents: read
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ inputs.target }}
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: zap_scan
+          cmd_options: "-J report_json.json -r report_html.html"
