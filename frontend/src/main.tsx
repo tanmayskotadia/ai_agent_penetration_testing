@@ -1,16 +1,15 @@
 import { StrictMode, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { createRoot } from "react-dom/client";
-import { jobEventBatch } from "./api-client";
 import type { ApiSchemas } from "./generated/api";
 import "./style.css";
 import { CoveragePanel } from "./CoveragePanel";
 import { CorrelationReviewPanel } from "./CorrelationReviewPanel";
 import { SourceReviewPanel } from "./SourceReviewPanel";
 import { AssessmentSetup } from "./AssessmentSetup";
+import { AssessmentTimeline } from "./AssessmentTimeline";
 
 type Status = { stage: string; live_scans_enabled: boolean; tools: ApiSchemas["Capability"][] };
-type JobSnapshot = ApiSchemas["JobStatusSnapshot"];
 type RecordedResult = Record<string, unknown>;
 type RiskRanking = {
   policy: string;
@@ -63,12 +62,6 @@ async function apiJson<T>(token: string, path: string, method: string, body?: un
   return response.json() as Promise<T>;
 }
 
-function formatDuration(milliseconds: number | null | undefined): string {
-  if (milliseconds == null) return "Not started";
-  const seconds = Math.floor(milliseconds / 1000);
-  return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-}
-
 function HumanReview() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -76,7 +69,6 @@ function HumanReview() {
   const [assessments, setAssessments] = useState<ApiSchemas["Assessment"][]>([]);
   const [selected, setSelected] = useState("");
   const [queue, setQueue] = useState<ApiSchemas["ApprovalView"][]>([]);
-  const [jobs, setJobs] = useState<JobSnapshot[]>([]);
   const [newAssessmentName, setNewAssessmentName] = useState("");
   const [assets, setAssets] = useState<ApiSchemas["Asset"][]>([]);
   const [assetContexts, setAssetContexts] = useState<ApiSchemas["WorkflowResource"][]>([]);
@@ -109,7 +101,6 @@ function HumanReview() {
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const keys = useRef(new Map<string, string>());
-  const jobCursors = useRef(new Map<string, number>());
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage("");
     try {
@@ -171,35 +162,6 @@ function HumanReview() {
     setManifestResult(null);
     setIntakeMessage("");
   }, [selected]);
-  useEffect(() => {
-    setJobs([]);
-    if (!selected || !token) return;
-    const controller = new AbortController();
-    let refreshing = false;
-    async function refreshJobs() {
-      if (refreshing) return;
-      refreshing = true;
-      try {
-        const response = await fetch(`/api/v1/assessments/${encodeURIComponent(selected)}/scan-jobs`, {
-          signal: controller.signal, headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error("Job status unavailable or assessment access changed.");
-        const snapshots = await response.json() as JobSnapshot[];
-        const updated = await Promise.all(snapshots.map(async job => {
-          const cursor = jobCursors.current.get(job.id) ?? 0;
-          const batch = await jobEventBatch("", selected, job.id, token, cursor, controller.signal);
-          jobCursors.current.set(job.id, batch.cursor);
-          return job;
-        }));
-        if (!controller.signal.aborted) setJobs(updated);
-      } catch (failure) {
-        if (!controller.signal.aborted) setMessage(failure instanceof Error ? failure.message : "Unable to refresh job status.");
-      } finally { refreshing = false; }
-    }
-    void refreshJobs();
-    const timer = window.setInterval(() => { void refreshJobs(); }, 5000);
-    return () => { controller.abort(); window.clearInterval(timer); };
-  }, [selected, token, refresh]);
   async function decide(item: ApiSchemas["ApprovalView"], decision: "approve" | "deny") {
     setBusy(true); setMessage("");
     const key = `${item.id}:${item.action_digest}:${decision}`;
@@ -218,7 +180,7 @@ function HumanReview() {
     let revoked = false;
     try { const response = await fetch("/api/v1/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${token}`, "X-Request-ID": crypto.randomUUID(), "Idempotency-Key": crypto.randomUUID() } }); revoked = response.ok; }
     catch { /* Local sign-out still clears the in-memory credential. */ }
-    finally { setToken(""); setAssessments([]); setSelected(""); setQueue([]); setJobs([]); keys.current.clear(); jobCursors.current.clear(); setMessage(revoked ? "Signed out; server session revoked." : "Signed out in this browser. Server revocation was not confirmed; sessions also expire automatically."); }
+    finally { setToken(""); setAssessments([]); setSelected(""); setQueue([]); keys.current.clear(); setMessage(revoked ? "Signed out; server session revoked." : "Signed out in this browser. Server revocation was not confirmed; sessions also expire automatically."); }
   }
   async function createAssessment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -395,25 +357,13 @@ function HumanReview() {
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (failure) { setIntakeMessage(failure instanceof Error ? failure.message : "The private original could not be downloaded."); }
   }
-  async function stopAssessment() {
-    if (!selected) return;
-    setBusy(true);
-    try {
-      const response = await fetch(`/api/v1/assessments/${selected}/controls/stop`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "X-Request-ID": crypto.randomUUID(), "Idempotency-Key": crypto.randomUUID() } });
-      if (!response.ok) throw new Error("Stop request rejected or not confirmed. Refresh current status.");
-      const result = await response.json() as { cancelled_before_start: number; running_cancel_requests: number; unknown_disconnected: number };
-      setMessage(`Assessment stopped for new work. Queued claims cancelled: ${result.cancelled_before_start}. Running cancellation requests: ${result.running_cancel_requests}. Disconnected/unknown: ${result.unknown_disconnected}.`);
-      setRefresh(value => value + 1);
-    } catch (failure) { setMessage(failure instanceof Error ? failure.message : "Stop was not confirmed."); }
-    finally { setBusy(false); }
-  }
   return <section aria-labelledby="human-review"><h2 id="human-review">Human action review</h2>
     <p>Review the exact destination, impact and rollback before recording a decision. Scanner execution remains disabled.</p>
-    {!token ? <form onSubmit={signIn}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required minLength={12} maxLength={128} /></label><button disabled={busy}>Sign in</button></form> : <><form onSubmit={createAssessment}><label>New assessment<input value={newAssessmentName} onChange={event => setNewAssessmentName(event.target.value)} maxLength={200} required /></label><button disabled={busy}>Create assessment</button></form><label>Assessment<select value={selected} onChange={event => setSelected(event.target.value)}><option value="">Select an assessment</option>{assessments.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><button onClick={signOut} disabled={busy}>Sign out</button><button disabled={busy || !selected} onClick={stopAssessment}>Stop assessment</button><button disabled={busy || !selected} onClick={() => setRefresh(value => value + 1)}>Refresh reviews</button>{selected && queue.length === 0 && <p>No action reviews are available for this assessment.</p>}{queue.map(item => <article className="review-card" key={item.id}><h3>{item.action.tool} Ã‚Â· {item.action.profile}</h3><p><strong>Destination:</strong> <code>{item.action.destination_url}</code></p><p><strong>Impact:</strong> {item.action.expected_impact}</p><p><strong>Parameters:</strong> <code>{JSON.stringify(item.action.parameters)}</code></p><p><strong>Rollback:</strong> {item.action.rollback_instructions}</p><p><strong>Maximum runtime:</strong> {item.action.max_runtime_seconds} seconds</p><p><strong>Scope revision:</strong> {item.scope_revision} Ã‚Â· <strong>Expires:</strong> {item.valid_until}</p><p className="digest"><strong>Action digest:</strong> <code>{item.action_digest}</code></p><p>Status: {item.expired ? "expired" : item.state}</p>{item.allowed_decisions.map(choice => <button key={choice} disabled={busy || item.expired} onClick={() => decide(item, choice)}>{choice === "approve" ? "Approve this action" : "Deny this action"}</button>)}</article>)}</>}
+    {!token ? <form onSubmit={signIn}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required minLength={12} maxLength={128} /></label><button disabled={busy}>Sign in</button></form> : <><form onSubmit={createAssessment}><label>New assessment<input value={newAssessmentName} onChange={event => setNewAssessmentName(event.target.value)} maxLength={200} required /></label><button disabled={busy}>Create assessment</button></form><label>Assessment<select value={selected} onChange={event => setSelected(event.target.value)}><option value="">Select an assessment</option>{assessments.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><button onClick={signOut} disabled={busy}>Sign out</button><button disabled={busy || !selected} onClick={() => setRefresh(value => value + 1)}>Refresh reviews</button>{selected && queue.length === 0 && <p>No action reviews are available for this assessment.</p>}{queue.map(item => <article className="review-card" key={item.id}><h3>{item.action.tool} Ã‚Â· {item.action.profile}</h3><p><strong>Destination:</strong> <code>{item.action.destination_url}</code></p><p><strong>Impact:</strong> {item.action.expected_impact}</p><p><strong>Parameters:</strong> <code>{JSON.stringify(item.action.parameters)}</code></p><p><strong>Rollback:</strong> {item.action.rollback_instructions}</p><p><strong>Maximum runtime:</strong> {item.action.max_runtime_seconds} seconds</p><p><strong>Scope revision:</strong> {item.scope_revision} Ã‚Â· <strong>Expires:</strong> {item.valid_until}</p><p className="digest"><strong>Action digest:</strong> <code>{item.action_digest}</code></p><p>Status: {item.expired ? "expired" : item.state}</p>{item.allowed_decisions.map(choice => <button key={choice} disabled={busy || item.expired} onClick={() => decide(item, choice)}>{choice === "approve" ? "Approve this action" : "Deny this action"}</button>)}</article>)}</>}
     {token && selected && <AssessmentSetup key={selected + token} assessmentId={selected} token={token} onChanged={() => setRefresh(value => value + 1)} />}
     {token && selected && <section aria-labelledby="asset-context"><h3 id="asset-context">Reviewer risk context</h3><p>Record only values with a source/reference you reviewed. These are analyst-provided inputs, not independently verified facts. Unknown values stay unknown.</p>{assets.length === 0 ? <p>Import or record an asset before adding context.</p> : <form onSubmit={saveAssetContext}><label>Asset<select value={contextAssetId} onChange={event => setContextAssetId(event.target.value)}>{assets.map(asset => <option key={asset.id} value={asset.id}>{asset.identifier}</option>)}</select></label><label>Exposure<select value={contextExposure} onChange={event => setContextExposure(event.target.value)}><option value="unknown">Unknown</option><option value="internet-facing">Internet-facing</option><option value="internal">Internal</option><option value="restricted">Restricted</option></select></label>{contextExposure !== "unknown" && <label>Exposure source/reference<input value={contextExposureReference} onChange={event => setContextExposureReference(event.target.value)} required maxLength={1000} /></label>}<label>Exploitability<select value={contextExploitability} onChange={event => setContextExploitability(event.target.value)}><option value="unknown">Unknown</option><option value="suspected">Suspected</option><option value="confirmed">Reviewer confirmed</option></select></label>{contextExploitability !== "unknown" && <label>Evidence reference<input value={contextExploitabilityReference} onChange={event => setContextExploitabilityReference(event.target.value)} required maxLength={1000} /></label>}<label>Asset criticality<select value={contextCriticality} onChange={event => setContextCriticality(event.target.value)}><option value="">Unknown</option><option value="1">1 · Low</option><option value="2">2</option><option value="3">3 · Moderate</option><option value="4">4</option><option value="5">5 · Critical</option></select></label>{contextCriticality && <label>Criticality source/reference<input value={contextCriticalityReference} onChange={event => setContextCriticalityReference(event.target.value)} required maxLength={1000} /></label>}<label>Reviewer rationale<textarea value={contextNote} onChange={event => setContextNote(event.target.value)} required maxLength={1000} /></label><button disabled={busy}>Save context revision</button></form>}{assetContexts.map(value => <article className="review-card" key={value.id}><h4>Context revision {value.revision} · {String(value.request.provenance_kind)}</h4><pre>{JSON.stringify(value.request, null, 2)}</pre></article>)}</section>}
     {token && selected && <section aria-labelledby="recorded-import"><h3 id="recorded-import">Import evidence and API definitions</h3><p>Upload an existing capture you are authorized to process. This flow never runs a scanner or contacts a target. Nessus, Greenbone and Burp use offline report imports only; their live APIs and licenses are not verified. OpenAPI URLs are never fetched, credentials are not accepted, and Burp HTTP messages remain in the encrypted original rather than normalized output. Captures are encrypted at rest, hashed, scope-checked and labeled as recorded input. A supplied authorization reference is recorded but not independently verified.</p><form onSubmit={importArtifact}><label>Evidence format<select value={importTool} onChange={event => { setImportTool(event.target.value as ImportTool); setToolVersion(""); setArtifact(null); }}><option value="Nmap">{IMPORT_OPTIONS.Nmap.label}</option><option value="OWASP ZAP">{IMPORT_OPTIONS["OWASP ZAP"].label}</option><option value="Nikto">{IMPORT_OPTIONS.Nikto.label}</option><option value="OpenAPI">{IMPORT_OPTIONS.OpenAPI.label}</option><option value="Nessus">{IMPORT_OPTIONS.Nessus.label}</option><option value="Greenbone">{IMPORT_OPTIONS.Greenbone.label}</option><option value="Burp Suite">{IMPORT_OPTIONS["Burp Suite"].label}</option></select></label><label>{IMPORT_OPTIONS[importTool].label} file<input type="file" accept={IMPORT_OPTIONS[importTool].accept} onChange={event => setArtifact(event.target.files?.[0] ?? null)} required /></label><label>Targets represented in the input<textarea value={targets} onChange={event => setTargets(event.target.value)} placeholder="One host, address or URL per line" required /></label><label>Excluded hosts/addresses<textarea value={exclusions} onChange={event => setExclusions(event.target.value)} placeholder="Optional; one host/address/URL per line" /></label><label>Source / authorization reference<input value={authorizationReference} onChange={event => setAuthorizationReference(event.target.value)} maxLength={500} required /></label><label>Version reported by source; not independently verified<input value={toolVersion} onChange={event => setToolVersion(event.target.value)} maxLength={100} required /></label><label>Capture time reported by source<input type="datetime-local" value={capturedAt} onChange={event => setCapturedAt(event.target.value)} required /></label><button disabled={intakeBusy || !artifact}>Store and normalize recorded evidence</button></form>{intakeMessage && <p role="status" aria-live="polite">{intakeMessage}</p>}{recordedResult && <article className="review-card"><h4>IMPORTED / RECORDED · {String(recordedResult.state ?? "unknown")}</h4><p>The system does not report this input as a live scan. Findings created: {String(recordedResult.findings_created ?? 0)}.</p><pre>{JSON.stringify(recordedResult, null, 2)}</pre>{typeof recordedResult.evidence_id === "string" && <button onClick={() => void downloadOriginal(recordedResult.evidence_id as string)}>Download exact original artifact</button>}{importTool === "Nmap" && <><label>Capture reference<input value={captureReference} onChange={event => setCaptureReference(event.target.value)} maxLength={300} /></label><label>Rights basis<input value={rightsBasis} onChange={event => setRightsBasis(event.target.value)} maxLength={300} /></label><button disabled={intakeBusy || !recordedImportId || !captureReference || !rightsBasis} onClick={() => void replayNmap()}>Create manifest and replay recorded input</button></>}</article>}{manifestResult && <article className="review-card"><h4>{String(manifestResult.label ?? "RECORDED / provenance unverified")}</h4><p>Immutable manifest evidence for reviewer inspection:</p><pre>{JSON.stringify(manifestResult, null, 2)}</pre></article>}{replayResult && <article className="review-card"><h4>{String(replayResult.replay_label ?? "RECORDED / provenance unverified")}</h4><pre>{JSON.stringify(replayResult, null, 2)}</pre></article>}</section>}
-    {token && selected && <section aria-labelledby="scan-jobs"><h3 id="scan-jobs">Scan job status</h3><p>Statuses come from persisted worker events. No estimated completion percentage is shown.</p>{jobs.length === 0 ? <p>No scan jobs are recorded for this assessment.</p> : jobs.map(job => <article className="review-card" key={job.id}><h4>{job.status === job.state ? job.state : `${job.status} (last stored: ${job.state})`}</h4><p><strong>Attempt:</strong> {job.attempt} · <strong>Elapsed:</strong> {formatDuration(job.duration_ms)}</p>{job.heartbeat_at !== null && <p><strong>Worker heartbeat:</strong> {job.heartbeat_stale ? `stale (${job.heartbeat_age_seconds}s ago)` : `${job.heartbeat_age_seconds}s ago`}</p>}{job.tool_version && <p><strong>Tool version:</strong> {job.tool_version}</p>}{job.exit_code !== null && <p><strong>Exit code:</strong> {job.exit_code}</p>}{job.diagnostic && <p role="status"><strong>{job.diagnostic_code}:</strong> {job.diagnostic}</p>}{job.latest_event_kind && job.latest_event_at && <small>Latest persisted event: {job.latest_event_kind} · {new Date(job.latest_event_at * 1000).toLocaleString()}</small>}</article>)}</section>}
+    {token && selected && <AssessmentTimeline key={selected + token} assessmentId={selected} token={token} onChanged={() => setRefresh(value => value + 1)} />}
     {coverage && <><CoveragePanel snapshot={coverage} />{token && selected && <><SourceReviewPanel assessmentId={selected} token={token} toolEvidence={coverage.tool_evidence} onChanged={() => setRefresh(value => value + 1)} /><CorrelationReviewPanel assessmentId={selected} token={token} analytics={coverage.observation_analytics} onChanged={() => setRefresh(value => value + 1)} /></>}<details><summary>Review-only source correlations</summary><pre>{JSON.stringify(coverage.observation_analytics ?? {}, null, 2)}</pre></details><button onClick={() => void downloadEvidenceReport()} disabled={reportBusy || Number(coverage.source_run_count ?? 0) === 0}>{reportBusy ? "Preparing PDF..." : "Freeze latest results and download PDF"}</button></>}
     {riskRanking && <section aria-labelledby="source-priority"><h3 id="source-priority">Evidence priority review</h3><p>{riskRanking.ranking_method} Scores are triage aids, not CVSS or calibrated risk. Observations with missing context remain unknown.</p>{riskRanking.ranked_observations.length === 0 ? <p>No observations are available for priority review.</p> : <ol>{riskRanking.ranked_observations.map(item => <li key={item.observation_id}><article className="review-card"><h4>{item.title || "Untitled source observation"}</h4><p>{item.source_tool} · Asset {item.asset_id} · Evidence {item.evidence_id}</p><p>Source CVSS: {item.source_cvss_score ?? "unknown"} · Local priority index: {item.priority.local_priority_index ?? "unknown"} ({item.priority.state})</p><p>Review attention: {item.priority.review_attention}</p><p>Missing context: {item.priority.missing_context.length ? item.priority.missing_context.join(", ") : "none"}</p><details><summary>Priority factors and provenance</summary><pre>{JSON.stringify(item.priority, null, 2)}</pre></details></article></li>)}</ol>}</section>}
     {coverage && <section aria-labelledby="prototype-gate"><h3 id="prototype-gate">Prototype acceptance gate</h3><p>Each check is derived from stored source reviews, run results and frozen report records. Reviewer assertions do not establish organizer authority or hidden-surface coverage.</p><ul>{Object.entries(coverage.prototype_gate as Record<string, { passed: boolean; evidence: unknown; limitation?: string }>).map(([name, item]) => <li key={name}><strong>{item.passed ? "PASS" : "OPEN"}</strong> · {name.replaceAll("_", " ")}<small className="capability-description">Evidence: {JSON.stringify(item.evidence ?? null)}{item.limitation ? " · " + item.limitation : ""}</small></li>)}</ul></section>}
