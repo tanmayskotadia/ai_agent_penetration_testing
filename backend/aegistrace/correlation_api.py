@@ -21,7 +21,7 @@ from aegistrace.correlation_review import (
 from aegistrace.mutations import mutation
 from aegistrace.platform_api import record_request
 from aegistrace.repository import require_access
-from aegistrace.schema_v1 import assessments, observations, tool_runs
+from aegistrace.schema_v1 import assessments, endpoints, observations, services, tool_runs
 from aegistrace.settings import Settings
 
 
@@ -80,9 +80,48 @@ def correlation_router(engine: Engine, config: Settings) -> APIRouter:
                     .all()
                 )
                 run_tools = {str(row["id"]): row["payload"]["tool"] for row in run_rows}
+                endpoint_rows = (
+                    connection.execute(
+                        select(endpoints.c.id, endpoints.c.payload)
+                        .where(endpoints.c.assessment_id == str(assessment_id))
+                        .limit(1001)
+                    )
+                    .mappings()
+                    .all()
+                )
+                service_rows = (
+                    connection.execute(
+                        select(services.c.id, services.c.payload)
+                        .where(services.c.assessment_id == str(assessment_id))
+                        .limit(1001)
+                    )
+                    .mappings()
+                    .all()
+                )
+                if len(endpoint_rows) > 1000 or len(service_rows) > 1000:
+                    raise HTTPException(409, "Location inventory exceeds the review limit")
+                endpoint_context = {
+                    str(row["id"]): {
+                        "path": str(row["payload"]["path"]),
+                        "method": str(row["payload"]["method"]),
+                    }
+                    for row in endpoint_rows
+                }
+                service_context = {
+                    str(row["id"]): {
+                        "port": row["payload"]["port"],
+                        "protocol": str(row["payload"]["protocol"]),
+                        "observed_name": row["payload"].get("observed_name"),
+                    }
+                    for row in service_rows
+                }
                 rendered_observations = [
                     dict(value)
-                    | {"source_tool": run_tools.get(str(value.get("run_id")), "unknown")}
+                    | {
+                        "source_tool": run_tools.get(str(value.get("run_id")), "unknown"),
+                        "endpoint": endpoint_context.get(str(value.get("endpoint_id"))),
+                        "service": service_context.get(str(value.get("service_id"))),
+                    }
                     for value in observation_rows
                 ]
                 reviewed = materialize_clusters(

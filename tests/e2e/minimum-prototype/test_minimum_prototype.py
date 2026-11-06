@@ -40,7 +40,11 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
         base + "/scopes",
         {
             "revision": 1,
-            "targets": ["192.0.2.10", "https://example.invalid/app"],
+            "targets": [
+                "192.0.2.10",
+                "https://example.invalid/app",
+                "https://other.example.invalid/app",
+            ],
             "exclusions": ["https://admin.example.invalid/app"],
             "authorization_reference": "TEST ONLY; synthetic fixture; no scan permission",
         },
@@ -88,7 +92,49 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
                             "method": "GET",
                         }
                     ],
-                }
+                },
+                {
+                    "id": "10022",
+                    "pluginId": "10022",
+                    "alertRef": "10022-1",
+                    "alert": "TEST ONLY same CVE on different endpoint",
+                    "cve": "CVE-2024-12345",
+                    "cweid": 79,
+                    "instances": [
+                        {
+                            "uri": "https://example.invalid/app/other",
+                            "method": "GET",
+                        }
+                    ],
+                },
+                {
+                    "id": "10023",
+                    "pluginId": "10023",
+                    "alertRef": "10023-1",
+                    "alert": "TEST ONLY same CVE on different parameter",
+                    "cve": "CVE-2024-12345",
+                    "cweid": 79,
+                    "instances": [
+                        {
+                            "uri": "https://example.invalid/app/check?account=fixture-secret",
+                            "method": "GET",
+                        }
+                    ],
+                },
+                {
+                    "id": "10024",
+                    "pluginId": "10024",
+                    "alertRef": "10024-1",
+                    "alert": "TEST ONLY same CVE on different asset",
+                    "cve": "CVE-2024-12345",
+                    "cweid": 79,
+                    "instances": [
+                        {
+                            "uri": "https://other.example.invalid/app/check",
+                            "method": "GET",
+                        }
+                    ],
+                },
             ]
         }
     ).encode()
@@ -242,8 +288,35 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
     shared_source_candidate = next(
         item for item in candidates if {"OWASP ZAP", "Nikto"}.issubset(item["source_tools"])
     )
+    assert len(candidates) == 1
     assert shared_source_candidate["observation_count"] == 2
+    assert shared_source_candidate["asset_ids"] == [
+        shared_source_candidate["observations"][0]["asset_id"]
+    ]
+    assert all(
+        item["endpoint"] == {"path": "/app/check", "method": "GET"}
+        and item["parameter_names"] == []
+        for item in shared_source_candidate["observations"]
+    )
     observation_ids = shared_source_candidate["observation_ids"]
+    assert len({item["evidence_id"] for item in shared_source_candidate["observations"]}) == 2
+    all_observations = snapshot["observation_analytics"]["ranked_observations"]
+    assert len(all_observations) == 6
+    assert "fixture-secret" not in json.dumps(snapshot["observation_analytics"])
+    zap_only = [
+        item
+        for item in all_observations
+        if item["source_tool"] == "OWASP ZAP" and item["observation_id"] not in observation_ids
+    ]
+    assert len(zap_only) == 3
+    assert {item["endpoint"]["path"] for item in zap_only} == {
+        "/app/check",
+        "/app/other",
+    }
+    assert any(item["parameter_names"] == ["account"] for item in zap_only)
+    assert len({item["asset_id"] for item in all_observations}) == 3
+    assert len({item["asset_id"] for item in zap_only}) == 2
+    assert len({item["endpoint_id"] for item in all_observations if item["endpoint_id"]}) == 3
     review = post(
         base + "/correlations/reviews",
         {
@@ -253,6 +326,22 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
         },
     )
     assert review["request"]["action"] == "merge"
+    review_state = client.get(base + "/correlations/reviews", headers=headers()).json()
+    reviewed_group = review_state["reviewed_clusters"][0]
+    assert reviewed_group["occurrence_count"] == 2
+    assert {item["evidence_id"] for item in reviewed_group["observations"]} == {
+        item["evidence_id"] for item in shared_source_candidate["observations"]
+    }
+    assert all(
+        item["endpoint"] == {"path": "/app/check", "method": "GET"}
+        for item in reviewed_group["observations"]
+    )
+    after_review = client.get(base + "/coverage", headers=headers()).json()
+    assert after_review["observed_record_count"] == 6
+    assert {
+        item["observation_id"]
+        for item in after_review["observation_analytics"]["ranked_observations"]
+    } == {item["observation_id"] for item in all_observations}
 
     assets = client.get(base + "/assets", headers=headers()).json()
     web_asset = next(asset for asset in assets if asset["identifier"] == "https://example.invalid")
@@ -301,5 +390,6 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
         escaped = heading.replace("(", "\\(").replace(")", "\\)")
         assert escaped in pdf_text
     assert "OWASP ZAP" in pdf_text and "Nikto" in pdf_text
+    assert "Source occurrence" in pdf_text and "GET /app/check" in pdf_text
     assert "Coverage status: NOT ESTABLISHED" in pdf_text
     assert "TEST ONLY" in pdf_text

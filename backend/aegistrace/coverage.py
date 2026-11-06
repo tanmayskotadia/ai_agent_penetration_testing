@@ -26,6 +26,7 @@ from aegistrace.schema_v1 import (
     endpoints,
     observations,
     scope_versions,
+    services,
     tool_runs,
 )
 
@@ -277,6 +278,7 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
             assets,
             endpoints,
             observations,
+            services,
             normalizations,
             api_checks,
             jobs,
@@ -287,10 +289,32 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
     truncated = sorted(name for name, (_, cut, _) in loaded.items() if cut)
     run_rows = [row["payload"] for row in loaded[tool_runs.name][0]]
     endpoint_rows = [row["payload"] for row in loaded[endpoints.name][0]]
+    service_rows = [row["payload"] for row in loaded[services.name][0]]
     observation_rows = [row["payload"] for row in loaded[observations.name][0]]
     source_rows = [row["payload"] for row in loaded[normalizations.name][0]]
     check_rows, job_rows = loaded[api_checks.name][0], loaded[jobs.name][0]
     run_tools = {str(row["id"]): str(row["tool"]) for row in run_rows}
+    endpoint_context = {
+        str(row["id"]): {"path": str(row["path"]), "method": str(row["method"])}
+        for row in endpoint_rows
+    }
+    service_context = {
+        str(row["id"]): {
+            "port": row["port"],
+            "protocol": str(row["protocol"]),
+            "observed_name": row.get("observed_name"),
+        }
+        for row in service_rows
+    }
+    rendered_observations = [
+        dict(value)
+        | {
+            "source_tool": run_tools.get(str(value.get("run_id")), "unknown"),
+            "endpoint": endpoint_context.get(str(value.get("endpoint_id"))),
+            "service": service_context.get(str(value.get("service_id"))),
+        }
+        for value in observation_rows
+    ]
     scope_rows = [row["payload"] for row in loaded[scope_versions.name][0]]
     scope_by_id = {str(row["id"]): row for row in scope_rows}
     source_review_rows = (
@@ -466,7 +490,13 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
     )
     if truncated:
         gaps.append("Snapshot row limit reached; omitted rows prevent complete coverage claims")
-    analytics = correlate_observations(observation_rows, run_tools, asset_context=asset_context)
+    analytics = correlate_observations(
+        observation_rows,
+        run_tools,
+        asset_context=asset_context,
+        endpoint_context=endpoint_context,
+        service_context=service_context,
+    )
     review_rows = (
         connection.execute(
             select(resources.c.payload)
@@ -509,17 +539,11 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
     )
     analytics["reviewed_clusters"] = materialize_clusters(
         reviewed_clusters,
-        [
-            dict(value) | {"source_tool": run_tools.get(str(value.get("run_id")), "unknown")}
-            for value in observation_rows
-        ],
+        rendered_observations,
     )
     analytics["reviewed_splits"] = materialize_splits(
         reviewed_splits,
-        [
-            dict(value) | {"source_tool": run_tools.get(str(value.get("run_id")), "unknown")}
-            for value in observation_rows
-        ],
+        rendered_observations,
     )
     export_rows = (
         connection.execute(

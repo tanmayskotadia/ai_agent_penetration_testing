@@ -11,6 +11,15 @@ type Props = {
 const rows = (value: unknown): Row[] =>
   Array.isArray(value) ? value.filter(item => item !== null && typeof item === "object") as Row[] : [];
 const ids = (value: unknown): string[] => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+const location = (item: Row): string => {
+  const endpoint = item.endpoint !== null && typeof item.endpoint === "object" ? item.endpoint as Row : null;
+  if (endpoint) return String(endpoint.method ?? "ANY") + " " + String(endpoint.path ?? "path unknown");
+  const service = item.service !== null && typeof item.service === "object" ? item.service as Row : null;
+  if (service) return String(service.protocol ?? "transport unknown").toUpperCase() + "/" + String(service.port ?? "port unknown") + (service.observed_name ? " · " + String(service.observed_name) : "");
+  return "Location unavailable";
+};
+const parameters = (item: Row): string => ids(item.parameter_names).join(", ") || "none reported";
+const occurrence = (item: Row): string => String(item.source_tool ?? "unknown source") + " · " + location(item) + " · parameters: " + parameters(item) + " · asset " + String(item.asset_id ?? "unknown") + " · evidence " + String(item.evidence_id ?? "unavailable") + " · observation " + String(item.observation_id ?? item.id ?? "unavailable");
 
 export function CorrelationReviewPanel({ assessmentId, token, analytics: analyticsValue, onChanged }: Props) {
   const [history, setHistory] = useState<Row[]>([]);
@@ -75,7 +84,7 @@ export function CorrelationReviewPanel({ assessmentId, token, analytics: analyti
       return <article className="review-card" key={String(candidate.match_value) + memberIds.join(":")}>
         <h5>{String(candidate.match_basis ?? "Candidate correlation")} · {String(candidate.review_state ?? "review-required")}</h5>
         <p>Assets: {ids(candidate.asset_ids).join(", ") || "unknown"} · Source tools: {ids(candidate.source_tools).join(", ") || "unknown"}</p>
-        <ul>{members.map(item => <li key={String(item.observation_id)}>{String(item.source_tool)} · {String(item.title)} · asset {String(item.asset_id)} · evidence {String(item.evidence_id)} · observation {String(item.observation_id)}</li>)}</ul>
+        <ul>{members.map(item => <li key={String(item.observation_id)}>{String(item.title)} · {occurrence(item)}</li>)}</ul>
         {candidate.review_state === "reviewer-split" && <p>Reviewer marked this candidate as distinct: {String(candidate.reviewer_rationale ?? "No rationale")}</p>}
         <button disabled={busy || memberIds.length < 2 || !rationale.trim()} onClick={() => void submit({ action: "merge", observation_ids: memberIds, rationale: rationale.trim() })}>Confirm duplicate and merge</button>
       </article>;
@@ -84,6 +93,7 @@ export function CorrelationReviewPanel({ assessmentId, token, analytics: analyti
     {clusters.length === 0 ? <p>No reviewer-confirmed duplicate groups.</p> : clusters.map(group => <article className="review-card" key={String(group.cluster_id)}>
       <p>Cluster {String(group.cluster_id)} · {String(group.occurrence_count)} source occurrences · assets {ids(group.asset_ids).join(", ")}</p>
       <p>Rationale: {String(group.rationale)}</p>
+      <ul>{rows(group.observations).map(item => <li key={String(item.observation_id)}>{String(item.title)} · {occurrence(item)}</li>)}</ul>
       <button disabled={busy || !rationale.trim()} onClick={() => { setSelectedSplit(String(group.cluster_id)); setPartitionText(ids(group.observation_ids).join("\n")); }}>Prepare split</button>
     </article>)}
     {selectedSplit && <div className="review-card">

@@ -99,6 +99,10 @@ def test_reviewer_can_merge_split_and_undo_without_mutating_source_observations(
     state = client.get(base + "/correlations/reviews", headers=headers()).json()
     assert state["reviewed_clusters"][0]["observation_ids"] == sorted(observation_ids)
     assert state["reviewed_clusters"][0]["occurrence_count"] == 2
+    assert all(
+        item["endpoint"] == {"path": "/app/item", "method": "GET"}
+        for item in state["reviewed_clusters"][0]["observations"]
+    )
     assert state["reviews"][-1]["id"] == merged["id"]
 
     split = post(
