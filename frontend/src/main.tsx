@@ -346,7 +346,7 @@ function HumanReview() {
       const normalizer = IMPORT_OPTIONS[importTool].normalizer;
       const normalized = await apiJson<RecordedResult>(token, `${assessmentBase}/imports/${imported.id}/${normalizer}`, "POST", { asset_mapping: {} });
       setRecordedResult(normalized);
-      setIntakeMessage("Recorded XML processed. No network scan was run; source authenticity and rights are not independently verified.");
+      setIntakeMessage("Recorded evidence processed. No network scan was run; source authenticity and rights are not independently verified.");
       setRefresh(value => value + 1);
     } catch (failure) {
       setIntakeMessage(failure instanceof Error ? failure.message : "The artifact could not be processed. Check the saved source metadata and retry with a new import.");

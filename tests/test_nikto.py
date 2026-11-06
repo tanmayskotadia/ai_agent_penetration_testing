@@ -48,6 +48,13 @@ def test_nikto_maps_only_explicit_unambiguous_references_without_inventing_sever
     assert "private-value" not in serialized
 
 
+def test_nikto_accepts_cli_version_banner_in_isolated_worker():
+    parsed = isolated_inspection(SAMPLE, "Nikto", "nikto-json-normalize-v1", "Nikto 2.6.1 (LW 2.5)")
+
+    assert parsed["state"] == "normalized"
+    assert parsed["parsed_records"] == 1
+
+
 def test_ambiguous_or_non_string_references_do_not_create_correlation_identifiers():
     raw = json.dumps(
         [
@@ -128,7 +135,19 @@ def test_explicit_source_reported_cve_can_correlate_nikto_and_zap_observations()
     assert candidate["observation_count"] == 2
 
 
-@pytest.mark.parametrize("version", ["2.5.0", "3.0.0", "2.6", "2.6.invalid", "source-declared"])
+@pytest.mark.parametrize(
+    "version",
+    [
+        "2.5.0",
+        "Nikto 2.5.0 (LW 2.5)",
+        "3.0.0",
+        "Nikto 3.0.0 (LW 2.5)",
+        "2.6",
+        "2.6.invalid",
+        "Nikto latest",
+        "source-declared",
+    ],
+)
 def test_unsupported_nikto_versions_are_quarantined(version):
     parsed = normalize_nikto(SAMPLE, version)
 

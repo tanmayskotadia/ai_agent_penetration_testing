@@ -60,7 +60,7 @@ def normalize_web_import(
     ):
         raise ValueError("source metadata mismatch or unsupported candidate normalizer")
     raw = EvidenceStore(config).read(connection, assessment_id, evidence_id, actor.subject)
-    parse_timeout = 10.0 if tool == "OWASP ZAP" else 3.0
+    parse_timeout = 10.0 if tool in {"OWASP ZAP", "Nikto"} else 3.0
     parsed = isolated_inspection(
         raw, tool, parser_format, run["tool_version"], timeout=parse_timeout
     )
