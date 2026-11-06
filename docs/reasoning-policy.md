@@ -16,7 +16,9 @@ Success creates a `request-only` draft containing one fixed recorded-import requ
 
 - One provider invocation per endpoint request; no automatic retry or model loop.
 - Default 3 adaptive revisions per conversation and 20 provider attempts per assessment. Configuration bounds are enforced; a new conversation does not reset the assessment budget.
-- Identical successful reasoning context is not sent again, even in a new conversation. Failed/unconfigured attempts may be retried manually within the budgets after fixing their cause.
+- An action fingerprint binds the exact scope revision, evidence observations, capability snapshot, failures/conflicts, prior same-scope tools and permitted candidates. It excludes conversational wording and conversation IDs. Rephrasing the same evidence/action set therefore reuses the stored plan instead of spending another provider call.
+- A provider-invoked attempt that fails is persisted with its stable failure code. The same action fingerprint is blocked across new conversations until a human reviewer explicitly sets `retry_failed_attempt: true`; the retry still consumes the assessment call and conversation revision budgets. Successful decisions cannot be retried through this override. Missing configuration or policy approval does not consume a provider-call budget because no provider invocation occurred.
+- Existing normalized same-scope tool results suppress repeat imports by exact asset ID and tool. Failed sources/conflicting evidence suppress import actions and leave source review as the only generated alternative. No scanner execution or active-action retry is possible in this planner.
 - At most 25 selected revisions, 200 observations and 1,000 current-scope source-history rows; larger contexts abstain instead of silently reasoning over a partial history.
 - Fixed TLS endpoint `api.groq.com/openai/v1/chat/completions`; no redirects or proxy-derived model destinations. Compound/tool systems are rejected as model choices.
 - Default 20-second network timeout/deadline checks, 2,048 completion tokens, 64 KiB request/response bounds, and 16,000 characters of model content. Streaming/tool-call/truncated or mismatched-model responses are rejected. The provider's own rate/account limits may be lower.
@@ -36,9 +38,12 @@ Success creates a `request-only` draft containing one fixed recorded-import requ
   "request_text": "Explain the next justified recorded-evidence review step",
   "result_revision_ids": ["<normalized result revision UUID>"],
   "allow_external_processing": true,
-  "data_policy_reference": "<operator-approved policy reference>"
+  "data_policy_reference": "<operator-approved policy reference>",
+  "retry_failed_attempt": false
 }
 ```
+
+`retry_failed_attempt` is optional and defaults to `false`. Set it to `true` only after reviewing a prior persisted provider failure and deciding that a manual retry is justified. It does not bypass data policy, scope, evidence review, per-conversation revision limits, or the assessment call budget.
 
 4. Inspect `request.proposal.decision`, its source citations, candidates/rejected alternatives, assumptions, stop conditions and provider trace. `model_called` is true only for a real provider response; recorded test-provider responses explicitly remain `test-only`.
 5. Review a draft using `POST .../plans/{plan_id}/reviews` with its revision and `request.review_digest`. Reload plans through the existing plan list and decisions through plan reviews. UI controls consuming these contracts remain #54/#58; Swagger `/docs` exposes the endpoint now.
@@ -53,7 +58,7 @@ For production hosting, enter the values in **Render → dataops → Environment
 
 ## Verification and limits
 
-`tests/test_adaptive_planner.py` covers different observed services, conflicts, unavailable tools, no evidence, unreviewed sources, consent, idempotency, repeat suppression, step limits and stale scope. `tests/test_model_provider.py` covers the fixed TLS destination, no redirects/tools, bounded output, truncation, rate limit and secret-safe failure handling. These fixtures and recorded-provider responses are explicitly synthetic.
+`tests/test_adaptive_planner.py` covers different observed services, conflicts, unavailable tools, no evidence, unreviewed sources, consent, idempotency, action-fingerprint repeat suppression across paraphrased requests, explicit bounded retry after a provider failure, step limits and stale scope. `tests/test_model_provider.py` covers the fixed TLS destination, no redirects/tools, bounded output, truncation, rate limit and secret-safe failure handling. These fixtures and recorded-provider responses are explicitly synthetic.
 
 `evaluation/replanning-cases.json` defines the scenario and rationale rubric. `scripts/verify_groq_acceptance.py` exercises the complete normalized-import → real Groq → grounded plan path against a disposable SQLite database, never production data or real targets. It requires a private env file and explicit `--approve-synthetic-data`. It writes only synthetic-case decisions, model/usage metadata, response hashes, context/code/prompt hashes and limitations. Use `--interval-seconds 20` when pacing is needed; failed cases are not automatically retried.
 
