@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from aegistrace.safe_parse import isolated_inspection
 from aegistrace.zap_parse import normalize_zap
 
 
@@ -101,6 +102,11 @@ def test_zap_traditional_json_report_projects_only_safe_alert_fields():
         }
     ).encode()
     parsed = normalize_zap(raw, "2.16.0")
+    isolated = isolated_inspection(
+        raw, "OWASP ZAP", "zap-alerts-normalize-v1", "2.16.0", timeout=10.0
+    )
+    assert isolated["state"] == "normalized"
+    assert isolated["parsed_records"] == 1
     assert parsed["state"] == "normalized"
     alert = parsed["alerts"][0]
     assert alert["plugin_id"] == "40012"
