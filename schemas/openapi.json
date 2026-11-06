@@ -1056,6 +1056,12 @@
             ],
             "title": "Cluster Id"
           },
+          "expected_revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
           "observation_ids": {
             "items": {
               "format": "uuid",
@@ -1543,6 +1549,12 @@
             "maxItems": 50,
             "title": "Contradictory Observation Ids",
             "type": "array"
+          },
+          "expected_revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
           },
           "observation_id": {
             "format": "uuid",

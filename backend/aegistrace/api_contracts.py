@@ -52,6 +52,7 @@ class AssetRiskContextCreate(ApiContract):
 
 
 class CorrelationReviewCreate(ApiContract):
+    expected_revision: int = Field(default=0, ge=0)
     action: Literal["merge", "split", "undo"]
     rationale: str = Field(min_length=1, max_length=2000)
     observation_ids: list[UUID] = Field(default_factory=list, max_length=100)
@@ -94,6 +95,7 @@ class CorrelationReviewCreate(ApiContract):
 class FindingReviewCreate(ApiContract):
     """Human triage of one source observation; never changes source evidence."""
 
+    expected_revision: int = Field(default=0, ge=0)
     observation_id: UUID
     validation_state: Literal[
         "suspected", "confirmed", "false-positive", "contradictory", "unknown"

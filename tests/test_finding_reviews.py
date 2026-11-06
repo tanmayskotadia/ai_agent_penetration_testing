@@ -142,6 +142,7 @@ def test_api_records_audited_reversible_triage_without_mutating_source_observati
         {
             "observation_id": str(observation_ids[0]),
             "validation_state": "false-positive",
+            "expected_revision": 1,
             "rationale": "A later reviewer corrected the prior decision; test only.",
         },
     )
@@ -151,6 +152,20 @@ def test_api_records_audited_reversible_triage_without_mutating_source_observati
         == "false-positive"
     )
     assert len(state["reviews"]) == 2
+    assert state["revision"] == 2
+    stale = client.post(
+        path,
+        json={
+            "observation_id": str(observation_ids[0]),
+            "expected_revision": 1,
+            "validation_state": "confirmed",
+            "rationale": "Stale reviewer view must not overwrite the later decision.",
+        },
+        headers=headers(),
+    )
+    assert stale.status_code == 409
+    assert len(client.get(path, headers=headers()).json()["reviews"]) == 2
+
     with client.app.state.engine.begin() as connection:
         original = get_record(connection, "observations", assessment_id, observation_ids[0])
     assert original["validation_state"] == "suspected"
@@ -167,3 +182,8 @@ def test_api_records_audited_reversible_triage_without_mutating_source_observati
     )
     # The assessment access guard intentionally hides inaccessible assessments as 404.
     assert analyst.status_code == 404
+
+
+@pytest.mark.services
+def test_postgresql_triage_revision_conflicts(import_context):
+    test_api_records_audited_reversible_triage_without_mutating_source_observation(import_context)
