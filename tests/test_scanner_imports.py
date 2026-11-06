@@ -1,4 +1,4 @@
-"""Handcrafted parser-only samples; they are not genuine scanner evidence."""
+"""Handcrafted parser/import samples; they are not genuine scanner evidence."""
 
 import base64
 import hashlib
@@ -146,7 +146,16 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
 
 
 @pytest.mark.parametrize(
-    ("tool", "format_name", "route", "raw", "targets", "version", "expected"),
+    (
+        "tool",
+        "format_name",
+        "route",
+        "raw",
+        "targets",
+        "version",
+        "expected",
+        "expected_state",
+    ),
     [
         (
             "Nessus",
@@ -156,6 +165,7 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
             ["192.0.2.0/24"],
             "source-declared",
             3,
+            "normalized",
         ),
         (
             "Greenbone",
@@ -165,6 +175,7 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
             ["192.0.2.0/24"],
             "source-declared",
             1,
+            "normalized",
         ),
         (
             "Nikto",
@@ -174,6 +185,7 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
             ["https://example.invalid/app"],
             "2.6.1",
             1,
+            "normalized",
         ),
         (
             "Burp Suite",
@@ -183,6 +195,7 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
             ["https://example.invalid"],
             "source-declared",
             1,
+            "normalized",
         ),
         (
             "OWASP ZAP",
@@ -192,11 +205,22 @@ def test_offline_normalizer_runs_in_isolated_parser_worker():
             ["https://example.invalid/app"],
             "2.16.0",
             1,
+            "normalized",
+        ),
+        (
+            "OWASP ZAP",
+            "zap-alerts-json",
+            "normalize-zap",
+            ZAP,
+            ["https://different.invalid/app"],
+            "2.16.0",
+            0,
+            "quarantined",
         ),
     ],
 )
 def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
-    import_context, tool, format_name, route, raw, targets, version, expected
+    import_context, tool, format_name, route, raw, targets, version, expected, expected_state
 ):
     client, settings = import_context
 
@@ -254,15 +278,27 @@ def test_candidate_imports_flow_through_encrypted_evidence_and_scope(
 
     normalized = post(base + f"/imports/{imported['id']}/{route}", {"asset_mapping": {}})
 
-    assert normalized["state"] == "normalized"
+    assert normalized["state"] == expected_state
     assert normalized["mode"] == "recorded-import"
     assert normalized["native_live_execution"] is False
     assert normalized["findings_created"] == 0
     assert len(normalized["observation_ids"]) == expected
-    assert normalized["out_of_scope_assets"] == []
+    if expected_state == "quarantined":
+        assert normalized["code"] == "out-of-scope-assets"
+        assert normalized["out_of_scope_assets"] == ["https://example.invalid/app"]
+        assert normalized["observation_ids"] == []
+    else:
+        assert normalized["out_of_scope_assets"] == []
     assert "private output" not in json.dumps(normalized)
     assert "secret-header" not in json.dumps(normalized)
     assert "private-value" not in json.dumps(normalized)
+    if tool == "OWASP ZAP" and expected_state == "normalized":
+        assert normalized["run_id"] == run["id"]
+        assert normalized["evidence_id"] == evidence["id"]
+        assert normalized["source_sha256"] == evidence["sha256"]
+        assert normalized["parser_revision"] == "zap-v1"
+        assert normalized["information_kind"] == "observed-evidence"
+        assert normalized["alerts"][0]["pointer"] == "/alerts/0"
     if tool == "Nikto":
         assert normalized["alerts"][0]["classification"] == ("server-configuration-observation")
         assert normalized["alerts"][0]["plugin_id"] == "OSVDB-12345"
