@@ -15,7 +15,21 @@
 - Each proposed input states that parser code is present while native execution, scanner edition, license and authenticity remain unverified.
 - Downstream jobs and approvals reject blocked plans and plans without a bound scope.
 
-## Manual inputs for an actual assessment
+## Analyst decision contract (T37 / issue #51)
+
+Each intake proposal captures the configured capability registry without promoting its status. A candidate import parser can remain `planned` until genuine verification; an absent or revoked/unsupported parser produces a clarification and blocks approval. Unsupported explicit tool requests are not silently ignored. Proposed steps include scope ID/revision, targets/exclusions, the offline profile, limits, prerequisites, expected evidence and alternatives. `information_kind` identifies this as a deterministic proposal, distinct from source evidence and AI inference. Actual model reasoning belongs to #52.
+
+1. Create a draft with `POST /api/v1/assessments/{assessment_id}/plans/intake` and inspect its `request.proposal` and `request.review_digest`.
+2. A human `reviewer` or `admin` submits `POST /api/v1/assessments/{assessment_id}/plans/{plan_id}/reviews` with `plan_revision`, `plan_digest` (the returned review digest), `decision` (`approve` or `reject`), and a 10–2000 character rationale. Standard authenticated mutation headers are required.
+3. Reload durable decisions through `GET /api/v1/assessments/{assessment_id}/plan-reviews`. The decision records reviewer, timestamp and audit event, and always returns `authorizes_execution: false`.
+
+The digest binds the plan ID, revision and complete stored request, including scope, constraints and capability snapshot. Changed digests, stale scopes, superseded conversation revisions and duplicate decisions return `409`; analyst/service identities cannot approve. A rejected revision cannot request downstream jobs/approvals. Create a new plan revision for reconsideration. Blocked proposals cannot be approved. Review does not mutate the original plan or grant active-validation permission; that remains the separate action approval mechanism. UI controls consuming this API are tracked in #54.
+
+### Issue-level acceptance evidence
+
+`tests/test_planning_intake.py` checks scope/intent clarification, exclusions, exact target matching, reused/stale sources, revoked/absent capabilities and step rationale/limits. `tests/test_api_contracts.py` checks durable revision history, ownership, digest tampering, role authorization, approval/rejection, supersession and unchanged denial. The integrated minimum-prototype test exercises intake with downstream imports/review/report using explicitly synthetic inputs. This proves the intake/review software contract, not model reasoning, genuine scan execution or T30 completion. No cloud keys or manual participant action is needed for #51's software acceptance.
+
+## Assessment inputs
 
 The participant must enter the exact approved target set, exclusions, and request, then supply genuine artifacts and source metadata through the recorded import interface. The application can validate that these values match the stored scope; it cannot independently authenticate authorization or scanner provenance. Live scanning remains disabled in this deployment.
 

@@ -313,3 +313,90 @@ def test_postgresql_api_idempotency_and_resumable_events(api_context):
     test_duplicate_mutations_and_changed_input_conflict(api_context)
     test_sse_resumes_persisted_events_and_checkpoint_download(api_context)
     test_concurrent_duplicate_submissions_create_one_resource(api_context)
+
+
+def test_plan_review_is_digest_bound_human_only_and_rejection_stays_denied(api_context):
+    client, settings, _ = api_context
+    assessment = client.post(
+        "/api/v1/assessments", json={"name": "Review test only"}, headers=headers(settings)
+    ).json()
+    base = "/api/v1/assessments/" + assessment["id"]
+    scope = client.post(
+        base + "/scopes",
+        json={"revision": 1, "targets": ["example.test"]},
+        headers=headers(settings),
+    ).json()
+    intake = {
+        "message": "Review Nmap evidence",
+        "scope_id": scope["id"],
+        "scope_revision": 1,
+        "conversation_id": str(uuid4()),
+    }
+    plan = client.post(base + "/plans/intake", json=intake, headers=headers(settings)).json()
+    review_url = base + "/plans/" + plan["id"] + "/reviews"
+    body = {
+        "plan_revision": 1,
+        "plan_digest": plan["request"]["review_digest"],
+        "decision": "reject",
+        "rationale": "TEST ONLY reviewer denial",
+    }
+
+    def reviewer_headers():
+        value = headers(settings)
+        value["Authorization"] = "Bearer " + issue_identity(settings, "owner", "reviewer")
+        return value
+
+    assert client.post(review_url, json=body, headers=headers(settings)).status_code == 403
+    assert (
+        client.post(
+            review_url, json=body | {"plan_digest": "0" * 64}, headers=reviewer_headers()
+        ).status_code
+        == 409
+    )
+    rejected = client.post(review_url, json=body, headers=reviewer_headers())
+    assert rejected.status_code == 201, rejected.text
+    assert rejected.json()["state"] == "reviewed"
+    assert rejected.json()["request"]["authorizes_execution"] is False
+    assert (
+        client.post(
+            review_url, json=body | {"decision": "approve"}, headers=reviewer_headers()
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            base + "/jobs",
+            json={"plan_id": plan["id"], "plan_revision": 1},
+            headers=headers(settings),
+        ).status_code
+        == 409
+    )
+    reviews = client.get(base + "/plan-reviews", headers=headers(settings))
+    assert reviews.status_code == 200 and len(reviews.json()) == 1
+    assert client.get(base + "/plan-reviews", headers=headers(settings, "other")).status_code == 404
+    newer = client.post(base + "/plans/intake", json=intake, headers=headers(settings)).json()
+    approval = body | {
+        "plan_revision": 2,
+        "plan_digest": newer["request"]["review_digest"],
+        "decision": "approve",
+    }
+    assert (
+        client.post(
+            base + "/plans/" + newer["id"] + "/reviews", json=approval, headers=reviewer_headers()
+        ).status_code
+        == 201
+    )
+    # Newest revision invalidates the earlier review target, even at the same scope.
+    client.post(base + "/plans/intake", json=intake, headers=headers(settings))
+    assert (
+        client.post(
+            base + "/plans/" + newer["id"] + "/reviews", json=approval, headers=reviewer_headers()
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            base + "/plans/intake", json={"message": "   "}, headers=headers(settings)
+        ).status_code
+        == 422
+    )

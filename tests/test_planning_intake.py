@@ -90,3 +90,27 @@ def test_planner_skips_normalized_same_scope_imports_and_discloses_stale_results
     assert any("will not repeat" in item for item in result["clarifications"])
     assert any("different scope revision" in item for item in result["clarifications"])
     assert all("capability_status" in step for step in result["steps"] if "tool" in step)
+
+
+def test_revoked_or_absent_capability_cannot_be_proposed_as_working():
+    scope = {"id": str(uuid4()), "revision": 1, "targets": ["example.test"]}
+    for registry in (
+        [],
+        [{"name": "Nmap", "mode": "unsupported", "guarded_containers": ["nmap-xml"]}],
+    ):
+        plan = build_intake_plan("Review Nmap evidence", scope=scope, capabilities=registry)
+        assert "requested-tool-unavailable" in plan["blockers"]
+        assert not any(step.get("tool") == "Nmap" for step in plan["steps"])
+
+
+def test_intake_discloses_scope_limits_and_unavailable_explicit_tool():
+    scope = {"id": str(uuid4()), "revision": 2, "targets": ["example.test"]}
+    plan = build_intake_plan(
+        "Review Nmap and Nessus evidence", scope=scope, constraints=["Offline only"]
+    )
+    assert "requested-tool-unavailable" in plan["blockers"]
+    step = next(item for item in plan["steps"] if item.get("tool") == "Nmap")
+    assert step["scope_id"] == scope["id"] and step["scope_revision"] == 2
+    assert step["targets"] == scope["targets"] and "Offline only" in step["limits"]
+    assert step["alternatives"] and step["registry_mode"] == "planned"
+    assert "not observed evidence" in plan["information_kind"]

@@ -21,6 +21,7 @@ from aegistrace.api_contracts import (
     JobCreate,
     PlanCreate,
     PlanIntake,
+    PlanReviewCreate,
     ReportCreate,
     RunCreate,
     ScopeCreate,
@@ -52,6 +53,17 @@ def resource(
     if row is None:
         raise LookupError("resource not found")
     return dict(row)
+
+
+def plan_digest(plan: dict[str, Any]) -> str:
+    content = {
+        "id": plan["id"],
+        "revision": plan["revision"],
+        "request": {key: value for key, value in plan["request"].items() if key != "review_digest"},
+    }
+    return hashlib.sha256(
+        json.dumps(content, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 def record_request(
@@ -226,6 +238,18 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
                     raise HTTPException(409, "Stale plan revision")
                 if plan["state"] != "draft":
                     raise HTTPException(409, "Blocked plans cannot be scheduled or approved")
+                reviews = connection.execute(
+                    select(resources.c.payload).where(
+                        resources.c.assessment_id == str(assessment_id),
+                        resources.c.kind == "plan-reviews",
+                    )
+                ).scalars()
+                if any(
+                    item["request"].get("plan_id") == str(body.plan_id)
+                    and item["request"].get("decision") == "reject"
+                    for item in reviews
+                ):
+                    raise HTTPException(409, "Rejected plan cannot be scheduled or approved")
                 if not plan.get("request", {}).get("scope_id"):
                     raise HTTPException(409, "Plan has no bound scope revision")
                 current_scope(
@@ -376,6 +400,7 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
                     "request": stored_request,
                 }
             ).model_dump(mode="json")
+            value["request"]["review_digest"] = plan_digest(value)
             connection.execute(
                 resources.insert().values(
                     id=value["id"], assessment_id=str(assessment_id), kind="plans", payload=value
@@ -387,6 +412,120 @@ def platform_router(engine: Engine, config: Settings) -> APIRouter:
             return value
 
         return mutation(engine, request, actor, request_payload, apply, 202)
+
+    @router.post(
+        "/assessments/{assessment_id}/plans/{plan_id}/reviews",
+        response_model=WorkflowResource,
+        status_code=201,
+    )
+    def review_plan(
+        assessment_id: UUID,
+        plan_id: UUID,
+        body: PlanReviewCreate,
+        request: Request,
+        actor: Identity = actor_dependency,
+    ) -> JSONResponse:
+        def apply(connection: Connection) -> dict[str, Any]:
+            require_access(connection, assessment_id, actor.subject)
+            if actor.principal_kind != "human" or actor.role not in {"reviewer", "admin"}:
+                raise HTTPException(403, "A human reviewer is required")
+            connection.execute(
+                select(assessments.c.id)
+                .where(assessments.c.id == str(assessment_id))
+                .with_for_update()
+            ).one()
+            try:
+                plan = resource(connection, assessment_id, "plans", plan_id)
+            except LookupError as error:
+                raise HTTPException(404, "Plan not found") from error
+            if body.plan_revision != plan["revision"] or body.plan_digest != plan_digest(plan):
+                raise HTTPException(409, "Plan revision or digest changed")
+            scoped = plan["request"]
+            if not scoped.get("scope_id"):
+                raise HTTPException(409, "Plan has no bound scope")
+            current_scope(
+                connection, assessment_id, UUID(scoped["scope_id"]), scoped["scope_revision"]
+            )
+            plans = connection.execute(
+                select(resources.c.payload).where(
+                    resources.c.assessment_id == str(assessment_id), resources.c.kind == "plans"
+                )
+            ).scalars()
+            conversation = scoped.get("conversation_id")
+            if conversation and any(
+                item.get("request", {}).get("conversation_id") == conversation
+                and item["revision"] > plan["revision"]
+                for item in plans
+            ):
+                raise HTTPException(409, "Plan has been superseded")
+            if body.decision == "approve" and plan["state"] != "draft":
+                raise HTTPException(409, "Blocked plan cannot be approved")
+            prior_reviews = connection.execute(
+                select(resources.c.payload).where(
+                    resources.c.assessment_id == str(assessment_id),
+                    resources.c.kind == "plan-reviews",
+                )
+            ).scalars()
+            if any(item["request"].get("plan_id") == str(plan_id) for item in prior_reviews):
+                raise HTTPException(409, "Plan already reviewed; create a new plan revision")
+            value = WorkflowResource.model_validate(
+                dict(
+                    id=uuid4(),
+                    assessment_id=assessment_id,
+                    kind="plan-reviews",
+                    state="reviewed",
+                    mode="request-only",
+                    reason="recorded-decision-only; execution-not-authorized",
+                    request=body.model_dump(mode="json")
+                    | {
+                        "plan_id": str(plan_id),
+                        "reviewer": actor.subject,
+                        "information_kind": "human reviewer decision",
+                        "reviewed_at": datetime.now(UTC).isoformat(),
+                        "authorizes_execution": False,
+                    },
+                )
+            ).model_dump(mode="json")
+            connection.execute(
+                resources.insert().values(
+                    id=value["id"],
+                    assessment_id=str(assessment_id),
+                    kind="plan-reviews",
+                    payload=value,
+                )
+            )
+            record_request(
+                connection, assessment_id, actor, "plan.reviewed", UUID(value["id"]), value
+            )
+            return value
+
+        return mutation(
+            engine,
+            request,
+            actor,
+            body.model_dump(mode="json") | {"plan_id": str(plan_id)},
+            apply,
+            201,
+        )
+
+    @router.get("/assessments/{assessment_id}/plan-reviews", response_model=list[WorkflowResource])
+    def list_plan_reviews(
+        assessment_id: UUID, actor: Identity = actor_dependency
+    ) -> list[dict[str, Any]]:
+        try:
+            with engine.connect() as connection:
+                require_access(connection, assessment_id, actor.subject)
+                return [
+                    dict(value)
+                    for value in connection.execute(
+                        select(resources.c.payload).where(
+                            resources.c.assessment_id == str(assessment_id),
+                            resources.c.kind == "plan-reviews",
+                        )
+                    ).scalars()
+                ]
+        except LookupError as error:
+            raise HTTPException(404, "Resource not found") from error
 
     @router.get("/assessments/{assessment_id}/plans", response_model=list[WorkflowResource])
     def list_plans(assessment_id: UUID, actor: Identity = actor_dependency) -> list[dict[str, Any]]:
