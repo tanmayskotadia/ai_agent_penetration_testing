@@ -2684,6 +2684,11 @@
             "title": "Result Revision Ids",
             "type": "array"
           },
+          "retry_failed_attempt": {
+            "default": false,
+            "title": "Retry Failed Attempt",
+            "type": "boolean"
+          },
           "scope_id": {
             "format": "uuid",
             "title": "Scope Id",

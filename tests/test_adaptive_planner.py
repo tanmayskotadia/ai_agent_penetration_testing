@@ -8,7 +8,9 @@ from aegistrace import adaptive_planner
 from aegistrace.adaptive_planner import (
     ModelDecision,
     RejectedAlternative,
+    action_fingerprint,
     candidate_steps,
+    prior_action_outcome,
     validate_decision,
 )
 from aegistrace.api_schema import resources
@@ -90,6 +92,34 @@ def prepare_case(context, raw=XML, reviewed=True):
     return client, config, base, headers, body
 
 
+def test_action_fingerprint_ignores_request_wording_and_classifies_prior_failures():
+    context = {
+        "request": "first phrasing",
+        "scope_revision": 1,
+        "observations": [{"id": "observation-1"}],
+        "candidates": [{"id": "review-sources"}],
+    }
+    fingerprint = action_fingerprint(context)
+    assert fingerprint == action_fingerprint(context | {"request": "paraphrased request"})
+    assert fingerprint != action_fingerprint(context | {"scope_revision": 2})
+
+    failed_plan = {
+        "request": {
+            "action_fingerprint": fingerprint,
+            "proposal": {"provider": {"provider_invoked": True}, "decision": None},
+        }
+    }
+    successful_plan = {
+        "request": {
+            "action_fingerprint": fingerprint,
+            "proposal": {"provider": {"provider_invoked": True}, "decision": {"decision": "stop"}},
+        }
+    }
+    assert prior_action_outcome([failed_plan], fingerprint) == (False, True)
+    assert prior_action_outcome([failed_plan, successful_plan], fingerprint) == (True, True)
+    assert prior_action_outcome([failed_plan], "different-action") == (False, False)
+
+
 def test_http_and_ssh_produce_different_bounded_proposals_and_persist_reviewable_plans(
     import_context, monkeypatch
 ):
@@ -114,15 +144,55 @@ def test_http_and_ssh_produce_different_bounded_proposals_and_persist_reviewable
         before = len(provider.contexts)
         repeated = client.post(
             base + "/reasoning/replan",
-            json=body | {"conversation_id": str(uuid4())},
+            json=body
+            | {
+                "conversation_id": str(uuid4()),
+                "request_text": "Use a different wording for the same evidence decision",
+            },
             headers=headers(),
         )
         assert repeated.status_code == 201
-        assert "unchanged-evidence" in repeated.json()["reason"]
+        assert "unchanged-evidence-or-action" in repeated.json()["reason"]
         assert len(provider.contexts) == before
         assert all(
             "targets" not in context and "raw" not in context for context in provider.contexts
         )
+
+
+def test_failed_provider_attempt_requires_explicit_bounded_reviewer_retry(
+    import_context, monkeypatch
+):
+    client, _, base, headers, body = prepare_case(import_context)
+    provider = RecordedProvider(fail=True)
+    monkeypatch.setattr(adaptive_planner, "build_provider", lambda config: provider)
+
+    first = client.post(base + "/reasoning/replan", json=body, headers=headers())
+    assert first.status_code == 201
+    assert "provider-rate-limited" in first.json()["reason"]
+    assert first.json()["request"]["proposal"]["provider"]["provider_invoked"] is True
+    assert len(provider.contexts) == 1
+
+    repeated = client.post(
+        base + "/reasoning/replan",
+        json=body
+        | {
+            "conversation_id": str(uuid4()),
+            "request_text": "Try the same evidence decision again",
+        },
+        headers=headers(),
+    )
+    assert repeated.status_code == 201
+    assert "explicit-reviewer-retry-required" in repeated.json()["reason"]
+    assert len(provider.contexts) == 1
+
+    retried = client.post(
+        base + "/reasoning/replan",
+        json=body | {"conversation_id": str(uuid4()), "retry_failed_attempt": True},
+        headers=headers(),
+    )
+    assert retried.status_code == 201
+    assert retried.json()["request"]["retry_failed_attempt"] is True
+    assert len(provider.contexts) == 2
 
 
 @pytest.mark.parametrize(

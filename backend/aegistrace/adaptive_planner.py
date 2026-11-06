@@ -36,6 +36,7 @@ class ReplanRequest(BaseModel):
     result_revision_ids: tuple[UUID, ...] = Field(max_length=25)
     allow_external_processing: bool = False
     data_policy_reference: str | None = Field(default=None, max_length=300)
+    retry_failed_attempt: bool = False
 
 
 class RejectedAlternative(BaseModel):
@@ -146,6 +147,28 @@ def validate_decision(
     expected = "request-review" if selected["action"] == "request-review" else "select"
     if decision.decision != expected:
         raise ProviderFailure("model-decision-action-mismatch")
+
+
+def action_fingerprint(context: dict[str, Any]) -> str:
+    """Hash decision-relevant context, excluding wording that cannot change candidates."""
+    action_context = {key: value for key, value in context.items() if key != "request"}
+    return hashlib.sha256(json.dumps(action_context, sort_keys=True).encode()).hexdigest()
+
+
+def prior_action_outcome(plans: list[dict[str, Any]], fingerprint: str) -> tuple[bool, bool]:
+    """Return (has_decision, has_failed_provider_call) for a prior identical action set."""
+    matching = [
+        row for row in plans if row.get("request", {}).get("action_fingerprint") == fingerprint
+    ]
+    has_decision = any(
+        row.get("request", {}).get("proposal", {}).get("decision") for row in matching
+    )
+    has_failed_provider_call = any(
+        row.get("request", {}).get("proposal", {}).get("provider", {}).get("provider_invoked")
+        and not row.get("request", {}).get("proposal", {}).get("decision")
+        for row in matching
+    )
+    return has_decision, has_failed_provider_call
 
 
 def replan(
@@ -326,6 +349,10 @@ def replan(
         "constraints": ["recorded imports only", "human review required", "no scanner invocation"],
     }
     context_digest = hashlib.sha256(json.dumps(context, sort_keys=True).encode()).hexdigest()
+    # Fingerprint the evidence and available actions separately from conversational wording.
+    # Rephrasing the same request must not spend another provider call for the same decision.
+    action_fingerprint_value = action_fingerprint(context)
+    prior_decision, prior_failed_call = prior_action_outcome(all_plans, action_fingerprint_value)
     blockers: list[str] = []
     trace: dict[str, Any] = {
         "provider": "groq",
@@ -343,12 +370,12 @@ def replan(
         blockers.append("context-limit; select-fewer-result-revisions")
     elif len(prior_scope_results) > 1000:
         blockers.append("scope-history-limit; review-existing-results")
-    elif any(
-        row["request"].get("context_sha256") == context_digest
-        and row["request"].get("proposal", {}).get("decision")
-        for row in all_plans
-    ):
-        blockers.append("unchanged-evidence; reuse-prior-plan-instead-of-repeating-model-call")
+    elif prior_decision:
+        blockers.append(
+            "unchanged-evidence-or-action; reuse-prior-plan-instead-of-repeating-model-call"
+        )
+    elif prior_failed_call and not body.retry_failed_attempt:
+        blockers.append("prior-provider-failure; explicit-reviewer-retry-required")
     elif (
         not body.allow_external_processing
         or not config.model_data_policy_reference
@@ -456,8 +483,10 @@ def replan(
         "data_policy_reference": clean(body.data_policy_reference)
         if body.data_policy_reference
         else None,
+        "retry_failed_attempt": body.retry_failed_attempt,
         "result_revision_ids": [str(v) for v in body.result_revision_ids],
         "context_sha256": context_digest,
+        "action_fingerprint": action_fingerprint_value,
         "context": context,
         "proposal": {
             "information_kind": "ai-inference" if decision else "unknown",
