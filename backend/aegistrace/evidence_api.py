@@ -2,20 +2,42 @@
 
 import hashlib
 import time
-from datetime import datetime
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import Connection, Engine, select
 
 from aegistrace.auth import Identity, identity_dependency, seal, unseal
-from aegistrace.evidence import MAX_BYTES, EvidenceError, EvidenceStore
+from aegistrace.evidence import MAX_BYTES, EvidenceError, EvidenceStore, redacted_snippet
 from aegistrace.evidence_schema import objects
 from aegistrace.mutations import mutation
-from aegistrace.repository import require_access
+from aegistrace.repository import get_record, require_access
 from aegistrace.settings import Settings
+
+
+class EvidenceInspectorView(BaseModel):
+    schema_version: Literal["1.0"] = "1.0"
+    id: UUID
+    observation_id: UUID | None
+    sha256: str
+    raw_reference: str
+    pointer_type: str
+    captured_at: str
+    run_id: UUID
+    tool: str
+    tool_version: str
+    mode: Literal["recorded-import", "live"]
+    run_state: str
+    information_kind: str
+    original_available: bool
+    original_access: str
+    reviewed_derivative_available: bool
+    can_generate_derivative: bool
+    can_review_derivative: bool
 
 
 def evidence_router(engine: Engine, config: Settings) -> APIRouter:
@@ -27,6 +49,71 @@ def evidence_router(engine: Engine, config: Settings) -> APIRouter:
             return EvidenceStore(config)
         except EvidenceError as error:
             raise HTTPException(503, str(error)) from error
+
+    @router.get("/{evidence_id}/inspector", response_model=EvidenceInspectorView)
+    def inspect(
+        assessment_id: UUID,
+        evidence_id: UUID,
+        response: Response,
+        observation_id: UUID | None = None,
+        actor: Identity = actor_dependency,
+    ) -> dict[str, Any]:
+        """Metadata only; originals and unreviewed snippets are never returned here."""
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            with engine.begin() as connection:
+                require_access(connection, assessment_id, actor.subject)
+                evidence = get_record(connection, "evidence_references", assessment_id, evidence_id)
+                if observation_id is not None:
+                    observation = get_record(
+                        connection, "observations", assessment_id, observation_id
+                    )
+                    if observation["evidence_id"] != str(evidence_id):
+                        raise LookupError("evidence does not match observation")
+                run = get_record(connection, "tool_runs", assessment_id, UUID(evidence["run_id"]))
+                row = (
+                    connection.execute(
+                        select(
+                            objects.c.expires_at, objects.c.redaction_reviewed, objects.c.size
+                        ).where(
+                            objects.c.id == str(evidence_id),
+                            objects.c.assessment_id == str(assessment_id),
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                available = row is not None and datetime.fromisoformat(
+                    row["expires_at"]
+                ) > datetime.now(UTC)
+                EvidenceStore.event(
+                    connection, assessment_id, evidence_id, actor.subject, "inspector-read"
+                )
+                return {
+                    "schema_version": "1.0",
+                    "id": str(evidence_id),
+                    "observation_id": str(observation_id) if observation_id else None,
+                    "sha256": evidence["sha256"],
+                    "raw_reference": redacted_snippet(evidence["pointer"].encode()),
+                    "pointer_type": evidence["pointer_type"],
+                    "captured_at": evidence["captured_at"],
+                    "run_id": evidence["run_id"],
+                    "tool": run["tool"],
+                    "tool_version": run["tool_version"],
+                    "mode": run["mode"],
+                    "run_state": run["state"],
+                    "information_kind": "observed-source-metadata; authenticity not established",
+                    "original_available": available,
+                    "original_access": "assessment access plus short-lived download ticket; integrity verified at read",
+                    "reviewed_derivative_available": bool(
+                        available and row and row["redaction_reviewed"]
+                    ),
+                    "can_generate_derivative": actor.role != "auditor" and available,
+                    "can_review_derivative": actor.principal_kind == "human"
+                    and actor.role in {"reviewer", "admin"},
+                }
+        except LookupError as error:
+            raise HTTPException(404, "Matching evidence not found") from error
 
     @router.put("/{evidence_id}/original", status_code=201)
     async def upload(

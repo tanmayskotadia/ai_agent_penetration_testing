@@ -1228,6 +1228,119 @@
         "title": "EvidenceCreate",
         "type": "object"
       },
+      "EvidenceInspectorView": {
+        "properties": {
+          "can_generate_derivative": {
+            "title": "Can Generate Derivative",
+            "type": "boolean"
+          },
+          "can_review_derivative": {
+            "title": "Can Review Derivative",
+            "type": "boolean"
+          },
+          "captured_at": {
+            "title": "Captured At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "information_kind": {
+            "title": "Information Kind",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "recorded-import",
+              "live"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id"
+          },
+          "original_access": {
+            "title": "Original Access",
+            "type": "string"
+          },
+          "original_available": {
+            "title": "Original Available",
+            "type": "boolean"
+          },
+          "pointer_type": {
+            "title": "Pointer Type",
+            "type": "string"
+          },
+          "raw_reference": {
+            "title": "Raw Reference",
+            "type": "string"
+          },
+          "reviewed_derivative_available": {
+            "title": "Reviewed Derivative Available",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "run_state": {
+            "title": "Run State",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "tool_version": {
+            "title": "Tool Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "observation_id",
+          "sha256",
+          "raw_reference",
+          "pointer_type",
+          "captured_at",
+          "run_id",
+          "tool",
+          "tool_version",
+          "mode",
+          "run_state",
+          "information_kind",
+          "original_available",
+          "original_access",
+          "reviewed_derivative_available",
+          "can_generate_derivative",
+          "can_review_derivative"
+        ],
+        "title": "EvidenceInspectorView",
+        "type": "object"
+      },
       "EvidenceReference": {
         "additionalProperties": false,
         "properties": {
@@ -7481,6 +7594,142 @@
           }
         ],
         "summary": "Ticket",
+        "tags": [
+          "evidence"
+        ]
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/evidence/{evidence_id}/inspector": {
+      "get": {
+        "description": "Metadata only; originals and unreviewed snippets are never returned here.",
+        "operationId": "inspect_api_v1_assessments__assessment_id__evidence__evidence_id__inspector_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "evidence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "observation_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Observation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceInspectorView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inspect",
         "tags": [
           "evidence"
         ]

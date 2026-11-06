@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiFailure, mutate } from "./api-client";
+import { EvidenceInspector } from "./EvidenceInspector";
 
 type Row = Record<string, unknown>;
 type Props = { assessmentId: string; token: string; analytics: unknown; onChanged: () => void };
@@ -86,6 +87,7 @@ export function FindingTriagePanel({ assessmentId, token, analytics, onChanged }
         <p>Source severity {text(item.source_severity)} · CVSS {text(item.source_cvss_score)} · version {text(item.source_cvss_version)} · vector {text(item.source_cvss_vector)}</p>
         <p>Source confidence {text(item.confidence)} · method {text(item.confidence_method)} · {confidence(item)} · not calibrated</p>
         <p>Current reviewer state: {review ? text(review.validation_state) : "no reviewer decision"} · rationale {text(review?.rationale)}</p>
+        {typeof item.evidence_id === "string" && <EvidenceInspector assessmentId={assessmentId} token={token} evidenceId={item.evidence_id} observationId={id} />}
         <label>Reviewer state<select aria-label={`Reviewer state ${id}`} value={state} onChange={event => setStates(current => ({ ...current, [id]: event.target.value }))}>{STATES.map(value => <option key={value}>{value}</option>)}</select></label>
         {state === "contradictory" && <label>Contradictory observations<select aria-label={`Contradictory observations ${id}`} multiple value={references[id] ?? []} onChange={event => setReferences(current => ({ ...current, [id]: [...event.target.selectedOptions].map(option => option.value) }))}>{observations.filter(other => other.observation_id !== id).map(other => <option key={String(other.observation_id)} value={String(other.observation_id)}>{text(other.title)} · {text(other.observation_id)} · evidence {text(other.evidence_id)}</option>)}</select></label>}
         <label>Reviewer rationale<textarea aria-label={`Reviewer rationale ${id}`} value={reasons[id] ?? ""} maxLength={2000} onChange={event => setReasons(current => ({ ...current, [id]: event.target.value }))} /></label>
