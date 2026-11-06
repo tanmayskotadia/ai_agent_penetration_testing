@@ -81,6 +81,8 @@ def correlate_observations(
             "parameter_names": observation.get("parameter_names", []),
             "source_tool": run_tools.get(run_id, "unknown"),
             "source_key": observation.get("source_key"),
+            "observed_at": observation.get("observed_at"),
+            "run_id": observation.get("run_id"),
             "title": observation.get("title", ""),
             "cve": observation.get("cve"),
             "cwe": observation.get("cwe"),

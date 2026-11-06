@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { mutate } from "./api-client";
+import { FindingTriagePanel } from "./FindingTriagePanel";
 
 type Row = Record<string, unknown>;
 type Props = {
@@ -22,6 +23,7 @@ const parameters = (item: Row): string => ids(item.parameter_names).join(", ") |
 const occurrence = (item: Row): string => String(item.source_tool ?? "unknown source") + " · " + location(item) + " · parameters: " + parameters(item) + " · asset " + String(item.asset_id ?? "unknown") + " · evidence " + String(item.evidence_id ?? "unavailable") + " · observation " + String(item.observation_id ?? item.id ?? "unavailable");
 
 export function CorrelationReviewPanel({ assessmentId, token, analytics: analyticsValue, onChanged }: Props) {
+  const [revision, setRevision] = useState<number | null>(null);
   const [history, setHistory] = useState<Row[]>([]);
   const [rationale, setRationale] = useState("");
   const [selectedSplit, setSelectedSplit] = useState("");
@@ -33,17 +35,17 @@ export function CorrelationReviewPanel({ assessmentId, token, analytics: analyti
     if (!token || !assessmentId) return;
     const response = await fetch(path, { headers: { Authorization: "Bearer " + token } });
     if (!response.ok) throw new Error("Review history could not be loaded (" + response.status + ").");
-    const body = await response.json() as { reviews?: Row[] };
-    setHistory(rows(body.reviews));
+    const body = await response.json() as { reviews?: Row[]; revision: number };
+    setHistory(rows(body.reviews)); setRevision(body.revision);
   }
   useEffect(() => {
     let active = true;
     void fetch(path, { headers: { Authorization: "Bearer " + token } })
       .then(async response => {
         if (!response.ok) throw new Error("Review history could not be loaded (" + response.status + ").");
-        return await response.json() as { reviews?: Row[] };
+        return await response.json() as { reviews?: Row[]; revision: number };
       })
-      .then(body => { if (active) setHistory(rows(body.reviews)); })
+      .then(body => { if (active) { setHistory(rows(body.reviews)); setRevision(body.revision); } })
       .catch(error => { if (active) setMessage(error instanceof Error ? error.message : "Review history could not be loaded."); });
     return () => { active = false; };
   }, [assessmentId, token, path]);
@@ -52,10 +54,11 @@ export function CorrelationReviewPanel({ assessmentId, token, analytics: analyti
       setMessage("Enter the reviewer rationale before saving this decision.");
       return false;
     }
+    if (revision === null) { setMessage("Reload review history before making a decision."); return false; }
     setBusy(true);
     setMessage("");
     try {
-      await mutate<Row>("", path, token, payload, crypto.randomUUID());
+      await mutate<Row>("", path, token, { ...payload, expected_revision: revision }, crypto.randomUUID());
       setRationale("");
       await refresh();
       onChanged();
@@ -63,6 +66,7 @@ export function CorrelationReviewPanel({ assessmentId, token, analytics: analyti
       return true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Reviewer decision was not saved.");
+      await refresh().catch(() => setRevision(null)); onChanged();
       return false;
     } finally {
       setBusy(false);
@@ -113,68 +117,5 @@ export function CorrelationReviewPanel({ assessmentId, token, analytics: analyti
     <ol aria-label="Correlation review history">{history.map(review => <li key={String(review.id)}>Revision {String(review.revision)} · {String(rows([review.request])[0]?.action ?? "unknown")} · {String(review.id)}</li>)}</ol>
     <FindingTriagePanel assessmentId={assessmentId} token={token} analytics={analytics} onChanged={onChanged} />
     <p role="status" aria-live="polite">{message}</p>
-  </section>;
-}
-
-function FindingTriagePanel({ assessmentId, token, analytics: value, onChanged }: Props) {
-  const [latestByObservation, setLatestByObservation] = useState<Record<string, Row>>({});
-  const [states, setStates] = useState<Record<string, string>>({});
-  const [rationales, setRationales] = useState<Record<string, string>>({});
-  const [contradictions, setContradictions] = useState<Record<string, string>>({});
-  const [status, setStatus] = useState("");
-  const [saving, setSaving] = useState(false);
-  const path = "/api/v1/assessments/" + encodeURIComponent(assessmentId) + "/finding-reviews";
-  const analytics = value !== null && typeof value === "object" ? value as Row : {};
-  const observations = rows(analytics.ranked_observations);
-  useEffect(() => {
-    let active = true;
-    void fetch(path, { headers: { Authorization: "Bearer " + token } })
-      .then(async response => {
-        if (!response.ok) throw new Error("Finding review history could not be loaded (" + response.status + ").");
-        return await response.json() as { latest_by_observation?: Record<string, Row> };
-      })
-      .then(body => { if (active) setLatestByObservation(body.latest_by_observation ?? {}); })
-      .catch(error => { if (active) setStatus(error instanceof Error ? error.message : "Finding review history could not be loaded."); });
-    return () => { active = false; };
-  }, [path, token]);
-  return <section aria-labelledby="finding-triage">
-    <h3 id="finding-triage">Finding validation and uncertainty</h3>
-    <p>Source observations are immutable. Human review decisions are separately audited. Confidence stays unknown unless a source method or independent calibration supports a value.</p>
-    {observations.length === 0 ? <p>No observations are available for triage.</p> : observations.map(item => {
-      const id = String(item.observation_id ?? "");
-      const review = latestByObservation[id];
-      const state = states[id] ?? String(review?.validation_state ?? "suspected");
-      const refs = (contradictions[id] ?? ids(review?.contradictory_observation_ids).join(", "))
-        .split(/[\n,]/).map(entry => entry.trim()).filter(Boolean);
-      return <article className="review-card" key={id}>
-        <h4>{String(item.title ?? "Untitled observation")}</h4>
-        <p>{String(item.source_tool ?? "Unknown source")} · asset {String(item.asset_id ?? "unknown")} · observation {id} · evidence {String(item.evidence_id ?? "unavailable")}</p>
-        <p>Source confidence: {item.confidence == null ? "unknown" : String(item.confidence)} · method: {String(item.confidence_method ?? "not supplied")} · calibration not established</p>
-        <p>Reviewer state: {String(review?.validation_state ?? "no decision")} · Source state: {String(item.validation_state ?? "unknown")}</p>
-        <label>Reviewer state<select value={state} onChange={event => setStates(current => ({ ...current, [id]: event.target.value }))}>
-          {["suspected", "confirmed", "false-positive", "contradictory", "unknown"].map(candidate => <option key={candidate} value={candidate}>{candidate}</option>)}
-        </select></label>
-        {state === "contradictory" && <label>Contradictory observation IDs, comma or newline separated<textarea value={contradictions[id] ?? ids(review?.contradictory_observation_ids).join(", ")} onChange={event => setContradictions(current => ({ ...current, [id]: event.target.value }))} rows={2} /></label>}
-        <label>Reviewer rationale<textarea value={rationales[id] ?? ""} onChange={event => setRationales(current => ({ ...current, [id]: event.target.value }))} maxLength={2000} rows={2} /></label>
-        {review && <p>Previous decision: {String(review.rationale)} · {String(review.recorded_at)} · {String(review.recorded_by)}</p>}
-        <button disabled={saving || !rationales[id]?.trim() || (state === "contradictory" && refs.length === 0)} onClick={async () => {
-          setSaving(true); setStatus("");
-          try {
-            const response = await mutate<Row>("", path, token, {
-              observation_id: id, validation_state: state, rationale: rationales[id].trim(),
-              contradictory_observation_ids: state === "contradictory" ? refs : [],
-            }, crypto.randomUUID());
-            const request = response.request !== null && typeof response.request === "object" ? response.request as Row : {};
-            setLatestByObservation(current => ({ ...current, [id]: request }));
-            setRationales(current => ({ ...current, [id]: "" }));
-            setStatus("Reviewer decision recorded; source evidence remains unchanged.");
-            onChanged();
-          } catch (error) {
-            setStatus(error instanceof Error ? error.message : "Reviewer decision was not saved.");
-          } finally { setSaving(false); }
-        }}>Record reviewer decision</button>
-      </article>;
-    })}
-    <p role="status" aria-live="polite">{status}</p>
   </section>;
 }

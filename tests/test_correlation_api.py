@@ -23,6 +23,10 @@ def test_reviewer_can_merge_split_and_undo_without_mutating_source_observations(
         }
 
     def post(path, body, role_token=token):
+        if path.endswith("/correlations/reviews"):
+            body = body | {
+                "expected_revision": client.get(path, headers=headers()).json()["revision"]
+            }
         response = client.post(path, json=body, headers=headers(role_token))
         assert response.status_code in {200, 201}, response.text
         return response.json()
@@ -104,6 +108,17 @@ def test_reviewer_can_merge_split_and_undo_without_mutating_source_observations(
         for item in state["reviewed_clusters"][0]["observations"]
     )
     assert state["reviews"][-1]["id"] == merged["id"]
+    stale = client.post(
+        base + "/correlations/reviews",
+        json={
+            "action": "merge",
+            "expected_revision": 0,
+            "observation_ids": observation_ids,
+            "rationale": "TEST ONLY stale concurrent review",
+        },
+        headers=headers(),
+    )
+    assert stale.status_code == 409
 
     split = post(
         base + "/correlations/reviews",

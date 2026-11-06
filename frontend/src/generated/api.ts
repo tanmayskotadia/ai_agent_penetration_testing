@@ -16,7 +16,7 @@ export interface ApiSchemas {
   "CheckDecision": { "digest": string; "decision": "approve" | "deny" | "cancel" };
   "ContextRequest": { "evidence_ids": Array<string> };
   "ControlEvidence": { "evidence_id": string; "attestation": "termination-reviewed" | "reset-reviewed" };
-  "CorrelationReviewCreate": { "schema_version"?: "1.0"; "action": "merge" | "split" | "undo"; "rationale": string; "observation_ids"?: Array<string>; "cluster_id"?: (string | null); "partitions"?: Array<Array<string>>; "target_review_id"?: (string | null) };
+  "CorrelationReviewCreate": { "schema_version"?: "1.0"; "expected_revision"?: number; "action": "merge" | "split" | "undo"; "rationale": string; "observation_ids"?: Array<string>; "cluster_id"?: (string | null); "partitions"?: Array<Array<string>>; "target_review_id"?: (string | null) };
   "Credential": { "kind": "bearer" | "api-key"; "header"?: string; "value": string; "expires_at": string; "origin": string };
   "DestinationCheck": { "url": string; "profile": "discovery" | "passive-web" | "active-web" | "controlled-validation" };
   "EvidenceCreate": { "schema_version"?: "1.0"; "sha256": string; "pointer": string; "pointer_type": "byte-range" | "xml-path" | "json-pointer" | "whole-file"; "captured_at": string };
@@ -24,7 +24,7 @@ export interface ApiSchemas {
   "ExecutionPolicy": { "schema_version"?: "1.0"; "id"?: string; "assessment_id": string; "scope_id": string; "scope_revision": number; "context": "general" | "hackathon"; "authorization_source": "asset-owner" | "organizer"; "authorization_reference": string; "authorization_document_sha256": string; "reviewed_by": string; "valid_from": string; "valid_until": string; "targets": Array<ApiSchemas["TargetRule"]>; "allowed_networks": Array<string>; "exclusions"?: Array<string>; "allowed_profiles": Array<"discovery" | "passive-web" | "active-web" | "controlled-validation">; "requests_per_second": number; "concurrent_jobs": number };
   "ExportCreate": { "revision_ids": Array<string> };
   "Finding": { "schema_version"?: "1.0"; "id"?: string; "assessment_id": string; "concept_id": string; "title": string; "information_kind": "reviewer-decision" | "ai-inference"; "validation_state"?: "suspected" | "confirmed" | "false-positive" | "contradictory" | "unknown"; "decision_id"?: (string | null); "limitations"?: Array<string> };
-  "FindingReviewCreate": { "schema_version"?: "1.0"; "observation_id": string; "validation_state": "suspected" | "confirmed" | "false-positive" | "contradictory" | "unknown"; "rationale": string; "contradictory_observation_ids"?: Array<string> };
+  "FindingReviewCreate": { "schema_version"?: "1.0"; "expected_revision"?: number; "observation_id": string; "validation_state": "suspected" | "confirmed" | "false-positive" | "contradictory" | "unknown"; "rationale": string; "contradictory_observation_ids"?: Array<string> };
   "HTTPValidationError": { "detail"?: Array<ApiSchemas["ValidationError"]> };
   "ImportCreate": { "schema_version"?: "1.0"; "scope_id": string; "scope_revision": number; "tool": "Nmap" | "Nessus" | "Greenbone" | "Nikto" | "OWASP ZAP" | "Burp Suite" | "Metasploit" | "OpenAPI"; "format": string; "evidence_id": string };
   "InspectionRequest": { "schema_version"?: "1.0"; "asset_mapping"?: Record<string, string> };

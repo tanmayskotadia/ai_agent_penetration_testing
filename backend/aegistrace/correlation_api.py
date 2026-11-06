@@ -182,7 +182,12 @@ def correlation_router(engine: Engine, config: Settings) -> APIRouter:
             ).one()
             history = _latest_reviews(connection, assessment_id)
             prior = history[-1] if history else None
-            revision = int(prior["revision"]) + 1 if prior else 1
+            current_revision = int(prior["revision"]) if prior else 0
+            if body.expected_revision != current_revision:
+                raise HTTPException(
+                    409, "Correlation review changed. Reload current decisions and review again."
+                )
+            revision = current_revision + 1
             prior_clusters = prior["request"].get("reviewed_clusters", []) if prior else []
             prior_splits = prior["request"].get("reviewed_splits", []) if prior else []
             known_ids = {

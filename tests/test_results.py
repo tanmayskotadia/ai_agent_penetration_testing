@@ -100,3 +100,52 @@ def test_late_output_keeps_canonical_result_unchanged(policy_context):
 @pytest.mark.services
 def test_postgresql_immutable_result_export(import_context):
     test_revision_and_export_are_frozen_and_late_callback_is_quarantined(import_context)
+
+
+def test_triage_changes_only_new_report_snapshots(import_context):
+    """Synthetic source fixture verifies reviewer history, never genuine scan accuracy."""
+    client, config = import_context
+
+    def headers():
+        return {
+            "Authorization": "Bearer " + issue_identity(config, "owner", "reviewer"),
+            "X-Request-ID": str(uuid4()),
+            "Idempotency-Key": str(uuid4()),
+        }
+
+    base, _, imported, _, _, _ = source(import_context)
+    normalized = client.post(
+        base + "/imports/" + imported["id"] + "/normalize-nmap", json={}, headers=headers()
+    )
+    assert normalized.status_code == 201, normalized.text
+    value = normalized.json()
+
+    def freeze():
+        result = client.post(
+            base + "/result-exports",
+            json={"revision_ids": [value["result_revision_id"]]},
+            headers=headers(),
+        )
+        assert result.status_code == 201, result.text
+        return client.get(base + "/result-exports/" + result.json()["id"], headers=headers()).json()
+
+    before = freeze()
+    decision = client.post(
+        base + "/finding-reviews",
+        json={
+            "observation_id": value["observation_ids"][0],
+            "expected_revision": 0,
+            "validation_state": "false-positive",
+            "rationale": "TEST ONLY human review of synthetic source fixture.",
+        },
+        headers=headers(),
+    )
+    assert decision.status_code == 201, decision.text
+    after = freeze()
+    assert before["snapshot"]["finding_reviews"] == []
+    assert after["snapshot"]["finding_reviews"][0]["validation_state"] == "false-positive"
+    assert after["snapshot"]["content"]["finding_reviews"] == after["snapshot"]["finding_reviews"]
+    assert before["sha256"] != after["sha256"]
+    unchanged = client.get(base + "/result-exports/" + before["id"], headers=headers()).json()
+    assert unchanged == before
+    assert after["snapshot"]["observations"] == before["snapshot"]["observations"]

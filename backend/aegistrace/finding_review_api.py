@@ -66,6 +66,7 @@ def finding_review_router(engine: Engine, config: Settings) -> APIRouter:
                 # A stale/corrupt reference is never returned as an active decision.
                 latest = {key: value for key, value in latest.items() if key in known_ids}
                 return {
+                    "revision": int(history[-1]["revision"]) if history else 0,
                     "information_kind": "reviewer-decision",
                     "confidence_policy": "unknown unless source or independently validated method supplies a value",
                     "calibration_status": "not-calibrated",
@@ -102,6 +103,11 @@ def finding_review_router(engine: Engine, config: Settings) -> APIRouter:
                 .with_for_update()
             ).one()
             history = _history(connection, assessment_id)
+            current_revision = int(history[-1]["revision"]) if history else 0
+            if body.expected_revision != current_revision:
+                raise HTTPException(
+                    409, "Finding review changed. Reload current decisions and review again."
+                )
             selected_ids = {
                 str(body.observation_id),
                 *(str(value) for value in body.contradictory_observation_ids),
