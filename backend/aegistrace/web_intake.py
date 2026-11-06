@@ -60,7 +60,10 @@ def normalize_web_import(
     ):
         raise ValueError("source metadata mismatch or unsupported candidate normalizer")
     raw = EvidenceStore(config).read(connection, assessment_id, evidence_id, actor.subject)
-    parsed = isolated_inspection(raw, tool, parser_format, run["tool_version"])
+    parse_timeout = 10.0 if tool == "OWASP ZAP" else 3.0
+    parsed = isolated_inspection(
+        raw, tool, parser_format, run["tool_version"], timeout=parse_timeout
+    )
     if any(canonical(source) != source or source not in parsed["assets"] for source in mapping):
         raise ValueError("mapping keys must be canonical extracted source URLs")
     if any(urlsplit(source).query or urlsplit(target).query for source, target in mapping.items()):
