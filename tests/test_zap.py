@@ -67,6 +67,7 @@ def test_zap_alert_import_retains_ids_endpoints_and_parameter_names_only():
 def test_zap_traditional_json_report_projects_only_safe_alert_fields():
     raw = json.dumps(
         {
+            "@programName": "ZAP",
             "@version": "Dev Build",
             "@generated": "TEST ONLY",
             "created": "2026-01-01T00:00:00Z",

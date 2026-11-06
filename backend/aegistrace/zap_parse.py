@@ -65,6 +65,7 @@ def _traditional_alerts(data: Any) -> dict[str, Any] | None:
     if not isinstance(data, dict) or set(data) - {
         "@version",
         "@generated",
+        "@programName",
         "created",
         "site",
         "insights",
