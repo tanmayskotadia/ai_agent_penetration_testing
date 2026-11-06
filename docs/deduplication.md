@@ -22,3 +22,13 @@ The workspace UI exposes candidate merge, reviewed-group split and latest-decisi
 ## Verification limits
 
 Handcrafted tests verify deterministic matching, asset/endpoint/parameter separation, preserved occurrences, and the immutable review-state transition helpers. They do not establish correlation precision/recall. That requires genuine permitted captures and independent labels. No model-generated score or synthetic fixture is represented as measured accuracy.
+
+
+## Reviewer-visible occurrence context
+
+Candidate and reviewer-confirmed source occurrences include the safe endpoint method/path or network service protocol/port, parameter names only, assessment asset ID, source tool, immutable observation ID, and evidence ID. Query strings and parameter values remain confined to encrypted original evidence. Cross-tool candidates require an exact reported identifier plus the same assessment asset, canonical endpoint/service identity, and exact parameter-name set; each source observation remains a separate occurrence. Same identifiers on a different asset, endpoint, or parameter set remain separate. The reviewer UI shows this context before a merge and after confirmation.
+
+The end-to-end synthetic integration check imports source-labeled ZAP and Nikto records through the normal intake and coverage APIs, demonstrates one exact shared candidate plus separate endpoint/parameter/asset observations, verifies the reviewer merge retains both evidence links, and confirms source observations remain unchanged. These fixtures are test-only and do not measure correlation precision/recall or prove genuine scanner execution.
+
+
+The frozen VAPT PDF also renders each reviewer-confirmed occurrence with its source, safe endpoint or service location, parameter names, asset, observation ID, and evidence ID. The end-to-end synthetic verification asserts those occurrence details survive normalization, reviewer merge, and export.

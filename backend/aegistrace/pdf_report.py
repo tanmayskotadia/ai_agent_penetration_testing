@@ -241,6 +241,25 @@ def render_evidence_report(
                     f"source observation IDs: {group.get('observation_ids', [])}."
                 )
             )
+            for occurrence in group.get("observations", []):
+                endpoint = occurrence.get("endpoint") or {}
+                service = occurrence.get("service") or {}
+                location = (
+                    f"{endpoint.get('method', 'ANY')} {endpoint.get('path', 'path unavailable')}"
+                    if endpoint
+                    else f"{service.get('protocol', 'transport unknown')}/"
+                    f"{service.get('port', 'port unknown')}"
+                )
+                lines.extend(
+                    (part, 2)
+                    for part in _wrap(
+                        f"Source occurrence {occurrence.get('observation_id', 'unknown')}: "
+                        f"{occurrence.get('source_tool', 'unknown source')} at {location}; "
+                        f"parameters {occurrence.get('parameter_names', [])}; "
+                        f"asset {occurrence.get('asset_id', 'unknown')}; "
+                        f"evidence {occurrence.get('evidence_id', 'unknown')}."
+                    )
+                )
         for group in content.get("reviewed_splits", []):
             lines.extend(
                 (part, 2)

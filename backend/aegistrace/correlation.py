@@ -61,6 +61,8 @@ def correlate_observations(
     run_tools: dict[str, str],
     *,
     asset_context: dict[str, dict[str, Any]] | None = None,
+    endpoint_context: dict[str, dict[str, Any]] | None = None,
+    service_context: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Group only explicit identifier matches; never turn observations into findings."""
     groups: dict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
@@ -73,6 +75,8 @@ def correlate_observations(
             "asset_id": str(observation.get("asset_id", "")),
             "service_id": observation.get("service_id"),
             "endpoint_id": observation.get("endpoint_id"),
+            "endpoint": (endpoint_context or {}).get(str(observation.get("endpoint_id"))),
+            "service": (service_context or {}).get(str(observation.get("service_id"))),
             "parameter_names": observation.get("parameter_names", []),
             "source_tool": run_tools.get(run_id, "unknown"),
             "source_key": observation.get("source_key"),
