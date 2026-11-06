@@ -16,6 +16,8 @@ from aegistrace.approval_schema import claims
 from aegistrace.capabilities import capability_snapshot
 from aegistrace.correlation import correlate_observations
 from aegistrace.correlation_review import materialize_clusters, materialize_splits
+from aegistrace.finding_review_api import _history
+from aegistrace.finding_reviews import latest_by_observation
 from aegistrace.job_schema import jobs
 from aegistrace.normalization_schema import normalizations
 from aegistrace.report_content import VaptReportContent
@@ -496,6 +498,7 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
         asset_context=asset_context,
         endpoint_context=endpoint_context,
         service_context=service_context,
+        reviewer_decisions=latest_by_observation(_history(connection, assessment_id)),
     )
     review_rows = (
         connection.execute(

@@ -165,7 +165,7 @@ def test_context_priority_keeps_unknown_unknown_and_flags_severe_low_confidence(
     ranking = result["contextual_risk_ranking"]
     by_id = {item["observation_id"]: item["priority"] for item in ranking["ranked_observations"]}
 
-    assert ranking["policy"] == "aegistrace-context-priority-v1"
+    assert ranking["policy"] == "aegistrace-context-priority-v2"
     assert by_id["high-uncertain"]["review_attention"] == "high-severity-low-confidence-review"
     assert by_id["unscored"]["local_priority_index"] is None
     assert by_id["contextual"]["state"] == "contextual-index"

@@ -1,9 +1,10 @@
 """Transparent, uncalibrated remediation priority with explicit missing factors."""
 
 from collections.abc import Iterable, Mapping
-from typing import Any
+from math import isfinite
+from typing import Any, TypeGuard
 
-POLICY_VERSION = "aegistrace-context-priority-v1"
+POLICY_VERSION = "aegistrace-context-priority-v2"
 _WEIGHTS = {
     "source_cvss": 0.40,
     "exposure": 0.20,
@@ -19,10 +20,20 @@ def _reported_context(value: Any, reference: Any) -> Any:
     return value
 
 
+def _number(value: Any, maximum: float) -> TypeGuard[int | float]:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and isfinite(value)
+        and 0 <= value <= maximum
+    )
+
+
 def rank_observations(
     observations: Iterable[dict[str, Any]],
     *,
     asset_context: Mapping[str, Mapping[str, Any]] | None = None,
+    reviewer_decisions: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Rank by supported context; do not invent scores when contextual inputs are absent.
 
@@ -34,6 +45,10 @@ def rank_observations(
     for source in observations:
         item = dict(source)
         context = context_by_asset.get(str(source.get("asset_id", "")), {})
+        review = (reviewer_decisions or {}).get(
+            str(source.get("observation_id", source.get("id", ""))), {}
+        )
+        disputed = review.get("validation_state", source.get("validation_state")) == "contradictory"
         factors: dict[str, dict[str, Any]] = {}
         weighted = 0.0
         available_weight = 0.0
@@ -42,7 +57,7 @@ def rank_observations(
         cvss_version = source.get("cvss_version")
         cvss_value = (
             float(cvss) * 10
-            if isinstance(cvss, (int, float)) and not isinstance(cvss, bool) and cvss_version
+            if _number(cvss, 10) and cvss_version in {"2.0", "3.0", "3.1", "4.0"}
             else None
         )
         factors["source_cvss"] = {
@@ -68,8 +83,12 @@ def rank_observations(
             weighted += exposure_score * _WEIGHTS["exposure"]
             available_weight += _WEIGHTS["exposure"]
 
-        exploitability = _reported_context(
-            context.get("exploitability"), context.get("exploitability_reference")
+        exploitability = (
+            None
+            if disputed
+            else _reported_context(
+                context.get("exploitability"), context.get("exploitability_reference")
+            )
         )
         exploitability_values = {"confirmed": 100, "suspected": 50}
         exploitability_score = (
@@ -113,9 +132,9 @@ def rank_observations(
         confidence = source.get("confidence")
         confidence_score = (
             float(confidence) * 100
-            if isinstance(confidence, (int, float))
-            and not isinstance(confidence, bool)
-            and source.get("confidence_method")
+            if _number(confidence, 1)
+            and isinstance(source.get("confidence_method"), str)
+            and source["confidence_method"].strip()
             else None
         )
         factors["source_confidence"] = {
@@ -138,7 +157,9 @@ def rank_observations(
             else None
         )
         attention = (
-            "high-severity-low-confidence-review"
+            "contradictory-evidence-review"
+            if disputed
+            else "high-severity-low-confidence-review"
             if cvss_value is not None
             and cvss_value >= 70
             and confidence_score is not None
@@ -150,6 +171,10 @@ def rank_observations(
             "local_priority_index": local_score,
             "state": "contextual-index" if local_score is not None else "context-insufficient",
             "factors": factors,
+            "available_weight": available_weight,
+            "weighted_sum": weighted,
+            "reviewer_decision": dict(review) if review else None,
+            "uncertainty": "contradictory" if disputed else "uncalibrated",
             "review_attention": attention,
             "missing_context": [
                 key
@@ -162,16 +187,12 @@ def rank_observations(
 
     ranked.sort(
         key=lambda item: (
-            0
-            if item["priority"]["review_attention"] == "high-severity-low-confidence-review"
-            else 1,
+            0 if item["priority"]["review_attention"] != "standard-review" else 1,
             item["priority"]["state"] != "contextual-index",
             -(item["priority"]["local_priority_index"] or 0),
-            not isinstance(item.get("cvss_score"), (float, int))
-            or isinstance(item.get("cvss_score"), bool),
+            item["priority"]["factors"]["source_cvss"]["state"] == "unknown",
             -float(item["cvss_score"])
-            if isinstance(item.get("cvss_score"), (float, int))
-            and not isinstance(item.get("cvss_score"), bool)
+            if item["priority"]["factors"]["source_cvss"]["state"] != "unknown"
             else 0,
             str(item.get("observation_id", item.get("id", ""))),
         )

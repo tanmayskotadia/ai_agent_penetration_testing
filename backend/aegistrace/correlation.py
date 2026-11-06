@@ -63,6 +63,7 @@ def correlate_observations(
     asset_context: dict[str, dict[str, Any]] | None = None,
     endpoint_context: dict[str, dict[str, Any]] | None = None,
     service_context: dict[str, dict[str, Any]] | None = None,
+    reviewer_decisions: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Group only explicit identifier matches; never turn observations into findings."""
     groups: dict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
@@ -85,6 +86,7 @@ def correlate_observations(
             "cwe": observation.get("cwe"),
             "source_cvss_score": observation.get("cvss_score"),
             "source_cvss_version": observation.get("cvss_version"),
+            "source_cvss_vector": observation.get("cvss_vector"),
             "source_severity": observation.get("source_severity"),
             "confidence": observation.get("confidence"),
             "confidence_method": observation.get("confidence_method"),
@@ -142,6 +144,7 @@ def correlate_observations(
             for item in ordered
         ],
         asset_context=asset_context,
+        reviewer_decisions=reviewer_decisions,
     )
     return {
         "correlation_method": "exact CVE; otherwise exact CWE plus normalized title",
