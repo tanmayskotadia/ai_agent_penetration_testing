@@ -28,6 +28,41 @@ _CVE_REFERENCE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 _CWE_REFERENCE = re.compile(r"\bCWE-\d{1,6}\b", re.IGNORECASE)
 
 
+def _report_origin(host: dict[str, Any]) -> str:
+    """Build the origin Nikto stores beside path-only vulnerability URLs."""
+    reported_host = host.get("host") or host.get("ip")
+    if not isinstance(reported_host, str) or not reported_host.strip():
+        raise ParseRejected("invalid-host-record")
+    raw_host = reported_host.strip()
+    if any(character in raw_host for character in "/?#@\\\r\n\t "):
+        raise ParseRejected("invalid-host-record")
+    try:
+        parsed_host = urlsplit("//" + raw_host)
+        hostname = parsed_host.hostname
+        explicit_port = parsed_host.port
+    except ValueError as error:
+        raise ParseRejected("invalid-host-record") from error
+    if not hostname or parsed_host.path or parsed_host.query or parsed_host.fragment:
+        raise ParseRejected("invalid-host-record")
+    reported_port = host.get("port")
+    if reported_port is None:
+        port = explicit_port
+    else:
+        try:
+            port = int(reported_port)
+        except (TypeError, ValueError) as error:
+            raise ParseRejected("invalid-host-record") from error
+        if explicit_port is not None and explicit_port != port:
+            raise ParseRejected("invalid-host-record")
+    scheme = "https" if isinstance(host.get("ssl_info"), dict) else "http"
+    if port is not None and not 1 <= port <= 65535:
+        raise ParseRejected("invalid-host-record")
+    host_literal = f"[{hostname}]" if ":" in hostname else hostname
+    default_port = 443 if scheme == "https" else 80
+    authority = host_literal if port is None or port == default_port else f"{host_literal}:{port}"
+    return canonical(f"{scheme}://{authority}")
+
+
 def normalize_nikto(raw: bytes, version: str) -> dict[str, Any]:
     result: dict[str, Any] = {
         "state": "quarantined",
@@ -82,6 +117,7 @@ def normalize_nikto(raw: bytes, version: str) -> dict[str, Any]:
         for host_index, host in enumerate(data):
             if not isinstance(host, dict) or not isinstance(host.get("vulnerabilities"), list):
                 raise ParseRejected("invalid-host-record")
+            origin: str | None = None
             for item_index, item in enumerate(host["vulnerabilities"]):
                 pointer_index += 1
                 if (
@@ -90,7 +126,23 @@ def normalize_nikto(raw: bytes, version: str) -> dict[str, Any]:
                     or not isinstance(item.get("url"), str)
                 ):
                     raise ParseRejected("observation-limit-or-shape")
-                uri = canonical(item["url"])
+                reported_uri = item["url"]
+                reported_parts = urlsplit(reported_uri)
+                if reported_parts.scheme:
+                    uri = canonical(reported_uri)
+                else:
+                    if reported_parts.netloc or not reported_parts.path:
+                        raise ParseRejected("invalid-observation-url-or-method")
+                    if origin is None:
+                        origin = _report_origin(host)
+                    relative_path = reported_parts.path
+                    if not relative_path.startswith("/"):
+                        relative_path = "/" + relative_path
+                    uri = canonical(
+                        origin.rstrip("/")
+                        + relative_path
+                        + ("?" + reported_parts.query if reported_parts.query else "")
+                    )
                 parsed = urlsplit(uri)
                 method = str(item.get("method", "GET")).upper()
                 if (
