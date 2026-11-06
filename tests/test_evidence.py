@@ -11,7 +11,15 @@ import pytest
 from aegistrace.api import create_app
 from aegistrace.auth import issue_identity, seal
 from aegistrace.db import make_engine
-from aegistrace.domain import Assessment, EvidenceReference, ReportSnapshot, ScopeVersion, ToolRun
+from aegistrace.domain import (
+    Assessment,
+    Asset,
+    EvidenceReference,
+    Observation,
+    ReportSnapshot,
+    ScopeVersion,
+    ToolRun,
+)
 from aegistrace.evidence import EvidenceError, EvidenceStore
 from aegistrace.evidence_schema import access_events, objects
 from aegistrace.repository import insert_record
@@ -253,3 +261,81 @@ def test_evidence_storage_and_download_on_postgresql(evidence_context):
     if os.environ.get("RUN_SERVICE_TESTS") != "1":
         pytest.skip("requires actual PostgreSQL")
     test_authenticated_trace_download_and_separate_reviewed_redaction(evidence_context)
+
+
+def test_inspector_checks_observation_binding_and_never_returns_original(evidence_context):
+    settings, engine, assessment, evidence, raw = evidence_context
+    asset = Asset(assessment_id=assessment.id, identifier="test-only", kind="host")
+    observation = Observation(
+        assessment_id=assessment.id,
+        asset_id=asset.id,
+        run_id=evidence.run_id,
+        evidence_id=evidence.id,
+        source_key="test-only-source",
+        title="TEST ONLY source",
+        observed_at=evidence.captured_at,
+    )
+    other = EvidenceReference(
+        assessment_id=assessment.id,
+        run_id=evidence.run_id,
+        sha256="a" * 64,
+        pointer="/other",
+        pointer_type="json-pointer",
+        captured_at=evidence.captured_at,
+    )
+    with engine.begin() as connection:
+        insert_record(connection, "assets", asset)
+        insert_record(connection, "observations", observation)
+        insert_record(connection, "evidence_references", other)
+
+    def headers(subject="owner", role="reviewer"):
+        return {
+            "Authorization": "Bearer " + issue_identity(settings, subject, role),
+            "X-Request-ID": str(uuid4()),
+            "Idempotency-Key": str(uuid4()),
+        }
+
+    route = f"/api/v1/assessments/{assessment.id}/evidence/{evidence.id}"
+    with TestClient(create_app(settings)) as client:
+        uploaded = client.put(
+            route + "/original",
+            content=raw,
+            params={"expires_at": (datetime.now(UTC) + timedelta(days=1)).isoformat()},
+            headers=headers(),
+        )
+        assert uploaded.status_code == 201
+        result = client.get(
+            route + "/inspector", params={"observation_id": str(observation.id)}, headers=headers()
+        )
+        assert result.status_code == 200, result.text
+        value = result.json()
+        assert value["observation_id"] == str(observation.id)
+        assert value["sha256"] == hashlib.sha256(raw).hexdigest()
+        assert value["mode"] == "recorded-import"
+        assert value["original_available"] and value["can_review_derivative"]
+        assert "fake-canary" not in result.text and "ciphertext" not in result.text
+        assert "snippet" not in value
+        mismatched = route.replace(str(evidence.id), str(other.id))
+        assert (
+            client.get(
+                mismatched + "/inspector",
+                params={"observation_id": str(observation.id)},
+                headers=headers(),
+            ).status_code
+            == 404
+        )
+        assert client.get(route + "/inspector", headers=headers("outsider")).status_code == 404
+        viewer = client.get(route + "/inspector", headers=headers(role="auditor")).json()
+        assert not viewer["can_review_derivative"] and not viewer["can_generate_derivative"]
+        assert (
+            client.post(
+                route + "/redaction-review", json={}, headers=headers(role="auditor")
+            ).status_code
+            == 403
+        )
+        assert (
+            client.get(
+                route + "/original", headers=headers() | {"X-Download-Ticket": "forged"}
+            ).status_code
+            == 403
+        )
