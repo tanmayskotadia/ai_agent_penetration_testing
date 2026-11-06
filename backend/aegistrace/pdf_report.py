@@ -127,7 +127,7 @@ def render_evidence_report(
             ("", 2),
             (f"Included source-result revisions: {len(revisions)}", 2),
             (
-                f"Source observations referenced: {snapshot.get('observation_reference_count', sum(len(value.get('observation_ids', [])) for value in revisions))}",
+                f"Source observations referenced: {snapshot.get('content', {}).get('summary_counts', {}).get('source_observation_count', len(observations))}",
                 2,
             ),
         ]
@@ -203,7 +203,9 @@ def render_evidence_report(
         lines.extend(
             (part, 2)
             for part in _wrap(
-                f"Source observations: {len(content.get('prioritized_observations', []))}; "
+                f"Source observations: {content.get('summary_counts', {}).get('source_observation_count', sum(content.get('source_severity_distribution', {}).values()))}; "
+                f"ranked entries: {len(content.get('prioritized_observations', []))}; "
+                f"reviewer report findings: {content.get('summary_counts', {}).get('reviewer_finding_count', 0)}; "
                 f"reviewer-recorded findings: {len(content.get('reviewed_findings', []))}; "
                 f"distinct occurrences: {content.get('occurrence_count', 0)}."
             )
@@ -267,6 +269,62 @@ def render_evidence_report(
                     f"Reviewer-split candidate {group.get('cluster_id', 'unknown')}: "
                     f"partitions {group.get('partitions', [])}; rationale: "
                     f"{group.get('rationale', 'not supplied')}."
+                )
+            )
+        lines.append(("Detailed findings and source observations", 0))
+        counts = content.get("summary_counts", {})
+        lines.extend((part, 2) for part in _wrap(f"Counts (separate units): {counts}"))
+        if not content.get("detailed_findings"):
+            lines.append(
+                (
+                    "No detailed findings or observations in the selected revisions; this does not establish a clean assessment.",
+                    2,
+                )
+            )
+        for finding in content.get("detailed_findings", []):
+            lines.extend((part, 1) for part in _wrap(f"{finding['id']}: {finding['title']}"))
+            for label, value in [
+                ("Record type", finding["record_kind"]),
+                ("Information kind", finding["information_kind"]),
+                ("Validation", finding["validation_state"]),
+                ("Description", finding["description"]),
+                ("Assets", finding["asset_ids"]),
+                ("Observation occurrences", finding["occurrence_count"]),
+                ("Technical impact", finding["technical_impact"]),
+                ("Business impact", finding["business_impact"]),
+                ("Remediation", finding["remediation"]),
+                ("References", finding["references"]),
+                ("Content provenance", finding["content_provenance"]),
+            ]:
+                lines.extend((part, 2) for part in _wrap(f"{label}: {value}"))
+            for observed in finding["source_records"]:
+                lines.extend(
+                    (part, 2)
+                    for part in _wrap(
+                        f"Source observation {observed.get('id', 'unknown')} | tool {observed.get('source_tool', 'unknown')} | "
+                        f"asset {observed.get('asset_id', 'unknown')} | evidence {observed.get('evidence_id', 'unknown')} | "
+                        f"observed {observed.get('observed_at', 'unknown')} | source reference {observed.get('source_key', 'unknown')} | "
+                        f"severity {observed.get('source_severity') or 'unknown'} | CVSS {observed.get('cvss_score') if observed.get('cvss_score') is not None else 'unknown'} "
+                        f"version {observed.get('cvss_version') or 'unknown'} vector {observed.get('cvss_vector') or 'unknown'} | "
+                        f"CVE {observed.get('cve') or 'not supplied'} CWE {observed.get('cwe') or 'not supplied'} | "
+                        f"confidence {observed.get('confidence') if observed.get('confidence') is not None else 'unknown'} method {observed.get('confidence_method') or 'unknown'}"
+                    )
+                )
+        lines.append(("Selected source processing outcomes", 0))
+        for outcome in content.get("execution_summary", []):
+            lines.extend((part, 2) for part in _wrap(str(outcome)))
+        for reference in content.get("evidence_manifest", []):
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"Evidence source {reference.get('id')}: SHA-256 {reference.get('sha256')} | {reference.get('pointer_type')} {reference.get('pointer')} | captured {reference.get('captured_at')}"
+                )
+            )
+        for approval in content.get("approvals_and_decisions", {}).get("action_approvals", []):
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"Action approval {approval.get('id')}: {approval.get('state', 'unknown')} | digest {approval.get('action_digest', 'unknown')} | reviewer {approval.get('reviewer') or 'not supplied'}"
                 )
             )
         impact = content.get("impact_and_remediation", {})
@@ -387,42 +445,43 @@ def render_evidence_report(
             for wrapped in _wrap(f"Source limitation: {warning}"):
                 lines.append((wrapped, 2))
 
-    lines.append(("Source observations", 0))
-    if not observations:
-        lines.append(("No normalized observations were present in the selected revisions.", 2))
-    for index, observation in enumerate(observations, start=1):
-        asset = assets.get(str(observation.get("asset_id")), "unmapped asset")
-        title = observation.get("title", "Untitled source observation")
-        for line_number, wrapped in enumerate(_wrap(f"Observation {index}: {title}")):
-            lines.append((wrapped, 1 if line_number == 0 else 2))
-        for label, value in [
-            ("Source tool", observation.get("source_tool", "unknown")),
-            ("Asset", asset),
-            ("Observed at", observation.get("observed_at", "unknown")),
-            ("Source key", observation.get("source_key", "unknown")),
-            ("Source severity", observation.get("source_severity") or "not supplied"),
-            (
-                "CVSS",
-                observation.get("cvss_score")
-                if observation.get("cvss_score") is not None
-                else "not supplied",
-            ),
-            ("CVSS vector", observation.get("cvss_vector") or "not supplied"),
-            ("CVSS version", observation.get("cvss_version") or "not supplied"),
-            ("CVE", observation.get("cve") or "not supplied"),
-            ("CWE", observation.get("cwe") or "not supplied"),
-            (
-                "Source confidence",
-                observation.get("confidence")
-                if observation.get("confidence") is not None
-                else "not supplied",
-            ),
-            ("Confidence method", observation.get("confidence_method") or "not supplied"),
-            ("Validation", observation.get("validation_state", "unknown")),
-            ("Evidence ID", observation.get("evidence_id", "unknown")),
-        ]:
-            for wrapped in _wrap(f"{label}: {value}"):
-                lines.append((wrapped, 2))
+    if not isinstance(content, dict) or "detailed_findings" not in content:
+        lines.append(("Source observations", 0))
+        if not observations:
+            lines.append(("No normalized observations were present in the selected revisions.", 2))
+        for index, observation in enumerate(observations, start=1):
+            asset = assets.get(str(observation.get("asset_id")), "unmapped asset")
+            title = observation.get("title", "Untitled source observation")
+            for line_number, wrapped in enumerate(_wrap(f"Observation {index}: {title}")):
+                lines.append((wrapped, 1 if line_number == 0 else 2))
+            for label, value in [
+                ("Source tool", observation.get("source_tool", "unknown")),
+                ("Asset", asset),
+                ("Observed at", observation.get("observed_at", "unknown")),
+                ("Source key", observation.get("source_key", "unknown")),
+                ("Source severity", observation.get("source_severity") or "not supplied"),
+                (
+                    "CVSS",
+                    observation.get("cvss_score")
+                    if observation.get("cvss_score") is not None
+                    else "not supplied",
+                ),
+                ("CVSS vector", observation.get("cvss_vector") or "not supplied"),
+                ("CVSS version", observation.get("cvss_version") or "not supplied"),
+                ("CVE", observation.get("cve") or "not supplied"),
+                ("CWE", observation.get("cwe") or "not supplied"),
+                (
+                    "Source confidence",
+                    observation.get("confidence")
+                    if observation.get("confidence") is not None
+                    else "not supplied",
+                ),
+                ("Confidence method", observation.get("confidence_method") or "not supplied"),
+                ("Validation", observation.get("validation_state", "unknown")),
+                ("Evidence ID", observation.get("evidence_id", "unknown")),
+            ]:
+                for wrapped in _wrap(f"{label}: {value}"):
+                    lines.append((wrapped, 2))
 
     lines.append(("Reviewer triage decisions", 0))
     triage = snapshot.get("finding_reviews", [])
