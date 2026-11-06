@@ -1531,56 +1531,56 @@
         "title": "Finding",
         "type": "object"
       },
-    "FindingReviewCreate": {
-      "additionalProperties": false,
-      "description": "Human triage of one source observation; never changes source evidence.",
-      "properties": {
-        "contradictory_observation_ids": {
-          "items": {
+      "FindingReviewCreate": {
+        "additionalProperties": false,
+        "description": "Human triage of one source observation; never changes source evidence.",
+        "properties": {
+          "contradictory_observation_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Contradictory Observation Ids",
+            "type": "array"
+          },
+          "observation_id": {
             "format": "uuid",
+            "title": "Observation Id",
             "type": "string"
           },
-          "maxItems": 50,
-          "title": "Contradictory Observation Ids",
-          "type": "array"
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "validation_state": {
+            "enum": [
+              "suspected",
+              "confirmed",
+              "false-positive",
+              "contradictory",
+              "unknown"
+            ],
+            "title": "Validation State",
+            "type": "string"
+          }
         },
-        "observation_id": {
-          "format": "uuid",
-          "title": "Observation Id",
-          "type": "string"
-        },
-        "rationale": {
-          "maxLength": 2000,
-          "minLength": 1,
-          "title": "Rationale",
-          "type": "string"
-        },
-        "schema_version": {
-          "const": "1.0",
-          "default": "1.0",
-          "title": "Schema Version",
-          "type": "string"
-        },
-        "validation_state": {
-          "enum": [
-            "suspected",
-            "confirmed",
-            "false-positive",
-            "contradictory",
-            "unknown"
-          ],
-          "title": "Validation State",
-          "type": "string"
-        }
+        "required": [
+          "observation_id",
+          "validation_state",
+          "rationale"
+        ],
+        "title": "FindingReviewCreate",
+        "type": "object"
       },
-      "required": [
-        "observation_id",
-        "validation_state",
-        "rationale"
-      ],
-      "title": "FindingReviewCreate",
-      "type": "object"
-    },
       "HTTPValidationError": {
         "properties": {
           "detail": {
