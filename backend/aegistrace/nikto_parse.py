@@ -19,7 +19,11 @@ from aegistrace.safe_parse import (
 MAX_HOSTS = 200
 MAX_OBSERVATIONS = 5000
 _METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
-_VERSION = re.compile(r"^2\.6\.\d{1,3}(?:[-+][A-Za-z0-9.-]{1,40})?$")
+_VERSION = re.compile(
+    r"^(?:Nikto\s+)?2\.6\.\d{1,3}(?:[-+][A-Za-z0-9.-]{1,40})?"
+    r"(?:\s+\([A-Za-z0-9 ._-]{1,80}\))?$",
+    re.IGNORECASE,
+)
 _CVE_REFERENCE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 _CWE_REFERENCE = re.compile(r"\bCWE-\d{1,6}\b", re.IGNORECASE)
 
