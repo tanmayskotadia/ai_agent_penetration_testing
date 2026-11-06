@@ -208,8 +208,13 @@ class ReportFindingCreate(ApiContract):
     title: str = Field(min_length=1, max_length=500)
     description: str = Field(min_length=1, max_length=4000)
     technical_impact: str | None = Field(default=None, min_length=1, max_length=4000)
+    technical_impact_basis: str | None = Field(default=None, min_length=1, max_length=2000)
     business_impact: str | None = Field(default=None, min_length=1, max_length=4000)
+    business_impact_basis: str | None = Field(default=None, min_length=1, max_length=2000)
     remediation: str | None = Field(default=None, min_length=1, max_length=4000)
+    remediation_basis: str | None = Field(default=None, min_length=1, max_length=2000)
+    remediation_owner: str | None = Field(default=None, min_length=1, max_length=200)
+    verification_steps: list[str] = Field(default_factory=list, max_length=12)
     references: list[str] = Field(default_factory=list, max_length=30)
     rationale: str = Field(min_length=10, max_length=2000)
 
@@ -219,6 +224,31 @@ class ReportFindingCreate(ApiContract):
             raise ValueError("observation references must be unique")
         if any(not value.strip() or len(value) > 1000 for value in self.references):
             raise ValueError("references must be bounded nonempty source descriptions")
+        if self.technical_impact and not self.technical_impact_basis:
+            raise ValueError("technical impact requires an explicit evidence basis")
+        if not self.technical_impact and self.technical_impact_basis:
+            raise ValueError("technical impact basis requires a technical impact statement")
+        if self.business_impact and not self.business_impact_basis:
+            raise ValueError("business impact requires an explicit basis or assumption")
+        if not self.business_impact and self.business_impact_basis:
+            raise ValueError("business impact basis requires a business impact statement")
+        if self.remediation and (not self.remediation_basis or not self.verification_steps):
+            raise ValueError("remediation requires a source basis and verification steps")
+        if not self.remediation and (
+            self.remediation_basis or self.remediation_owner or self.verification_steps
+        ):
+            raise ValueError("remediation details require a remediation statement")
+        if any(not value.strip() or len(value) > 500 for value in self.verification_steps):
+            raise ValueError("verification steps must be bounded nonempty instructions")
+        for name in (
+            "technical_impact_basis",
+            "business_impact_basis",
+            "remediation_basis",
+            "remediation_owner",
+        ):
+            value = getattr(self, name)
+            if value is not None and not value.strip():
+                raise ValueError(f"{name} must be nonempty when supplied")
         return self
 
 

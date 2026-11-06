@@ -134,7 +134,7 @@ def render_evidence_report(
     )
     content = snapshot.get("content")
     if isinstance(content, dict):
-        lines.append(("Executive summary", 0))
+        lines.append(("Executive summary from frozen evidence and reviewer records", 0))
         lines.extend((part, 2) for part in _wrap(content.get("executive_summary", "Unknown")))
         lines.append(("Assessment scope and rules of engagement", 0))
         scope = content.get("scope", {})
@@ -291,8 +291,13 @@ def render_evidence_report(
                 ("Assets", finding["asset_ids"]),
                 ("Observation occurrences", finding["occurrence_count"]),
                 ("Technical impact", finding["technical_impact"]),
+                ("Evidence basis for technical impact", finding["technical_impact_basis"]),
                 ("Business impact", finding["business_impact"]),
+                ("Business impact assumptions/basis", finding["business_impact_basis"]),
                 ("Remediation", finding["remediation"]),
+                ("Observed basis for remediation", finding["remediation_basis"]),
+                ("Remediation owner (reviewer supplied)", finding["remediation_owner"]),
+                ("Verification/retest steps", finding["verification_steps"]),
                 ("References", finding["references"]),
                 ("Content provenance", finding["content_provenance"]),
             ]:
@@ -330,6 +335,12 @@ def render_evidence_report(
         impact = content.get("impact_and_remediation", {})
         lines.append(("Business impact, recommendations and references", 0))
         lines.extend((part, 2) for part in _wrap(f"Status: {impact.get('status', 'unknown')}"))
+        lines.extend(
+            (part, 2)
+            for part in _wrap(
+                f"Recommendation status: {impact.get('recommendation_status', 'unknown')}"
+            )
+        )
         lines.extend(
             (part, 2)
             for part in _wrap(f"Business impact: {impact.get('business_impact', 'unknown')}")

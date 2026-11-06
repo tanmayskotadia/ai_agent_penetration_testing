@@ -14,6 +14,10 @@
           "title": "Business Impact",
           "type": "string"
         },
+        "business_impact_basis": {
+          "title": "Business Impact Basis",
+          "type": "string"
+        },
         "content_provenance": {
           "additionalProperties": true,
           "title": "Content Provenance",
@@ -73,6 +77,14 @@
           "title": "Remediation",
           "type": "string"
         },
+        "remediation_basis": {
+          "title": "Remediation Basis",
+          "type": "string"
+        },
+        "remediation_owner": {
+          "title": "Remediation Owner",
+          "type": "string"
+        },
         "source_records": {
           "items": {
             "additionalProperties": true,
@@ -85,6 +97,10 @@
           "title": "Technical Impact",
           "type": "string"
         },
+        "technical_impact_basis": {
+          "title": "Technical Impact Basis",
+          "type": "string"
+        },
         "title": {
           "title": "Title",
           "type": "string"
@@ -92,6 +108,13 @@
         "validation_state": {
           "title": "Validation State",
           "type": "string"
+        },
+        "verification_steps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Verification Steps",
+          "type": "array"
         }
       },
       "required": [
@@ -107,8 +130,13 @@
         "observation_ids",
         "occurrence_count",
         "technical_impact",
+        "technical_impact_basis",
         "business_impact",
+        "business_impact_basis",
         "remediation",
+        "remediation_basis",
+        "remediation_owner",
+        "verification_steps",
         "references",
         "content_provenance"
       ],
@@ -148,8 +176,8 @@
       "type": "array"
     },
     "content_revision": {
-      "const": "1.1",
-      "default": "1.1",
+      "const": "1.2",
+      "default": "1.2",
       "title": "Content Revision",
       "type": "string"
     },

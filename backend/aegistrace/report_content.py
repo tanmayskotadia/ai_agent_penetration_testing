@@ -20,8 +20,13 @@ class DetailedReportFinding(BaseModel):
     observation_ids: list[str]
     occurrence_count: int = Field(ge=0)
     technical_impact: str
+    technical_impact_basis: str
     business_impact: str
+    business_impact_basis: str
     remediation: str
+    remediation_basis: str
+    remediation_owner: str
+    verification_steps: list[str]
     references: list[str]
     content_provenance: dict[str, Any]
 
@@ -75,8 +80,13 @@ def detailed_records(source: dict[str, Any]) -> list[dict[str, Any]]:
                 observation_ids=members,
                 occurrence_count=len(members),
                 technical_impact=note_body.get("technical_impact") or "unknown",
+                technical_impact_basis=note_body.get("technical_impact_basis") or "unknown",
                 business_impact=note_body.get("business_impact") or "unknown",
+                business_impact_basis=note_body.get("business_impact_basis") or "unknown",
                 remediation=note_body.get("remediation") or "unknown",
+                remediation_basis=note_body.get("remediation_basis") or "unknown",
+                remediation_owner=note_body.get("remediation_owner") or "unknown",
+                verification_steps=note_body.get("verification_steps", []),
                 references=note_body.get("references", []),
                 content_provenance={
                     "record_id": note.get("id"),
@@ -116,7 +126,7 @@ class VaptReportContent(BaseModel):
     limitations: list[str]
     coverage: dict[str, Any]
     grounded_claims: list[dict[str, Any]] = Field(default_factory=list)
-    content_revision: Literal["1.1"] = "1.1"
+    content_revision: Literal["1.2"] = "1.2"
     detailed_findings: list[DetailedReportFinding] = Field(default_factory=list)
     summary_counts: dict[str, int] = Field(default_factory=dict)
     execution_summary: list[dict[str, Any]] = Field(default_factory=list)
@@ -136,10 +146,186 @@ class VaptReportContent(BaseModel):
                 ),
                 "source_observation_count": sum(self.source_severity_distribution.values()),
                 "canonical_occurrence_count": self.occurrence_count,
+                "business_impact_supplied_count": sum(
+                    value.business_impact != "unknown" for value in self.detailed_findings
+                ),
+                "technical_impact_supplied_count": sum(
+                    value.technical_impact != "unknown" for value in self.detailed_findings
+                ),
+                "technical_impact_basis_count": sum(
+                    value.technical_impact_basis != "unknown" for value in self.detailed_findings
+                ),
+                "business_impact_basis_count": sum(
+                    value.business_impact_basis != "unknown" for value in self.detailed_findings
+                ),
+                "remediation_supplied_count": sum(
+                    value.remediation != "unknown" for value in self.detailed_findings
+                ),
+                "remediation_basis_count": sum(
+                    value.remediation_basis != "unknown" for value in self.detailed_findings
+                ),
+                "remediation_owner_count": sum(
+                    value.remediation_owner != "unknown" for value in self.detailed_findings
+                ),
+                "verification_step_count": sum(
+                    len(value.verification_steps) for value in self.detailed_findings
+                ),
             }
             if any(self.summary_counts.get(key) != value for key, value in expected.items()):
                 raise ValueError("Report counts do not reconcile to frozen records")
         return self
+
+
+def executive_summary_text(
+    *,
+    source: dict[str, Any],
+    detailed: list[dict[str, Any]],
+    severity: dict[str, int],
+    reviewer_findings: list[dict[str, Any]],
+) -> str:
+    """Compose the executive summary from frozen counts and attributed review content only."""
+    observations = source.get("observations", [])
+    assets = source.get("assets", [])
+    analytics = source.get("correlation", {})
+    candidate_count = len(analytics.get("cross_tool_candidate_groups", []))
+    merge_count = len(analytics.get("reviewed_clusters", []))
+    canonical_count = len(source.get("findings", []))
+    if not observations:
+        overview = (
+            f"No source observations are present in the selected revisions; {canonical_count} canonical records, "
+            f"{candidate_count} correlation candidates, and {merge_count} reviewer-merged groups are in the snapshot. "
+            "This is not a clean-assessment conclusion."
+        )
+    else:
+        overview = (
+            f"The frozen selection contains {len(assets)} linked assets and {len(observations)} source observations; "
+            f"{len(reviewer_findings)} reviewer-authored report findings group those observations, "
+            f"alongside {canonical_count} canonical records, {candidate_count} correlation candidates, "
+            f"and {merge_count} reviewer-merged groups. "
+            "Source observations are not confirmations."
+        )
+
+    validation_counts: dict[str, int] = {}
+    for finding in detailed:
+        state = str(finding.get("validation_state", "unknown")).casefold()
+        label = (
+            state
+            if state in {"confirmed", "suspected", "rejected", "contradictory"}
+            else "unknown-or-mixed"
+        )
+        validation_counts[label] = validation_counts.get(label, 0) + 1
+    validation = (
+        "Reviewer validation states by detailed record: "
+        + (
+            ", ".join(f"{key} {validation_counts[key]}" for key in sorted(validation_counts))
+            if validation_counts
+            else "none recorded"
+        )
+        + "."
+    )
+
+    severity_text = (
+        "Source-reported severity counts: "
+        + ", ".join(f"{key} {severity[key]}" for key in sorted(severity))
+        + "."
+        if severity
+        else "No source severity was supplied."
+    )
+    ranking = (
+        source.get("correlation", {})
+        .get("contextual_risk_ranking", {})
+        .get("ranked_observations", [])
+    )
+    priority_entries = []
+    for item in ranking[:3]:
+        priority = item.get("priority", {})
+        index = priority.get("local_priority_index")
+        factors = priority.get("factors", {})
+        supported_factors = []
+        for factor_name in (
+            "source_cvss",
+            "exposure",
+            "exploitability",
+            "asset_criticality",
+            "source_confidence",
+        ):
+            factor = factors.get(factor_name, {})
+            if factor.get("state") not in {None, "unknown"}:
+                detail = f"{factor_name}={factor.get('value')}"
+                if factor.get("version"):
+                    detail += f" v{factor['version']}"
+                if factor.get("reference"):
+                    detail += f" (ref: {factor['reference']})"
+                if factor.get("method"):
+                    detail += f" (method: {factor['method']})"
+                supported_factors.append(detail)
+        missing = priority.get("missing_context", [])
+        rationale = (
+            "; ".join(supported_factors) if supported_factors else "no documented ranking factors"
+        )
+        if missing:
+            rationale += "; unknown context: " + ", ".join(str(value) for value in missing)
+        priority_entries.append(
+            f"{item.get('observation_id', item.get('id', 'unknown observation'))} "
+            f"(source severity {item.get('source_severity') or 'unknown'}, "
+            f"{priority.get('review_attention', 'standard-review')}, "
+            f"local index {index if index is not None else 'unknown'}; rationale: {rationale})"
+        )
+    priority_text = (
+        "Priority review entries: "
+        + "; ".join(priority_entries)
+        + ". The local index is an uncalibrated triage aid, not a probability or CVSS score."
+        if priority_entries
+        else "No ranked observation is available; priority is unknown."
+    )
+
+    technical_impact_count = sum(
+        value.get("technical_impact") != "unknown" for value in reviewer_findings
+    )
+    impact_count = sum(value.get("business_impact") != "unknown" for value in reviewer_findings)
+    recommendation_count = sum(value.get("remediation") != "unknown" for value in reviewer_findings)
+    verified_step_count = sum(
+        len(value.get("verification_steps", [])) for value in reviewer_findings
+    )
+    action_text = (
+        f"Reviewer impact statements: technical {technical_impact_count}, business {impact_count}; "
+        f"reviewer recommendations: {recommendation_count} "
+        f"with {verified_step_count} proposed verification steps. These are reviewer-supplied, "
+        "not independently validated or executed; missing fields remain unknown."
+    )
+
+    exceptional = []
+    incomplete_states = {
+        "failed",
+        "partial",
+        "quarantined",
+        "blocked",
+        "cancelled",
+        "timeout",
+        "error",
+    }
+    for value in source.get("result_revisions", []):
+        state = str(value.get("state", "unknown")).casefold()
+        if state in incomplete_states:
+            exceptional.append(f"{value.get('run_id', 'unknown run')} {state}")
+    for value in source.get("tool_runs", []):
+        state = str(value.get("state", "unknown")).casefold()
+        if state in incomplete_states:
+            entry = f"{value.get('id', 'unknown run')} {state}"
+            if entry not in exceptional:
+                exceptional.append(entry)
+    processing = (
+        "Partial or failed source processing: " + "; ".join(exceptional) + "."
+        if exceptional
+        else "No partial/failed result state was recorded in the selected records; this does not establish complete coverage."
+    )
+    boundary = (
+        "Only selected frozen revisions are represented. Target coverage, authorization, source authenticity, "
+        "and unselected assets/endpoints are not independently verified; no live scan is claimed."
+    )
+    return " ".join(
+        (overview, validation, severity_text, priority_text, action_text, processing, boundary)
+    )
 
 
 def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
@@ -149,7 +335,6 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
     detailed = detailed_records(source)
     reviewer_findings = [value for value in detailed if value["record_kind"] == "reviewer-finding"]
     analytics = source.get("correlation", {})
-    correlation = analytics.get("cross_tool_candidate_groups", [])
     reviewed_correlations = analytics.get("reviewed_clusters", [])
     reviewed_splits = analytics.get("reviewed_splits", [])
     current_scope = source.get("scope") or {}
@@ -176,18 +361,18 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
         )
     )
     scope_status = "participant-supplied; not independently verified"
+    executive_summary = executive_summary_text(
+        source=source,
+        detailed=detailed,
+        severity=severity,
+        reviewer_findings=reviewer_findings,
+    )
     content = VaptReportContent.model_validate(
         {
             "assessment_id": source["assessment_id"],
             "created_at": source["created_at"],
             "assessment_complete": False,
-            "executive_summary": (
-                f"Frozen reviewer report for {len(source.get('assets', []))} recorded assets, "
-                f"{len(observations)} source observations, {len(correlation)} cross-tool candidate groups, "
-                f"{len(reviewed_correlations)} reviewer-merged groups, "
-                f"and {len(reviewer_findings)} reviewer-authored report findings ({len(findings)} canonical finding records). Assessment coverage and authorization "
-                "remain unverified; observations are not confirmations."
-            ),
+            "executive_summary": executive_summary,
             "scope": {
                 "scope_id": current_scope.get("id"),
                 "revision": current_scope.get("revision"),
@@ -227,6 +412,30 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
                 "source_occurrence_count": sum(value["occurrence_count"] for value in detailed),
                 "canonical_finding_count": len({value.get("id") for value in findings}),
                 "canonical_occurrence_count": len(source.get("occurrences", [])),
+                "business_impact_supplied_count": sum(
+                    value["business_impact"] != "unknown" for value in detailed
+                ),
+                "technical_impact_supplied_count": sum(
+                    value["technical_impact"] != "unknown" for value in detailed
+                ),
+                "technical_impact_basis_count": sum(
+                    value["technical_impact_basis"] != "unknown" for value in detailed
+                ),
+                "business_impact_basis_count": sum(
+                    value["business_impact_basis"] != "unknown" for value in detailed
+                ),
+                "remediation_supplied_count": sum(
+                    value["remediation"] != "unknown" for value in detailed
+                ),
+                "remediation_basis_count": sum(
+                    value["remediation_basis"] != "unknown" for value in detailed
+                ),
+                "remediation_owner_count": sum(
+                    value["remediation_owner"] != "unknown" for value in detailed
+                ),
+                "verification_step_count": sum(
+                    len(value["verification_steps"]) for value in detailed
+                ),
             },
             "execution_summary": [
                 {
@@ -249,8 +458,13 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
                         for key in (
                             "id",
                             "technical_impact",
+                            "technical_impact_basis",
                             "business_impact",
+                            "business_impact_basis",
                             "remediation",
+                            "remediation_basis",
+                            "remediation_owner",
+                            "verification_steps",
                             "references",
                             "content_provenance",
                         )
@@ -273,6 +487,21 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
                 "references": sorted(
                     {reference for value in reviewer_findings for reference in value["references"]}
                 ),
+                "recommendation_status": "reviewer supplied; not independently validated or executed",
+                "recommendations": [
+                    {
+                        "finding_id": value["id"],
+                        "assets": value["asset_ids"],
+                        "action": value["remediation"],
+                        "basis": value["remediation_basis"],
+                        "owner": value["remediation_owner"],
+                        "verification_steps": value["verification_steps"],
+                        "status": "reviewer supplied; not independently validated or executed"
+                        if value["remediation"] != "unknown"
+                        else "not provided; requires human review",
+                    }
+                    for value in reviewer_findings
+                ],
             },
             "approvals_and_decisions": {
                 "approvals": source.get("approvals", []),
