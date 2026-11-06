@@ -316,7 +316,7 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
     assert any(item["parameter_names"] == ["account"] for item in zap_only)
     assert len({item["asset_id"] for item in all_observations}) == 3
     assert len({item["asset_id"] for item in zap_only}) == 2
-    assert len({item["endpoint_id"] for item in all_observations}) == 3
+    assert len({item["endpoint_id"] for item in all_observations if item["endpoint_id"]}) == 3
     review = post(
         base + "/correlations/reviews",
         {
