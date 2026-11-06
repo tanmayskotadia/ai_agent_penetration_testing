@@ -1,0 +1,17 @@
+# Assessment setup and plan review (#54)
+
+Sign in with an existing application account, enter a new assessment name, and select the created assessment. The setup panel gives three steps: scope, request, and review. Enter one exact host/address/URL per line, exclusions, an optional source/authorization reference, the assessment request, and constraints. The persisted scope is loaded when reopening an assessment. Creating a plan uses the current server scope revision and preserves the last 100 result revision references for planning context. A scope changed by another tab is reloaded before creating a new draft.
+
+The panel renders the stored plan ID/revision and scope ID/revision, request, targets, exclusions, capability state, rationale, limits, required inputs, source references, clarifications and blockers. The exact stored object remains available under a disclosure. These are deterministic intake proposals; the panel does not claim a model call or observed findings.
+
+A reviewer/admin can approve or reject a plan with a rationale of at least ten characters. Each request sends the persisted revision and server digest. The server checks assessment access, reviewer role, scope freshness, superseding revisions and existing decisions. A plan decision records no execution authorization. Blocked plans cannot be approved; rejection remains visible after reload. A new revision is required to change a decision. Changed scopes and superseded plans disable review and prompt a new draft. A server conflict or permission error remains visible, and current saved plans reload for recovery. Draft input remains available after errors.
+
+Empty targets and missing intent receive specific messages before submission; other invalid targets show the server's validation error. Textual instructions never authorize testing. Unknown or unavailable tool capabilities and missing inputs remain visible as blockers/clarifications. React escapes source and request text. The keyed setup panel isolates each selected assessment and discards updates after unmount.
+
+## Verification and boundaries
+
+`frontend/scripts/check-assessment-ui.mjs` runs Chromium against the actual React panel with explicitly synthetic HTTP fixtures. It exercises fresh empty setup, empty/invalid scope, exclusions/reference/constraints, saved revision rendering, digest-bound rejection, denied role, unavailable tool blockers, stale scope disabling and restored history. No scan endpoint is called. Run from `frontend`: `npm ci`, `npx playwright install chromium`, `node scripts/check-assessment-ui.mjs`. CI installs Chromium with its Linux dependencies and executes the walkthrough.
+
+`tests/test_api_contracts.py` and `tests/test_planning_intake.py` exercise the real backend separately, including invalid and excluded targets, reviewer role denial, digest changes, rejection persistence, superseded revisions and unavailable capabilities. These automated checks establish the UI and API contracts; the browser's synthetic responses do not establish hosted deployment health, genuine scanner provenance, or live-lab acceptance. A production demonstration remains part of the final prototype acceptance gate. No production credentials or cloud migration are required for this change.
+
+PDF alignment: R01/R07 conversational setup and scoped plans; R03 permission boundaries; R02/R22 rationale, capability and evidence disclosure; R27 safe failure and review checks. The broader genuine-source and demonstration requirements remain in their existing acceptance issues.
