@@ -160,4 +160,5 @@ def test_api_records_audited_reversible_triage_without_mutating_source_observati
         },
         headers=headers(issue_identity(settings, "triage-analyst", "analyst")),
     )
-    assert analyst.status_code == 403
+    # The assessment access guard intentionally hides inaccessible assessments as 404.
+    assert analyst.status_code == 404
