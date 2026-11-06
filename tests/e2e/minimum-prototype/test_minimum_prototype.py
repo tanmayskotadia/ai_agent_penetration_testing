@@ -337,9 +337,10 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
     )
     after_review = client.get(base + "/coverage", headers=headers()).json()
     assert after_review["observed_record_count"] == 5
-    assert {item["observation_id"] for item in after_review["observation_analytics"]["ranked_observations"]} == {
-        item["observation_id"] for item in all_observations
-    }
+    assert {
+        item["observation_id"]
+        for item in after_review["observation_analytics"]["ranked_observations"]
+    } == {item["observation_id"] for item in all_observations}
 
     assets = client.get(base + "/assets", headers=headers()).json()
     web_asset = next(asset for asset in assets if asset["identifier"] == "https://example.invalid")
