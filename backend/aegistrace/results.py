@@ -206,7 +206,11 @@ def freeze_export(
     ]
     run_tools = {str(value["id"]): str(value["tool"]) for value in selected_runs}
     selected_observations = [
-        dict(value) | {"source_tool": run_tools.get(str(value.get("run_id")), "unknown")}
+        dict(value)
+        | {
+            "source_tool": run_tools.get(str(value.get("run_id")), "unknown"),
+            "observation_id": str(value["id"]),
+        }
         for value in selected_observations
     ]
     selected_scope_ids = list(dict.fromkeys(str(value["scope_id"]) for value in selected_runs))
@@ -248,6 +252,7 @@ def freeze_export(
         ):
             selected_contexts[asset_id] = context
     from aegistrace.correlation import correlate_observations
+    from aegistrace.risk_ranking import rank_observations
 
     selected_observation_ids = {str(value["id"]) for value in selected_observations}
     finding_review_rows = (
@@ -286,6 +291,11 @@ def freeze_export(
     correlations = correlate_observations(
         selected_observations,
         run_tools,
+        asset_context={key: value.get("request", {}) for key, value in selected_contexts.items()},
+        reviewer_decisions={value["observation_id"]: value for value in selected_finding_reviews},
+    )
+    correlations["contextual_risk_ranking"] = rank_observations(
+        selected_observations,
         asset_context={key: value.get("request", {}) for key, value in selected_contexts.items()},
         reviewer_decisions={value["observation_id"]: value for value in selected_finding_reviews},
     )

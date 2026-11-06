@@ -2993,6 +2993,19 @@
             ],
             "title": "Business Impact"
           },
+          "business_impact_basis": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Impact Basis"
+          },
           "description": {
             "maxLength": 4000,
             "minLength": 1,
@@ -3054,6 +3067,32 @@
             ],
             "title": "Remediation"
           },
+          "remediation_basis": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remediation Basis"
+          },
+          "remediation_owner": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remediation Owner"
+          },
           "schema_version": {
             "const": "1.0",
             "default": "1.0",
@@ -3073,11 +3112,32 @@
             ],
             "title": "Technical Impact"
           },
+          "technical_impact_basis": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Technical Impact Basis"
+          },
           "title": {
             "maxLength": 500,
             "minLength": 1,
             "title": "Title",
             "type": "string"
+          },
+          "verification_steps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "title": "Verification Steps",
+            "type": "array"
           }
         },
         "required": [
