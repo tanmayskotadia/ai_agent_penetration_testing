@@ -43,6 +43,14 @@
       "title": "Executive Summary",
       "type": "string"
     },
+    "finding_reviews": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Finding Reviews",
+      "type": "array"
+    },
     "grounded_claims": {
       "items": {
         "additionalProperties": true,
@@ -145,6 +153,7 @@
     "reviewed_correlations",
     "reviewed_splits",
     "reviewed_findings",
+    "finding_reviews",
     "occurrence_count",
     "impact_and_remediation",
     "approvals_and_decisions",
