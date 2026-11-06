@@ -245,6 +245,32 @@ def freeze_export(
         asset_context={key: value.get("request", {}) for key, value in selected_contexts.items()},
     )
     selected_observation_ids = {str(value["id"]) for value in selected_observations}
+    finding_review_rows = (
+        connection.execute(
+            select(resources.c.payload)
+            .where(
+                resources.c.assessment_id == str(assessment_id),
+                resources.c.kind == "finding-reviews",
+            )
+            .order_by(resources.c.id)
+            .limit(1001)
+        )
+        .scalars()
+        .all()
+    )
+    if len(finding_review_rows) > 1000:
+        limitations.append("Finding review history exceeds the report snapshot limit; reviewer triage is omitted.")
+        selected_finding_reviews: list[dict[str, Any]] = []
+    else:
+        from aegistrace.finding_reviews import latest_by_observation
+
+        selected_finding_reviews = [
+            value
+            for observation_id, value in latest_by_observation(
+                [dict(row) for row in finding_review_rows]
+            ).items()
+            if observation_id in selected_observation_ids
+        ]
     active_reviewed_clusters = coverage.get("observation_analytics", {}).get(
         "reviewed_clusters", []
     )
@@ -340,6 +366,7 @@ def freeze_export(
         "assets": selected_assets,
         "tool_runs": selected_runs,
         "observations": selected_observations,
+        "finding_reviews": selected_finding_reviews,
         "findings": selected_findings,
         "occurrences": selected_occurrences,
         "decisions": selected_decisions,

@@ -91,6 +91,29 @@ class CorrelationReviewCreate(ApiContract):
         return self
 
 
+class FindingReviewCreate(ApiContract):
+    """Human triage of one source observation; never changes source evidence."""
+
+    observation_id: UUID
+    validation_state: Literal[
+        "suspected", "confirmed", "false-positive", "contradictory", "unknown"
+    ]
+    rationale: str = Field(min_length=1, max_length=2000)
+    contradictory_observation_ids: list[UUID] = Field(default_factory=list, max_length=50)
+
+    @model_validator(mode="after")
+    def contradiction_references(self) -> "FindingReviewCreate":
+        if len(set(self.contradictory_observation_ids)) != len(self.contradictory_observation_ids):
+            raise ValueError("contradiction references must be unique")
+        if self.observation_id in self.contradictory_observation_ids:
+            raise ValueError("an observation cannot contradict itself")
+        if self.validation_state == "contradictory" and not self.contradictory_observation_ids:
+            raise ValueError("contradictory state requires at least one cited observation")
+        if self.validation_state != "contradictory" and self.contradictory_observation_ids:
+            raise ValueError("contradiction references require contradictory state")
+        return self
+
+
 class SourceReviewCreate(ApiContract):
     normalization_id: UUID
     source_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -187,6 +210,7 @@ class WorkflowResource(ApiContract):
         "reports",
         "asset-contexts",
         "correlation-reviews",
+        "finding-reviews",
         "source-reviews",
         "plan-reviews",
     ]

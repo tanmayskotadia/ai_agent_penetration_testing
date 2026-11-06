@@ -25,6 +25,7 @@ from aegistrace.correlation_api import correlation_router
 from aegistrace.coverage_api import coverage_router
 from aegistrace.db import make_engine
 from aegistrace.evidence_api import evidence_router
+from aegistrace.finding_review_api import finding_review_router
 from aegistrace.http_limits import BodyLimitMiddleware
 from aegistrace.identity_api import identity_router
 from aegistrace.inference_api import inference_router
@@ -71,6 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(result_router(engine, config))
     app.include_router(coverage_router(engine, config))
     app.include_router(correlation_router(engine, config))
+    app.include_router(finding_review_router(engine, config))
     app.include_router(source_review_router(engine, config))
     app.include_router(api_check_router(engine, config))
     app.add_middleware(BodyLimitMiddleware)

@@ -22,6 +22,7 @@ class VaptReportContent(BaseModel):
     reviewed_correlations: list[dict[str, Any]]
     reviewed_splits: list[dict[str, Any]]
     reviewed_findings: list[dict[str, Any]]
+    finding_reviews: list[dict[str, Any]]
     occurrence_count: int = Field(ge=0)
     impact_and_remediation: dict[str, Any]
     approvals_and_decisions: dict[str, list[dict[str, Any]]]
@@ -102,6 +103,7 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
             "reviewed_correlations": reviewed_correlations,
             "reviewed_splits": reviewed_splits,
             "reviewed_findings": findings,
+            "finding_reviews": source.get("finding_reviews", []),
             "occurrence_count": len(source.get("occurrences", [])),
             "impact_and_remediation": {
                 "entries": [],
