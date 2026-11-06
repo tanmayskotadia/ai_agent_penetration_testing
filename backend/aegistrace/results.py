@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from sqlalchemy import Connection, func, select
 
 from aegistrace.api_schema import resources
+from aegistrace.approval_schema import grants
 from aegistrace.auth import Identity
 from aegistrace.domain import ReportSnapshot
 from aegistrace.evidence import EvidenceStore
@@ -22,12 +23,15 @@ from aegistrace.platform_api import record_request
 from aegistrace.policy import PolicyError
 from aegistrace.reasoning_schema import proposals
 from aegistrace.report_content import build_vapt_content
+from aegistrace.report_finding_api import latest_report_findings, report_finding_history
 from aegistrace.repository import insert_record, require_access
 from aegistrace.result_schema import exports, late_outputs, revisions
 from aegistrace.schema_v1 import (
     approvals,
+    assessments,
     assets,
     decisions,
+    evidence_references,
     findings,
     observations,
     occurrences,
@@ -124,6 +128,9 @@ def freeze_export(
     require_access(connection, assessment_id, actor.subject)
     if actor.principal_kind != "human" or actor.role not in {"reviewer", "admin"}:
         raise PolicyError("human reviewer required to freeze export")
+    connection.execute(
+        select(assessments.c.id).where(assessments.c.id == str(assessment_id)).with_for_update()
+    ).one()
     values = []
     for revision_id in dict.fromkeys(ids):
         value = connection.execute(
@@ -165,7 +172,10 @@ def freeze_export(
     )
     selected_observations = [dict(value) for value in observation_rows]
     selected_asset_ids = list(
-        dict.fromkeys(str(value["asset_id"]) for value in selected_observations)
+        dict.fromkeys(
+            [str(value["asset_id"]) for value in selected_observations]
+            + [str(asset_id) for value in values for asset_id in value.get("asset_ids", [])]
+        )
     )
     selected_assets = (
         [
@@ -321,16 +331,19 @@ def freeze_export(
             select(findings.c.payload)
             .where(findings.c.assessment_id == str(assessment_id))
             .order_by(findings.c.id)
-            .limit(1000)
+            .limit(1001)
         ).scalars()
     ]
     selected_occurrences = [
         dict(value)
         for value in connection.execute(
             select(occurrences.c.payload)
-            .where(occurrences.c.assessment_id == str(assessment_id))
+            .where(
+                occurrences.c.assessment_id == str(assessment_id),
+                occurrences.c.observation_id.in_(selected_observation_ids),
+            )
             .order_by(occurrences.c.id)
-            .limit(1000)
+            .limit(1001)
         ).scalars()
     ]
     selected_decisions = [
@@ -339,7 +352,7 @@ def freeze_export(
             select(decisions.c.payload)
             .where(decisions.c.assessment_id == str(assessment_id))
             .order_by(decisions.c.id)
-            .limit(1000)
+            .limit(1001)
         ).scalars()
     ]
     selected_approvals = [
@@ -348,14 +361,75 @@ def freeze_export(
             select(approvals.c.payload)
             .where(approvals.c.assessment_id == str(assessment_id))
             .order_by(approvals.c.id)
-            .limit(1000)
+            .limit(1001)
         ).scalars()
     ]
     snapshot_truncated = len(observation_ids) > 1000 or len(context_resources) > 1000
+    if any(
+        len(value) > 1000
+        for value in (
+            selected_findings,
+            selected_occurrences,
+            selected_decisions,
+            selected_approvals,
+        )
+    ):
+        snapshot_truncated = True
+        selected_findings = selected_findings[:1000]
+        selected_occurrences = selected_occurrences[:1000]
+        selected_decisions = selected_decisions[:1000]
+        selected_approvals = selected_approvals[:1000]
     if snapshot_truncated:
         limitations.append(
             "Frozen content row limit reached; omitted rows make this export incomplete"
         )
+    source_evidence_ids = {str(value["evidence_id"]) for value in values}
+    frozen_evidence = [
+        dict(value)
+        for value in connection.execute(
+            select(evidence_references.c.payload).where(
+                evidence_references.c.assessment_id == str(assessment_id),
+                evidence_references.c.id.in_(source_evidence_ids),
+            )
+        ).scalars()
+    ]
+    notes = latest_report_findings(report_finding_history(connection, assessment_id))
+    selected_notes = [
+        value
+        for value in notes
+        if set(value["request"]["observation_ids"]) <= selected_observation_ids
+    ]
+    if len(notes) != len(selected_notes):
+        limitations.append(
+            "Report findings with sources outside the selected revisions are omitted; select all their source revisions to include them."
+        )
+    action_rows = (
+        connection.execute(
+            select(grants).where(grants.c.assessment_id == str(assessment_id)).limit(1001)
+        )
+        .mappings()
+        .all()
+    )
+    plan_rows = (
+        connection.execute(
+            select(resources.c.payload)
+            .where(resources.c.assessment_id == str(assessment_id), resources.c.kind == "plans")
+            .limit(1001)
+        )
+        .scalars()
+        .all()
+    )
+    if len(action_rows) > 1000 or len(plan_rows) > 1000:
+        snapshot_truncated = True
+        limitations.append("Assessment plan/action snapshot row limit reached.")
+    frozen_actions = [
+        dict(row["payload"]) | {"state": row["state"], "reviewer": row["reviewer"]}
+        for row in action_rows[:1000]
+    ]
+    selected_concepts = {value["concept_id"] for value in selected_occurrences}
+    selected_findings = [
+        value for value in selected_findings if value["concept_id"] in selected_concepts
+    ]
     payload = {
         "format": "frozen-result-json-v1",
         "created_at": datetime.now(UTC).isoformat(),
@@ -366,6 +440,15 @@ def freeze_export(
         "complete_assessment": False,
         "report_renderer_enabled": True,
         "limitations": limitations,
+        "assessment": dict(
+            connection.execute(
+                select(assessments.c.payload).where(assessments.c.id == str(assessment_id))
+            ).scalar_one()
+        ),
+        "report_findings": selected_notes,
+        "evidence_references": frozen_evidence,
+        "action_approvals": frozen_actions,
+        "plans": [dict(value) for value in plan_rows[:1000]],
         "scope_snapshots": selected_scopes,
         "scope": selected_scopes[-1] if selected_scopes else None,
         "assets": selected_assets,

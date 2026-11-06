@@ -36,6 +36,7 @@ from aegistrace.log_safety import protect_handlers
 from aegistrace.platform_api import platform_router
 from aegistrace.policy_api import policy_router
 from aegistrace.replay import replay_router
+from aegistrace.report_finding_api import report_finding_router
 from aegistrace.result_api import result_router
 from aegistrace.settings import Settings
 from aegistrace.source_review_api import source_review_router
@@ -70,6 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(job_router(engine, config))
     app.include_router(replay_router(engine, config))
     app.include_router(result_router(engine, config))
+    app.include_router(report_finding_router(engine, config))
     app.include_router(coverage_router(engine, config))
     app.include_router(correlation_router(engine, config))
     app.include_router(finding_review_router(engine, config))

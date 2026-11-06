@@ -1,4 +1,121 @@
 {
+  "$defs": {
+    "DetailedReportFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Asset Ids",
+          "type": "array"
+        },
+        "business_impact": {
+          "title": "Business Impact",
+          "type": "string"
+        },
+        "content_provenance": {
+          "additionalProperties": true,
+          "title": "Content Provenance",
+          "type": "object"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "information_kind": {
+          "enum": [
+            "reviewer-decision",
+            "observed-evidence"
+          ],
+          "title": "Information Kind",
+          "type": "string"
+        },
+        "observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Observation Ids",
+          "type": "array"
+        },
+        "occurrence_count": {
+          "minimum": 0,
+          "title": "Occurrence Count",
+          "type": "integer"
+        },
+        "record_kind": {
+          "enum": [
+            "reviewer-finding",
+            "source-observation"
+          ],
+          "title": "Record Kind",
+          "type": "string"
+        },
+        "references": {
+          "items": {
+            "type": "string"
+          },
+          "title": "References",
+          "type": "array"
+        },
+        "remediation": {
+          "title": "Remediation",
+          "type": "string"
+        },
+        "source_records": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Source Records",
+          "type": "array"
+        },
+        "technical_impact": {
+          "title": "Technical Impact",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "validation_state": {
+          "title": "Validation State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "record_kind",
+        "information_kind",
+        "title",
+        "description",
+        "validation_state",
+        "source_records",
+        "asset_ids",
+        "evidence_ids",
+        "observation_ids",
+        "occurrence_count",
+        "technical_impact",
+        "business_impact",
+        "remediation",
+        "references",
+        "content_provenance"
+      ],
+      "title": "DetailedReportFinding",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
   "properties": {
     "approvals_and_decisions": {
@@ -30,6 +147,12 @@
       "title": "Assets",
       "type": "array"
     },
+    "content_revision": {
+      "const": "1.1",
+      "default": "1.1",
+      "title": "Content Revision",
+      "type": "string"
+    },
     "coverage": {
       "additionalProperties": true,
       "title": "Coverage",
@@ -38,6 +161,29 @@
     "created_at": {
       "title": "Created At",
       "type": "string"
+    },
+    "detailed_findings": {
+      "items": {
+        "$ref": "#/$defs/DetailedReportFinding"
+      },
+      "title": "Detailed Findings",
+      "type": "array"
+    },
+    "evidence_manifest": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Evidence Manifest",
+      "type": "array"
+    },
+    "execution_summary": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Execution Summary",
+      "type": "array"
     },
     "executive_summary": {
       "title": "Executive Summary",
@@ -124,11 +270,26 @@
       "title": "Scope",
       "type": "object"
     },
+    "scope_snapshots": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Scope Snapshots",
+      "type": "array"
+    },
     "source_severity_distribution": {
       "additionalProperties": {
         "type": "integer"
       },
       "title": "Source Severity Distribution",
+      "type": "object"
+    },
+    "summary_counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Summary Counts",
       "type": "object"
     },
     "tool_runs": {

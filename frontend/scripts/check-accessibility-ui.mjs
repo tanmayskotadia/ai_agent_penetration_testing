@@ -35,6 +35,7 @@ try {
     } else if (path.endsWith("/action-approvals")) value = [action];
     else if (path.endsWith("/action-approvals/approval-test")) value = action;
     else if (path.endsWith("/decision")) { decisions.push(request.postDataJSON()); action.state = "denied"; action.allowed_decisions = []; value = action; }
+    else if (path.endsWith("/report-findings")) value = { revision: 0, findings: [] };
     else if (path.endsWith("/finding-reviews")) value = { revision: 0, latest_by_observation: {}, reviews: [] };
     else if (path.endsWith("/correlations/reviews")) value = { revision: 0, reviews: [] };
     else if (path.endsWith("/controls")) value = { stopped: false, epoch: 0, jobs: [] };

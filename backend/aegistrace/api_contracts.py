@@ -201,6 +201,27 @@ class ReportCreate(ApiContract):
     format: Literal["pdf", "json"] = "pdf"
 
 
+class ReportFindingCreate(ApiContract):
+    expected_revision: int = Field(default=0, ge=0)
+    finding_id: UUID | None = None
+    observation_ids: list[UUID] = Field(min_length=1, max_length=100)
+    title: str = Field(min_length=1, max_length=500)
+    description: str = Field(min_length=1, max_length=4000)
+    technical_impact: str | None = Field(default=None, min_length=1, max_length=4000)
+    business_impact: str | None = Field(default=None, min_length=1, max_length=4000)
+    remediation: str | None = Field(default=None, min_length=1, max_length=4000)
+    references: list[str] = Field(default_factory=list, max_length=30)
+    rationale: str = Field(min_length=10, max_length=2000)
+
+    @model_validator(mode="after")
+    def unique_sources(self) -> "ReportFindingCreate":
+        if len(set(self.observation_ids)) != len(self.observation_ids):
+            raise ValueError("observation references must be unique")
+        if any(not value.strip() or len(value) > 1000 for value in self.references):
+            raise ValueError("references must be bounded nonempty source descriptions")
+        return self
+
+
 class WorkflowResource(ApiContract):
     id: UUID
     assessment_id: UUID
@@ -215,6 +236,7 @@ class WorkflowResource(ApiContract):
         "finding-reviews",
         "source-reviews",
         "plan-reviews",
+        "report-findings",
     ]
     revision: int = Field(default=1, ge=1)
     state: Literal["draft", "blocked", "pending-review", "pending-ingestion", "reviewed"]

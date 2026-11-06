@@ -161,6 +161,11 @@ def result_router(engine: Engine, config: Settings) -> APIRouter:
             str(asset_id): str(payload.get("identifier", "unmapped asset"))
             for asset_id, payload in asset_rows
         }
+        if "observations" in snapshot:
+            observation_rows = snapshot["observations"][:250]
+            asset_names = {
+                str(value["id"]): str(value["identifier"]) for value in snapshot.get("assets", [])
+            }
         pdf = render_evidence_report(
             snapshot, [dict(value) for value in observation_rows], asset_names
         )
