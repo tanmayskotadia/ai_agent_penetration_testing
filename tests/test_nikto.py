@@ -49,9 +49,7 @@ def test_nikto_maps_only_explicit_unambiguous_references_without_inventing_sever
 
 
 def test_nikto_accepts_cli_version_banner_in_isolated_worker():
-    parsed = isolated_inspection(
-        SAMPLE, "Nikto", "nikto-json-normalize-v1", "Nikto 2.6.1 (LW 2.5)"
-    )
+    parsed = isolated_inspection(SAMPLE, "Nikto", "nikto-json-normalize-v1", "Nikto 2.6.1 (LW 2.5)")
 
     assert parsed["state"] == "normalized"
     assert parsed["parsed_records"] == 1
