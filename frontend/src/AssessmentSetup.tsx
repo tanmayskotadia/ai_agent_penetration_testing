@@ -41,7 +41,7 @@ export function PlanCard({ plan, problem, decision, rationale, busy, onRationale
     <label>Review rationale<textarea value={rationale} maxLength={2000} onChange={event => onRationale(event.target.value)} /></label>
     <button disabled={busy || !!problem || plan.state !== "draft" || rationale.trim().length < 10} onClick={() => onReview("approve")}>Approve plan proposal</button>
     <button disabled={busy || !!problem || rationale.trim().length < 10} onClick={() => onReview("reject")}>Reject plan proposal</button>
-    <details><summary>Exact persisted plan and source references</summary><pre>{JSON.stringify(plan, null, 2)}</pre></details>
+    <details><summary>Exact persisted plan and source references</summary><pre tabIndex={0}>{JSON.stringify(plan, null, 2)}</pre></details>
   </article>;
 }
 

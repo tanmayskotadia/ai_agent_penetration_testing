@@ -16,6 +16,16 @@ export function ActionApprovalPanel({ assessmentId, token, onChanged }: { assess
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const active = useRef(false);
+  const confirmation = useRef<HTMLElement>(null);
+  const returnFocus = useRef<HTMLButtonElement | null>(null);
+  const statusFocus = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (pending) confirmation.current?.focus();
+    else if (returnFocus.current) {
+      if (!returnFocus.current.disabled) returnFocus.current.focus();
+      else statusFocus.current?.focus();
+    }
+  }, [pending]);
   const keys = useRef(new Map<string, string>());
   const base = `/api/v1/assessments/${encodeURIComponent(assessmentId)}`;
   async function get<T>(path: string): Promise<T> {
@@ -50,7 +60,7 @@ export function ActionApprovalPanel({ assessmentId, token, onChanged }: { assess
       await mutate("", base + `/action-approvals/${fresh.id}/decision`, token, { decision: pending.decision, action_digest: pending.item.action_digest }, key);
       if (!active.current) return;
       setStatus(`Backend recorded ${pending.decision === "approve" ? "approval" : "denial"} for the reviewed action digest. No execution was submitted by this screen.`);
-      setPending(null); await reload(); onChanged();
+      await reload(); setPending(null); onChanged();
     } catch (error) {
       if (active.current) { setStatus(error instanceof Error ? error.message : "Decision was not confirmed."); setPending(null); await reload().catch(() => setReady(false)); }
     } finally { if (active.current) setBusy(false); }
@@ -68,11 +78,11 @@ export function ActionApprovalPanel({ assessmentId, token, onChanged }: { assess
       <dt>Scope</dt><dd>{item.scope_id} · revision {item.scope_revision}</dd><dt>Expiry</dt><dd>{item.valid_until}</dd><dt>Enforced action digest</dt><dd><code>{item.action_digest}</code></dd><dt>Parameter hash</dt><dd><code>{item.parameter_hash}</code></dd><dt>Policy/profile digests</dt><dd>{item.policy_digest} · {item.profile_digest ?? "not supplied"}</dd><dt>Reviewer</dt><dd>{item.reviewer ?? "no recorded reviewer"}</dd></dl>
       {!item.action.evidence_ids?.length && <p>No evidence references supplied by this action.</p>}
       {item.action.evidence_ids?.map(id => <div key={id}><p>Action evidence {id}</p><EvidenceInspector assessmentId={assessmentId} token={token} evidenceId={id} /></div>)}
-      <button disabled={busy || !ready || !!problem(item) || !item.allowed_decisions.includes("approve")} onClick={() => setPending({ item, decision: "approve" })}>Review approval</button>
-      <button disabled={busy || !ready || !item.allowed_decisions.includes("deny")} onClick={() => setPending({ item, decision: "deny" })}>Review denial</button>
+      <button disabled={busy || !ready || !!problem(item) || !item.allowed_decisions.includes("approve")} onClick={event => { returnFocus.current = event.currentTarget; setPending({ item, decision: "approve" }); }}>Review approval</button>
+      <button disabled={busy || !ready || !item.allowed_decisions.includes("deny")} onClick={event => { returnFocus.current = event.currentTarget; setPending({ item, decision: "deny" }); }}>Review denial</button>
       {!item.allowed_decisions.length && <p>No decision permitted for this identity or action state.</p>}
     </article>)}
-    {pending && <section role="region" aria-label="Confirm exact action decision" className="review-card"><p>Confirm {pending.decision} for action {pending.item.id}. Enforced digest: {pending.item.action_digest}. This decision applies only to that exact action.</p><button disabled={busy} onClick={() => void confirm()}>Confirm {pending.decision === "approve" ? "approval" : "denial"}</button><button disabled={busy} onClick={() => setPending(null)}>Cancel decision</button></section>}
-    <p role="status" aria-live="polite">{status}</p>
+    {pending && <section ref={confirmation} tabIndex={-1} role="region" aria-label="Confirm exact action decision" className="review-card"><p>Confirm {pending.decision} for action {pending.item.id}. Enforced digest: {pending.item.action_digest}. This decision applies only to that exact action.</p><button disabled={busy} onClick={() => void confirm()}>Confirm {pending.decision === "approve" ? "approval" : "denial"}</button><button disabled={busy} onClick={() => setPending(null)}>Cancel decision</button></section>}
+    <p ref={statusFocus} tabIndex={-1} role="status" aria-live="polite">{status}</p>
   </section>;
 }

@@ -69,7 +69,7 @@ jobs:
           RUN_SERVICE_TESTS=1 uv run pytest -m services
       - name: Build workspace
         working-directory: frontend
-        run: npm ci --no-audit --no-fund && npm run build && node scripts/check-coverage-ui.mjs && npx playwright install --with-deps chromium && node scripts/check-assessment-ui.mjs && node scripts/check-timeline-ui.mjs && node scripts/check-triage-ui.mjs && node scripts/check-evidence-approval-ui.mjs
+        run: npm ci --no-audit --no-fund && npm run build && node scripts/check-coverage-ui.mjs && npx playwright install --with-deps chromium && node scripts/check-assessment-ui.mjs && node scripts/check-timeline-ui.mjs && node scripts/check-triage-ui.mjs && node scripts/check-evidence-approval-ui.mjs && node scripts/check-accessibility-ui.mjs
       - name: Validate Compose development profile
         env:
           POSTGRES_PASSWORD: ci-only-disposable

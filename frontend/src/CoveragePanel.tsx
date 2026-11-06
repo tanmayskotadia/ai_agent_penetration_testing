@@ -17,7 +17,7 @@ export function CoveragePanel({ snapshot }: { snapshot: RecordValue }) {
     <p>Native job states: {text(snapshot.native_job_states)} · API job states: {text(snapshot.api_job_states)}. Expired running leases are shown as unknown.</p>
     <h4>All seven scanner integrations</h4>
     <p>Imported records do not promote an integration to working status. Guarded candidate formats remain distinct from verified supported formats. API operation checks are a separate execution path.</p>
-    <div className="coverage-table"><table><caption>Current scanner capability and assessment evidence</caption>
+    <div className="coverage-table" tabIndex={0} role="region" aria-label="Scrollable coverage data"><table><caption>Current scanner capability and assessment evidence</caption>
       <thead><tr><th scope="col">Tool / mode</th><th scope="col">Edition and license</th><th scope="col">Formats</th><th scope="col">Verification</th><th scope="col">Assessment records and gaps</th></tr></thead>
       <tbody>{records(snapshot.tool_evidence).map(tool => {
         const capability = record(tool.capability);
@@ -34,7 +34,7 @@ export function CoveragePanel({ snapshot }: { snapshot: RecordValue }) {
         <p>{text(summary.coverage_state)} · Declared operations: {text(summary.declared_operation_count)} · Latest attempted: {text(summary.attempted_count)} · Ever attempted: {text(summary.ever_attempted_count)}</p>
         <p>States: {text(summary.state_counts)}. Authentication: {text(summary.authentication_counts)}.</p>
         <p>These counts describe the declared OpenAPI inventory. HTTP success does not establish authenticated identity, a vulnerability, or coverage of hidden endpoints.</p>
-        {operations.length > 0 && <div className="coverage-table"><table><caption>Latest outcome per asset, endpoint and method ({mode})</caption><thead><tr><th scope="col">Method / path</th><th scope="col">State</th><th scope="col">Authentication</th><th scope="col">Source</th></tr></thead>
+        {operations.length > 0 && <div className="coverage-table" tabIndex={0} role="region" aria-label="Scrollable coverage data"><table><caption>Latest outcome per asset, endpoint and method ({mode})</caption><thead><tr><th scope="col">Method / path</th><th scope="col">State</th><th scope="col">Authentication</th><th scope="col">Source</th></tr></thead>
           <tbody>{operations.slice(0, 100).map(operation => <tr key={text(operation.endpoint_id)}><th scope="row">{text(operation.method)} {text(operation.path)}<br />Asset: {text(operation.asset_id)}</th><td>{text(operation.state)}<br />HTTP: {text(operation.status_code)}</td><td>{text(operation.authentication)}</td><td>Check: {text(operation.check_id)}<br />Evidence: {text(operation.source_evidence_id)}</td></tr>)}</tbody></table></div>}
         {operations.length > 100 && <p>Showing 100 of {operations.length} operations. The authenticated coverage API and frozen JSON export retain the full bounded snapshot.</p>}
       </section>;
