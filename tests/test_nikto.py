@@ -55,6 +55,31 @@ def test_nikto_accepts_cli_version_banner_in_isolated_worker():
     assert parsed["parsed_records"] == 1
 
 
+def test_nikto_resolves_path_only_observations_from_host_record():
+    raw = json.dumps(
+        [
+            {
+                "host": "localhost",
+                "ip": "127.0.0.1",
+                "port": 3000,
+                "vulnerabilities": [
+                    {"id": "OSVDB-1", "url": "/robots.txt", "msg": "Test only"},
+                    {"id": "OSVDB-2", "url": "/ftp/", "msg": "Test only"},
+                ],
+            }
+        ]
+    ).encode()
+
+    parsed = normalize_nikto(raw, "Nikto 2.6.1 (LW 2.5)")
+
+    assert parsed["state"] == "normalized"
+    assert parsed["assets"] == [
+        "http://localhost:3000/ftp/",
+        "http://localhost:3000/robots.txt",
+    ]
+    assert len(parsed["alerts"]) == 2
+
+
 def test_ambiguous_or_non_string_references_do_not_create_correlation_identifiers():
     raw = json.dumps(
         [
