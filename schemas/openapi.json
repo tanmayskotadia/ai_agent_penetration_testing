@@ -27,8 +27,8 @@
             "type": "string"
           },
           "max_runtime_seconds": {
-            "maximum": 300,
-            "minimum": 1,
+            "maximum": 300.0,
+            "minimum": 1.0,
             "title": "Max Runtime Seconds",
             "type": "integer"
           },
@@ -52,8 +52,8 @@
             "type": "string"
           },
           "plan_revision": {
-            "maximum": 2147483647,
-            "minimum": 1,
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
             "title": "Plan Revision",
             "type": "integer"
           },
@@ -169,7 +169,7 @@
             "type": "string"
           },
           "plan_revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Plan Revision",
             "type": "integer"
           },
@@ -464,8 +464,8 @@
           "criticality": {
             "anyOf": [
               {
-                "maximum": 5,
-                "minimum": 1,
+                "maximum": 5.0,
+                "minimum": 1.0,
                 "type": "integer"
               },
               {
@@ -538,7 +538,7 @@
             "type": "string"
           },
           "revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Revision",
             "type": "integer"
           },
@@ -915,8 +915,8 @@
           },
           "max_runtime_seconds": {
             "default": 60,
-            "maximum": 300,
-            "minimum": 1,
+            "maximum": 300.0,
+            "minimum": 1.0,
             "title": "Max Runtime Seconds",
             "type": "integer"
           },
@@ -1335,8 +1335,8 @@
             "type": "string"
           },
           "concurrent_jobs": {
-            "maximum": 8,
-            "minimum": 1,
+            "maximum": 8.0,
+            "minimum": 1.0,
             "title": "Concurrent Jobs",
             "type": "integer"
           },
@@ -1363,8 +1363,8 @@
             "type": "string"
           },
           "requests_per_second": {
-            "maximum": 100,
-            "minimum": 1,
+            "maximum": 100.0,
+            "minimum": 1.0,
             "title": "Requests Per Second",
             "type": "integer"
           },
@@ -1386,8 +1386,8 @@
             "type": "string"
           },
           "scope_revision": {
-            "maximum": 2147483647,
-            "minimum": 1,
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
             "title": "Scope Revision",
             "type": "integer"
           },
@@ -1531,56 +1531,56 @@
         "title": "Finding",
         "type": "object"
       },
-      "FindingReviewCreate": {
-        "additionalProperties": false,
-        "description": "Human triage of one source observation; never changes source evidence.",
-        "properties": {
-          "contradictory_observation_ids": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "maxItems": 50,
-            "title": "Contradictory Observation Ids",
-            "type": "array"
-          },
-          "observation_id": {
+    "FindingReviewCreate": {
+      "additionalProperties": false,
+      "description": "Human triage of one source observation; never changes source evidence.",
+      "properties": {
+        "contradictory_observation_ids": {
+          "items": {
             "format": "uuid",
-            "title": "Observation Id",
             "type": "string"
           },
-          "rationale": {
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Rationale",
-            "type": "string"
-          },
-          "schema_version": {
-            "const": "1.0",
-            "default": "1.0",
-            "title": "Schema Version",
-            "type": "string"
-          },
-          "validation_state": {
-            "enum": [
-              "suspected",
-              "confirmed",
-              "false-positive",
-              "contradictory",
-              "unknown"
-            ],
-            "title": "Validation State",
-            "type": "string"
-          }
+          "maxItems": 50,
+          "title": "Contradictory Observation Ids",
+          "type": "array"
         },
-        "required": [
-          "observation_id",
-          "validation_state",
-          "rationale"
-        ],
-        "title": "FindingReviewCreate",
-        "type": "object"
+        "observation_id": {
+          "format": "uuid",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "rationale": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "validation_state": {
+          "enum": [
+            "suspected",
+            "confirmed",
+            "false-positive",
+            "contradictory",
+            "unknown"
+          ],
+          "title": "Validation State",
+          "type": "string"
+        }
       },
+      "required": [
+        "observation_id",
+        "validation_state",
+        "rationale"
+      ],
+      "title": "FindingReviewCreate",
+      "type": "object"
+    },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1620,7 +1620,7 @@
             "type": "string"
           },
           "scope_revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Scope Revision",
             "type": "integer"
           },
@@ -1783,7 +1783,7 @@
             "type": "string"
           },
           "plan_revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Plan Revision",
             "type": "integer"
           },
@@ -1963,7 +1963,7 @@
             "type": "string"
           },
           "attempt": {
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Attempt",
             "type": "integer"
           },
@@ -1998,7 +1998,7 @@
           "duration_ms": {
             "anyOf": [
               {
-                "minimum": 0,
+                "minimum": 0.0,
                 "type": "integer"
               },
               {
@@ -2008,15 +2008,15 @@
             "title": "Duration Ms"
           },
           "events_cursor": {
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Events Cursor",
             "type": "integer"
           },
           "exit_code": {
             "anyOf": [
               {
-                "maximum": 255,
-                "minimum": -255,
+                "maximum": 255.0,
+                "minimum": -255.0,
                 "type": "integer"
               },
               {
@@ -2039,7 +2039,7 @@
           "heartbeat_age_seconds": {
             "anyOf": [
               {
-                "minimum": 0,
+                "minimum": 0.0,
                 "type": "integer"
               },
               {
@@ -2166,8 +2166,8 @@
           },
           "priority": {
             "default": 0,
-            "maximum": 10,
-            "minimum": 0,
+            "maximum": 10.0,
+            "minimum": 0.0,
             "title": "Priority",
             "type": "integer"
           },
@@ -2306,7 +2306,7 @@
         "additionalProperties": false,
         "properties": {
           "revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Revision",
             "type": "integer"
           },
@@ -2322,7 +2322,7 @@
             "type": "string"
           },
           "scope_revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Scope Revision",
             "type": "integer"
           },
@@ -2405,7 +2405,7 @@
           "scope_revision": {
             "anyOf": [
               {
-                "minimum": 1,
+                "minimum": 1.0,
                 "type": "integer"
               },
               {
@@ -2438,7 +2438,7 @@
             "type": "string"
           },
           "plan_revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Plan Revision",
             "type": "integer"
           },
@@ -2510,8 +2510,8 @@
             "type": "string"
           },
           "concurrent_jobs": {
-            "maximum": 8,
-            "minimum": 1,
+            "maximum": 8.0,
+            "minimum": 1.0,
             "title": "Concurrent Jobs",
             "type": "integer"
           },
@@ -2533,8 +2533,8 @@
             "type": "array"
           },
           "requests_per_second": {
-            "maximum": 100,
-            "minimum": 1,
+            "maximum": 100.0,
+            "minimum": 1.0,
             "title": "Requests Per Second",
             "type": "integer"
           },
@@ -2550,8 +2550,8 @@
             "type": "string"
           },
           "scope_revision": {
-            "maximum": 2147483647,
-            "minimum": 1,
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
             "title": "Scope Revision",
             "type": "integer"
           },
@@ -2608,8 +2608,8 @@
           "confidence": {
             "anyOf": [
               {
-                "maximum": 1,
-                "minimum": 0,
+                "maximum": 1.0,
+                "minimum": 0.0,
                 "type": "number"
               },
               {
@@ -2745,7 +2745,7 @@
             "type": "string"
           },
           "scope_revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Scope Revision",
             "type": "integer"
           }
@@ -2965,7 +2965,7 @@
             "type": "string"
           },
           "revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Revision",
             "type": "integer"
           },
@@ -3047,7 +3047,7 @@
             "type": "string"
           },
           "revision": {
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Revision",
             "type": "integer"
           },
@@ -3230,8 +3230,8 @@
             "type": "array"
           },
           "port": {
-            "maximum": 65535,
-            "minimum": 1,
+            "maximum": 65535.0,
+            "minimum": 1.0,
             "title": "Port",
             "type": "integer"
           },
@@ -3435,9 +3435,9 @@
               "reports",
               "asset-contexts",
               "correlation-reviews",
+              "finding-reviews",
               "source-reviews",
-              "plan-reviews",
-              "finding-reviews"
+              "plan-reviews"
             ],
             "title": "Kind",
             "type": "string"
@@ -3469,7 +3469,7 @@
           },
           "revision": {
             "default": 1,
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Revision",
             "type": "integer"
           },
