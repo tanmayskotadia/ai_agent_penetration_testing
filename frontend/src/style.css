@@ -5,3 +5,35 @@ label{display:block;margin:12px 0}input,select,textarea{display:block;width:min(
 .coverage-table table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .coverage-table th, .coverage-table td { border: 1px solid #58677d; padding: .65rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .coverage-table caption { text-align: left; padding-bottom: .5rem; font-weight: 600; }
+
+/* Readable document flow and explicit keyboard targets across both modes. */
+a { color: #84e6d8; text-decoration: underline; text-underline-offset: .2em; }
+:focus-visible { outline: 3px solid #f0cf91; outline-offset: 3px; }
+.skip-link { position: fixed; top: 12px; left: 12px; z-index: 100; background: #111f2b; padding: 12px; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; white-space: nowrap; }
+.skip-link:focus { clip-path: none; width: auto; height: auto; overflow: visible; white-space: normal; }
+section, article, fieldset, form, dl, dd, li { min-width: 0; overflow-wrap: anywhere; }
+section section { border-radius: 10px; }
+ul { display: block; padding-left: 1.25rem; list-style: disc; }
+ol { padding-left: 1.5rem; }
+li { display: list-item; padding: .45rem 0; }
+#integration-capabilities ul { display: grid; list-style: none; padding: 0; }
+#integration-capabilities li { display: flex; align-items: flex-start; }
+.capability-description { font-size: .875rem; }
+button, input, select, summary { min-height: 44px; font: inherit; }
+button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+button:disabled { opacity: 1; color: #adbeca; border-color: #78909f; background: #172735; cursor: not-allowed; }
+button[aria-pressed="true"] { background: #31566a; border-width: 2px; font-weight: 700; }
+summary { cursor: pointer; padding: .5rem 0; }
+dd { margin-left: 0; margin-bottom: .8rem; } dt { font-weight: 700; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; }
+code { overflow-wrap: anywhere; } fieldset { border: 1px solid #78909f; }
+[role="alert"] { border-left: 4px solid #f0cf91; padding-left: 1rem; }
+@media (max-width: 600px) {
+  main { padding: 24px 12px; }
+  section { padding: 14px; }
+  section section { padding: 10px; margin-block: 12px; }
+  #integration-capabilities ul { grid-template-columns: minmax(0, 1fr); }
+  .badge { flex-shrink: 1; } input, select, textarea { width: 100%; max-width: 100%; }
+  .coverage-table { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }

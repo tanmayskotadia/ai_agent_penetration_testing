@@ -1,0 +1,23 @@
+# Workspace usability and accessibility review (#74)
+
+## Delivered behavior
+
+The assessment presentation controls switch between Executive and Analyst modes using native keyboard-operable buttons with pressed-state announcements. The executive view summarizes the same bounded source snapshot used by the analyst workspace: recorded asset/run/observation counts, a captioned source-severity table, capability availability, gaps and explicit uncertainty. Counts are never presented as confirmed vulnerabilities, business risk or proof of clean coverage. Business impact and recommendations remain unknown unless supported by reviewed inputs; full PDF/report content remains in the reporting milestones. Both modes expose unavailable integrations and a shared frozen-PDF download control. The executive view links back to analyst source trace.
+
+Analyst panels retain their draft state while hidden in executive mode; hidden controls are absent from keyboard navigation and the accessibility tree. Switching mode or assessment moves focus to the presentation heading. Explicit action confirmation moves focus to its named region and returns focus to the initiating control or outcome status after completion. A skip link reaches the main workspace. Native form controls and readable status messages remain available without mouse interaction.
+
+Lists now use document flow rather than applying a two-column flex/grid treatment to every technical list. Capability grids retain their layout. Tables have captions/header associations and keyboard-focusable horizontal scroll regions. Long identifiers wrap; raw preformatted source disclosures are keyboard-focusable. Controls have visible focus outlines, text labels, minimum target heights and disabled styling beyond reduced opacity. Severity/validation/capability states are written as text, not color-only encoding. Narrow-screen padding, widths and wrapping prevent document-level horizontal overflow; table content can scroll within its named region.
+
+## Verification record
+
+`frontend/scripts/check-accessibility-ui.mjs` loads the actual main React application in Chromium with explicitly synthetic HTTP responses and a fresh empty account inventory. It uses Tab, Enter and typed keystrokes (no mouse clicks or programmatic focus) to sign in, create an assessment, inspect matching evidence, explicitly deny an action and download a PDF fixture. It verifies focus moves to the confirmation region, denial carries the chosen decision, and the mode buttons lead back to analyst source trace. Browser errors, including React console errors, fail the check.
+
+Five axe-core scans cover WCAG 2 A/AA, WCAG 2.1/2.2 AA and best-practice rules in signed-out, analyst desktop, executive desktop, executive 390px mobile and analyst 390px mobile states. The script verifies no document-level horizontal overflow in either mobile mode and checks unavailable Metasploit capability disclosure and uncertainty language. Mobile captures are generated locally in ignored `tmp/executive-mobile.png` and `tmp/analyst-mobile.png` for visual inspection. These checks are in CI alongside all prior setup, timeline, triage and approval walkthroughs.
+
+Defects found and resolved: absent executive presentation; generic list styling distorted source timelines; narrow nested sections and long hashes constrained reading; confirmation focus was unmanaged; raw source scroll areas were not keyboard-focusable; sibling panel React keys collided and included session values. Keys now use component-specific assessment identities, and automated console-error checks prevent regression.
+
+## Limits and remaining external evidence
+
+Automated keyboard interaction and axe checks establish the tested paths, not universal accessibility conformance. Screen-reader speech, every browser/assistive technology combination and a fresh independent human reviewer study have not been performed. No external reviewer feedback is fabricated; that participant validation can be recorded in final prototype/demo acceptance. The PDF download fixture proves accessible initiation and filename handling, not report-content completeness or genuine-source validity. These limits do not require new keys, cloud configuration or local setup from the user for this engineering issue.
+
+PDF mapping: R01 usable assessment journey; R13/R14 distinct presentation and honest scope/coverage; R15 text-readable severity counts; R16 source trace through analyst detail; R17 reviewed-impact/remediation boundary; R27 demonstrable approval/evidence/report workflow. Official live-lab and genuine-source conditions remain in their existing acceptance gates.

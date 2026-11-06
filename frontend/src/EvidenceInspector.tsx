@@ -73,7 +73,7 @@ function Inspector({ assessmentId, token, evidenceId, observationId }: { assessm
     <p>Snippets are bounded redacted derivatives of the source artifact, not an exact finding excerpt. Automated redaction requires human review and may miss unrecognized sensitive text. Source text is displayed inertly.</p>
     <button disabled={busy || !metadata.reviewed_derivative_available} onClick={() => void operation("read")}>Load reviewed snippet</button>
     <button disabled={busy || !metadata.can_generate_derivative} onClick={() => void operation("generate")}>Generate redacted snippet</button>
-    {snippet && <><p>{kind}</p><pre>{snippet}</pre><button disabled={busy || !metadata.can_review_derivative || kind !== "Unreviewed redacted source derivative"} onClick={() => void operation("review")}>Mark derivative reviewed</button></>}
+    {snippet && <><p>{kind}</p><pre tabIndex={0}>{snippet}</pre><button disabled={busy || !metadata.can_review_derivative || kind !== "Unreviewed redacted source derivative"} onClick={() => void operation("review")}>Mark derivative reviewed</button></>}
     <button disabled={busy || !metadata.original_available} onClick={() => void operation("download")}>Download private original</button></>}
     <p role="status" aria-live="polite">{status}</p>
   </section>;
