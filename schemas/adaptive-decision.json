@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "RejectedAlternative": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "observation_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Observation Ids",
+          "type": "array"
+        },
+        "reason": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "reason",
+        "observation_ids"
+      ],
+      "title": "RejectedAlternative",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "decision": {
+      "enum": [
+        "select",
+        "request-review",
+        "stop"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "expected_information_gain": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Expected Information Gain",
+      "type": "string"
+    },
+    "observation_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "maxItems": 50,
+      "title": "Observation Ids",
+      "type": "array"
+    },
+    "rationale": {
+      "maxLength": 1500,
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "rejected_alternatives": {
+      "items": {
+        "$ref": "#/$defs/RejectedAlternative"
+      },
+      "maxItems": 30,
+      "title": "Rejected Alternatives",
+      "type": "array"
+    },
+    "selected_candidate_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Selected Candidate Id"
+    },
+    "stop_conditions": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Stop Conditions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "decision",
+    "selected_candidate_id",
+    "rationale",
+    "observation_ids",
+    "expected_information_gain",
+    "assumptions",
+    "stop_conditions",
+    "rejected_alternatives"
+  ],
+  "title": "ModelDecision",
+  "type": "object"
+}

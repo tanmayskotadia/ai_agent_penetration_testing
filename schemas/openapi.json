@@ -2644,6 +2644,67 @@
         "title": "ReasoningProposal",
         "type": "object"
       },
+      "ReplanRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_external_processing": {
+            "default": false,
+            "title": "Allow External Processing",
+            "type": "boolean"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "data_policy_reference": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Policy Reference"
+          },
+          "request_text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Request Text",
+            "type": "string"
+          },
+          "result_revision_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 25,
+            "title": "Result Revision Ids",
+            "type": "array"
+          },
+          "scope_id": {
+            "format": "uuid",
+            "title": "Scope Id",
+            "type": "string"
+          },
+          "scope_revision": {
+            "minimum": 1.0,
+            "title": "Scope Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scope_id",
+          "scope_revision",
+          "conversation_id",
+          "request_text",
+          "result_revision_ids"
+        ],
+        "title": "ReplanRequest",
+        "type": "object"
+      },
       "ReplayCreate": {
         "additionalProperties": false,
         "properties": {
@@ -11247,6 +11308,143 @@
           }
         ],
         "summary": "Read",
+        "tags": [
+          "inference-boundary"
+        ]
+      }
+    },
+    "/api/v1/assessments/{assessment_id}/reasoning/replan": {
+      "post": {
+        "operationId": "adaptive_plan_api_v1_assessments__assessment_id__reasoning_replan_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-ID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Typed API error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Adaptive Plan",
         "tags": [
           "inference-boundary"
         ]

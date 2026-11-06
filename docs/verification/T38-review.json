@@ -1,0 +1,18 @@
+{
+  "issue": 52,
+  "review_kind": "Codex-assisted source and rationale review; not an independent human benchmark",
+  "live_record": "T38-live-acceptance.json",
+  "rubric": [
+    {"criterion": "Context changes the permitted next step", "result": "pass", "evidence": "Real Groq selects a missing web import for HTTP, and review/stop for SSH, conflicting port states and unavailable web imports."},
+    {"criterion": "Citations identify relevant source observations", "result": "pass", "evidence": "All chosen and rejected candidate citations are validated against the recorded context and relevant candidate IDs."},
+    {"criterion": "Reasoning explains information gain and alternatives", "result": "pass with caveat", "evidence": "The HTTP case explains the missing web evidence and alternative import choices; review cases explain uncertainty/conflict. Proposed benefits are hypotheses, not guarantees that imported output will contain findings."},
+    {"criterion": "Uncertainty and human authority remain explicit", "result": "pass", "evidence": "No confirmed findings or execution authority are created. Review/stop decisions remain blocked and active validation requires its separate approval mechanism."},
+    {"criterion": "Repeated work and unavailable dependencies are handled honestly", "result": "pass", "evidence": "Duplicate context requests are suppressed without model calls; unsupported tools are excluded and failed calls return stable reasons without automatic retries."}
+  ],
+  "limitations": [
+    "Synthetic normalized fixtures do not prove genuine scanner coverage or T30 acceptance.",
+    "Provider/model validity is dated and account-specific; no accuracy, calibration or winning guarantee is made.",
+    "Production key/policy activation on Render is separate from this software and live-provider acceptance record.",
+    "Advanced durable graph memory and broad cost/performance evaluation remain later issues."
+  ]
+}

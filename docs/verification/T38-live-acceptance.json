@@ -1,0 +1,821 @@
+{
+  "schema_version": "1.0",
+  "issue": 52,
+  "executed_at": "2026-11-06T10:03:09.246908+00:00",
+  "prompt_sha256": "d37c9100a0052d717cb6d99ec56c4868010e7cfc2a270a7e22f5bad69d68a811",
+  "source_sha256": {
+    "backend/aegistrace/adaptive_planner.py": "3248a24ff3daff9287031a71f9d3947ec45cde24b632a0298e232b26ca5c94b6",
+    "backend/aegistrace/model_provider.py": "e427576b71bafbd3808ff3c665e6d10a75284dc8534e9c0f6f9b3ed8179ca101"
+  },
+  "acceptance": "passed",
+  "cases": [
+    {
+      "case": "http-missing-web-evidence",
+      "passed": true,
+      "expected": "select",
+      "decision": {
+        "decision": "select",
+        "selected_candidate_id": "import-OWASP ZAP-b1dcf73e-545d-433f-9f05-a10e7cde9209",
+        "rationale": "An HTTP service on port 80 is observed (observation 7c42e248-e295-41df-b27d-5613b04232d8). No recorded web vulnerability evidence exists for this service. Importing OWASP ZAP results will fill the evidence gap with detailed web findings.",
+        "observation_ids": [
+          "7c42e248-e295-41df-b27d-5613b04232d8"
+        ],
+        "expected_information_gain": "Recorded OWASP ZAP findings for the HTTP service, revealing potential vulnerabilities and confirming service behavior.",
+        "assumptions": [
+          "Only recorded imports are allowed",
+          "Human review will validate imported evidence",
+          "No live scanning will be performed"
+        ],
+        "stop_conditions": [
+          "If the import yields no new findings",
+          "If a conflict is reported",
+          "If the import cannot be performed"
+        ],
+        "rejected_alternatives": [
+          {
+            "candidate_id": "review-sources",
+            "reason": "Generic review does not address the missing web evidence; a targeted import is more appropriate.",
+            "observation_ids": [
+              "1effb8d6-bc55-4cbe-82db-1c3cfebb718c",
+              "54da72e6-37bf-49a2-bbd1-23a2efb591ad",
+              "730da516-f83d-4dfd-ba79-9a403c3fb119",
+              "7c42e248-e295-41df-b27d-5613b04232d8"
+            ]
+          },
+          {
+            "candidate_id": "import-Nikto-b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "reason": "Redundant with OWASP ZAP import; OWASP ZAP is preferred for comprehensive web analysis.",
+            "observation_ids": [
+              "7c42e248-e295-41df-b27d-5613b04232d8"
+            ]
+          }
+        ]
+      },
+      "provider": {
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "model_called": true,
+        "provider_invoked": true,
+        "prompt_version": "adaptive-v2",
+        "schema_version": "1.0",
+        "provider_source": "live-provider",
+        "response_id_sha256": "f19a4aac78f0befefc23406bf9de00e35daa8197b8d3b49f875aa011a45d922a",
+        "usage": {
+          "prompt_tokens": 2229,
+          "completion_tokens": 1170,
+          "total_tokens": 3399
+        }
+      },
+      "plan_id": "2a9919cd-1fa9-44bb-b665-b2d170d8afda",
+      "context_sha256": "9f462cdc8a9cbf58e8232e11b347993ebfac3759b62723c6c28ed5b7b848d6b2",
+      "context": {
+        "schema_version": "1.0",
+        "request": "Review current recorded evidence gaps",
+        "scope_id": "0362a58c-c88b-4675-b51c-674e489dc725",
+        "scope_revision": 1,
+        "observations": [
+          {
+            "id": "1effb8d6-bc55-4cbe-82db-1c3cfebb718c",
+            "asset_id": "b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "evidence_id": "7af25ad4-a123-4d79-a853-c868ffcff90c",
+            "title": "Nmap tcp/81: closed",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:01:51.577858Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "54da72e6-37bf-49a2-bbd1-23a2efb591ad",
+            "asset_id": "b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "evidence_id": "7af25ad4-a123-4d79-a853-c868ffcff90c",
+            "title": "Nmap tcp/82: filtered",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:01:51.577858Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "730da516-f83d-4dfd-ba79-9a403c3fb119",
+            "asset_id": "b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "evidence_id": "7af25ad4-a123-4d79-a853-c868ffcff90c",
+            "title": "Nmap tcp/83: unknown",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:01:51.577858Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "7c42e248-e295-41df-b27d-5613b04232d8",
+            "asset_id": "b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "evidence_id": "7af25ad4-a123-4d79-a853-c868ffcff90c",
+            "title": "Nmap tcp/80: open",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:01:51.577858Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": 80,
+              "protocol": "tcp",
+              "observed_name": "http"
+            }
+          }
+        ],
+        "candidates": [
+          {
+            "id": "review-sources",
+            "action": "request-review",
+            "tool": null,
+            "observation_ids": [
+              "1effb8d6-bc55-4cbe-82db-1c3cfebb718c",
+              "54da72e6-37bf-49a2-bbd1-23a2efb591ad",
+              "730da516-f83d-4dfd-ba79-9a403c3fb119",
+              "7c42e248-e295-41df-b27d-5613b04232d8"
+            ],
+            "reason": "Review source evidence and uncertainty before making any validation claim."
+          },
+          {
+            "id": "import-OWASP ZAP-b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "action": "request-import",
+            "tool": "OWASP ZAP",
+            "asset_id": "b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "observation_ids": [
+              "7c42e248-e295-41df-b27d-5613b04232d8"
+            ],
+            "reason": "Observed web service warrants missing recorded web evidence; no live scan is enabled."
+          },
+          {
+            "id": "import-Nikto-b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "action": "request-import",
+            "tool": "Nikto",
+            "asset_id": "b1dcf73e-545d-433f-9f05-a10e7cde9209",
+            "observation_ids": [
+              "7c42e248-e295-41df-b27d-5613b04232d8"
+            ],
+            "reason": "Observed web service warrants missing recorded web evidence; no live scan is enabled."
+          }
+        ],
+        "failed_tools": [],
+        "conflicts": [],
+        "capabilities": [
+          {
+            "name": "Nmap",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Nessus",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Greenbone",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Nikto",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "OWASP ZAP",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Burp Suite",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Metasploit",
+            "mode": "planned",
+            "recorded_import_parser_configured": false
+          }
+        ],
+        "existing_same_scope_tools": {
+          "b1dcf73e-545d-433f-9f05-a10e7cde9209": [
+            "Nmap"
+          ]
+        },
+        "source_authenticity": "Not independently verified by model context",
+        "constraints": [
+          "recorded imports only",
+          "human review required",
+          "no scanner invocation"
+        ]
+      },
+      "validated_plan_steps": [
+        {
+          "id": "import-OWASP ZAP-b1dcf73e-545d-433f-9f05-a10e7cde9209",
+          "action": "request-import",
+          "tool": "OWASP ZAP",
+          "asset_id": "b1dcf73e-545d-433f-9f05-a10e7cde9209",
+          "observation_ids": [
+            "7c42e248-e295-41df-b27d-5613b04232d8"
+          ],
+          "reason": "Observed web service warrants missing recorded web evidence; no live scan is enabled.",
+          "mode": "recorded-import",
+          "profile": "recorded-import-only",
+          "scope_id": "0362a58c-c88b-4675-b51c-674e489dc725",
+          "scope_revision": 1,
+          "requires": [
+            "human plan review",
+            "permitted source artifact with provenance"
+          ],
+          "rationale": "An HTTP service on port 80 is observed (observation 7c42e248-e295-41df-b27d-5613b04232d8). No recorded web vulnerability evidence exists for this service. Importing OWASP ZAP results will fill the evidence gap with detailed web findings.",
+          "expected_information_gain": "Recorded OWASP ZAP findings for the HTTP service, revealing potential vulnerabilities and confirming service behavior."
+        }
+      ],
+      "synthetic_artifact_sha256": "72250e8c3f7e0709f48014179d504a373324a6cbc576f2ff3960bd57ff32cf4f",
+      "blockers": [],
+      "duplicate_suppressed": true,
+      "label": "synthetic fixture; provider trace reports actual model status; no scanner or target contacted"
+    },
+    {
+      "case": "ssh-no-web-evidence",
+      "passed": true,
+      "expected": "request-review",
+      "decision": {
+        "decision": "request-review",
+        "selected_candidate_id": "review-sources",
+        "rationale": "All four observations have validation_state &quot;unknown&quot;, providing no confirmed evidence about the services on ports 80, 81, 82, and 83. A human reviewer must assess these source findings before any validation claim can be made.",
+        "observation_ids": [
+          "3442c8e1-3337-4afd-aeff-185923ba958a",
+          "4e2ad464-8c3c-4f70-80ee-d90ec6c86b4b",
+          "fc60f289-2529-445b-8ac4-6cc5f23908b0",
+          "ff1e372b-654f-456e-8bb1-4fdd6c567816"
+        ],
+        "expected_information_gain": "Human review will clarify the true status of each port, resolve the unknown validation, and identify any missing or mis\u2011recorded evidence, enabling subsequent automated or manual validation steps.",
+        "assumptions": [
+          "Only recorded imports are available",
+          "Human review is required before any validation claim",
+          "No scanner tools may be invoked"
+        ],
+        "stop_conditions": [
+          "Await completion of human review of the source evidence"
+        ],
+        "rejected_alternatives": []
+      },
+      "provider": {
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "model_called": true,
+        "provider_invoked": true,
+        "prompt_version": "adaptive-v2",
+        "schema_version": "1.0",
+        "provider_source": "live-provider",
+        "response_id_sha256": "4df8a5ea3fdc6fe19cf5355ce17b59d09c04b3d33dc54d81e995982fc98b7cec",
+        "usage": {
+          "prompt_tokens": 2004,
+          "completion_tokens": 596,
+          "total_tokens": 2600
+        }
+      },
+      "plan_id": "d92a2c43-aa9a-4007-8138-12cca948b6ae",
+      "context_sha256": "73350f0785b4649873fc4bfa574e26383d6ff080384e0f2a361912f92aa9704d",
+      "context": {
+        "schema_version": "1.0",
+        "request": "Review current recorded evidence gaps",
+        "scope_id": "4abb624f-cb24-4719-8e4e-7d7c7878bff0",
+        "scope_revision": 1,
+        "observations": [
+          {
+            "id": "3442c8e1-3337-4afd-aeff-185923ba958a",
+            "asset_id": "945aaed4-7870-4d20-9b32-0c31a582aa50",
+            "evidence_id": "3a3049ec-f4bf-4652-b2b8-c7d0a2fb4860",
+            "title": "Nmap tcp/83: unknown",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:02:16.851169Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "4e2ad464-8c3c-4f70-80ee-d90ec6c86b4b",
+            "asset_id": "945aaed4-7870-4d20-9b32-0c31a582aa50",
+            "evidence_id": "3a3049ec-f4bf-4652-b2b8-c7d0a2fb4860",
+            "title": "Nmap tcp/81: closed",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:02:16.851169Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "fc60f289-2529-445b-8ac4-6cc5f23908b0",
+            "asset_id": "945aaed4-7870-4d20-9b32-0c31a582aa50",
+            "evidence_id": "3a3049ec-f4bf-4652-b2b8-c7d0a2fb4860",
+            "title": "Nmap tcp/80: open",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:02:16.851169Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": 80,
+              "protocol": "tcp",
+              "observed_name": "ssh"
+            }
+          },
+          {
+            "id": "ff1e372b-654f-456e-8bb1-4fdd6c567816",
+            "asset_id": "945aaed4-7870-4d20-9b32-0c31a582aa50",
+            "evidence_id": "3a3049ec-f4bf-4652-b2b8-c7d0a2fb4860",
+            "title": "Nmap tcp/82: filtered",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:02:16.851169Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          }
+        ],
+        "candidates": [
+          {
+            "id": "review-sources",
+            "action": "request-review",
+            "tool": null,
+            "observation_ids": [
+              "3442c8e1-3337-4afd-aeff-185923ba958a",
+              "4e2ad464-8c3c-4f70-80ee-d90ec6c86b4b",
+              "fc60f289-2529-445b-8ac4-6cc5f23908b0",
+              "ff1e372b-654f-456e-8bb1-4fdd6c567816"
+            ],
+            "reason": "Review source evidence and uncertainty before making any validation claim."
+          }
+        ],
+        "failed_tools": [],
+        "conflicts": [],
+        "capabilities": [
+          {
+            "name": "Nmap",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Nessus",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Greenbone",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Nikto",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "OWASP ZAP",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Burp Suite",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Metasploit",
+            "mode": "planned",
+            "recorded_import_parser_configured": false
+          }
+        ],
+        "existing_same_scope_tools": {
+          "945aaed4-7870-4d20-9b32-0c31a582aa50": [
+            "Nmap"
+          ]
+        },
+        "source_authenticity": "Not independently verified by model context",
+        "constraints": [
+          "recorded imports only",
+          "human review required",
+          "no scanner invocation"
+        ]
+      },
+      "validated_plan_steps": [],
+      "synthetic_artifact_sha256": "5075017f6ab06f52d6d8be4cf1ec14155db8d2e2f3d70e82367bac9faf41654c",
+      "blockers": [
+        "model-requested-review-or-stop"
+      ],
+      "duplicate_suppressed": true,
+      "label": "synthetic fixture; provider trace reports actual model status; no scanner or target contacted"
+    },
+    {
+      "case": "conflicting-port-states",
+      "passed": true,
+      "expected": "request-review",
+      "decision": {
+        "decision": "request-review",
+        "selected_candidate_id": "review-sources",
+        "rationale": "Human review is required because the recorded Nmap observations contain contradictory states for port\u202f80 (open vs closed) and all validation states are unknown, preventing any automated validation claim.",
+        "observation_ids": [
+          "5073cf04-092b-4ff4-8984-e0d71df49c23",
+          "59dce7c8-c39b-41e6-bfb4-440dec243a87",
+          "6a17266f-0690-489d-965e-6ac4ee0741ab",
+          "de33ea3d-7647-4888-ae2f-7aebca17364a"
+        ],
+        "expected_information_gain": "Clarify which port state is correct, resolve the conflict, and assign validation states, enabling future automated assessment of the service.",
+        "assumptions": [
+          "Recorded imports are trustworthy",
+          "No new scanning will be performed",
+          "Human reviewer can access original scan data"
+        ],
+        "stop_conditions": [
+          "Await human review outcome before proceeding"
+        ],
+        "rejected_alternatives": []
+      },
+      "provider": {
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "model_called": true,
+        "provider_invoked": true,
+        "prompt_version": "adaptive-v2",
+        "schema_version": "1.0",
+        "provider_source": "live-provider",
+        "response_id_sha256": "e3ccfd87e9ffe17eecff5a3996cd968412a885a3c6b99131accf72d5d3ad93ec",
+        "usage": {
+          "prompt_tokens": 2040,
+          "completion_tokens": 659,
+          "total_tokens": 2699
+        }
+      },
+      "plan_id": "8bc777ac-fb49-4f1d-afb2-b08f5de93be3",
+      "context_sha256": "2cf711d360c035fea30c7bc41ba56b51686f70ef59fc8768947462d2c406dcdb",
+      "context": {
+        "schema_version": "1.0",
+        "request": "Review current recorded evidence gaps",
+        "scope_id": "160bd460-d186-4600-9798-4354a5308975",
+        "scope_revision": 1,
+        "observations": [
+          {
+            "id": "5073cf04-092b-4ff4-8984-e0d71df49c23",
+            "asset_id": "37c9cf61-c9b1-4437-93c7-74ad039dd6ad",
+            "evidence_id": "168408b9-ef7d-4b87-9f41-2a11e385375e",
+            "title": "Nmap tcp/80: open",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:02:40.557967Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": 80,
+              "protocol": "tcp",
+              "observed_name": "http"
+            }
+          },
+          {
+            "id": "59dce7c8-c39b-41e6-bfb4-440dec243a87",
+            "asset_id": "37c9cf61-c9b1-4437-93c7-74ad039dd6ad",
+            "evidence_id": "168408b9-ef7d-4b87-9f41-2a11e385375e",
+            "title": "Nmap tcp/83: unknown",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:02:40.557967Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "6a17266f-0690-489d-965e-6ac4ee0741ab",
+            "asset_id": "37c9cf61-c9b1-4437-93c7-74ad039dd6ad",
+            "evidence_id": "168408b9-ef7d-4b87-9f41-2a11e385375e",
+            "title": "Nmap tcp/82: filtered",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:02:40.557967Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "de33ea3d-7647-4888-ae2f-7aebca17364a",
+            "asset_id": "37c9cf61-c9b1-4437-93c7-74ad039dd6ad",
+            "evidence_id": "168408b9-ef7d-4b87-9f41-2a11e385375e",
+            "title": "Nmap tcp/80: closed",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:02:40.557967Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          }
+        ],
+        "candidates": [
+          {
+            "id": "review-sources",
+            "action": "request-review",
+            "tool": null,
+            "observation_ids": [
+              "5073cf04-092b-4ff4-8984-e0d71df49c23",
+              "59dce7c8-c39b-41e6-bfb4-440dec243a87",
+              "6a17266f-0690-489d-965e-6ac4ee0741ab",
+              "de33ea3d-7647-4888-ae2f-7aebca17364a"
+            ],
+            "reason": "Review source evidence and uncertainty before making any validation claim."
+          }
+        ],
+        "failed_tools": [],
+        "conflicts": [
+          [
+            "5073cf04-092b-4ff4-8984-e0d71df49c23",
+            "de33ea3d-7647-4888-ae2f-7aebca17364a"
+          ]
+        ],
+        "capabilities": [
+          {
+            "name": "Nmap",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Nessus",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Greenbone",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Nikto",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "OWASP ZAP",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Burp Suite",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Metasploit",
+            "mode": "planned",
+            "recorded_import_parser_configured": false
+          }
+        ],
+        "existing_same_scope_tools": {
+          "37c9cf61-c9b1-4437-93c7-74ad039dd6ad": [
+            "Nmap"
+          ]
+        },
+        "source_authenticity": "Not independently verified by model context",
+        "constraints": [
+          "recorded imports only",
+          "human review required",
+          "no scanner invocation"
+        ]
+      },
+      "validated_plan_steps": [],
+      "synthetic_artifact_sha256": "0f868c84b770f84959c14dcd8b0d8c40cc83728811896b4e2af74ad224b29682",
+      "blockers": [
+        "model-requested-review-or-stop"
+      ],
+      "duplicate_suppressed": true,
+      "label": "synthetic fixture; provider trace reports actual model status; no scanner or target contacted"
+    },
+    {
+      "case": "unavailable-web-imports",
+      "passed": true,
+      "expected": "request-review",
+      "decision": {
+        "decision": "request-review",
+        "selected_candidate_id": "review-sources",
+        "rationale": "All Nmap observations (ports 80 open, 81 closed, 82 filtered, 83 unknown) have validation_state &#x27;unknown&#x27;, indicating uncertainty about service presence and severity. Human review is required to evaluate these source evidences before any validation claim.",
+        "observation_ids": [
+          "7105561c-8304-4361-af1f-f84d8765bc32",
+          "a08bd366-16c3-45dd-bf94-84d4d77e2974",
+          "d7b0963d-f840-4dcb-9be5-db5fac6a294f",
+          "ee16a87f-8e6f-46db-95cc-590e7619cf50"
+        ],
+        "expected_information_gain": "Human review will clarify the validation state of each observed port, identify any missing import evidence, and resolve uncertainty about service exposure, enabling accurate risk assessment.",
+        "assumptions": [
+          "Recorded imports are correctly configured",
+          "No additional scanning tools will be invoked"
+        ],
+        "stop_conditions": [
+          "Human reviewer completes validation assessment of the observations"
+        ],
+        "rejected_alternatives": []
+      },
+      "provider": {
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "model_called": true,
+        "provider_invoked": true,
+        "prompt_version": "adaptive-v2",
+        "schema_version": "1.0",
+        "provider_source": "live-provider",
+        "response_id_sha256": "342138770e7f35a00bc6207c66c5d9f409cabc5e1cadb96b7c70e36523e3b24d",
+        "usage": {
+          "prompt_tokens": 1982,
+          "completion_tokens": 663,
+          "total_tokens": 2645
+        }
+      },
+      "plan_id": "09c9bdff-8906-424a-ae84-87ea684dd7d4",
+      "context_sha256": "ef28dd695d3c39f5cc1c3c2e95edc631bef56c00f134b75cfd9ca5cf309c89cc",
+      "context": {
+        "schema_version": "1.0",
+        "request": "Review current recorded evidence gaps",
+        "scope_id": "519cea63-0e12-43a7-883b-0aca613ee8b4",
+        "scope_revision": 1,
+        "observations": [
+          {
+            "id": "7105561c-8304-4361-af1f-f84d8765bc32",
+            "asset_id": "6d52c58c-b37a-40b3-9022-e2dbc852034d",
+            "evidence_id": "e46946fe-2b2c-403e-893b-dacb61602fce",
+            "title": "Nmap tcp/83: unknown",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:03:04.655719Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "a08bd366-16c3-45dd-bf94-84d4d77e2974",
+            "asset_id": "6d52c58c-b37a-40b3-9022-e2dbc852034d",
+            "evidence_id": "e46946fe-2b2c-403e-893b-dacb61602fce",
+            "title": "Nmap tcp/80: open",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:03:04.655719Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": 80,
+              "protocol": "tcp",
+              "observed_name": "http"
+            }
+          },
+          {
+            "id": "d7b0963d-f840-4dcb-9be5-db5fac6a294f",
+            "asset_id": "6d52c58c-b37a-40b3-9022-e2dbc852034d",
+            "evidence_id": "e46946fe-2b2c-403e-893b-dacb61602fce",
+            "title": "Nmap tcp/82: filtered",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:03:04.655719Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          },
+          {
+            "id": "ee16a87f-8e6f-46db-95cc-590e7619cf50",
+            "asset_id": "6d52c58c-b37a-40b3-9022-e2dbc852034d",
+            "evidence_id": "e46946fe-2b2c-403e-893b-dacb61602fce",
+            "title": "Nmap tcp/81: closed",
+            "validation_state": "unknown",
+            "observed_at": "2026-11-06T10:03:04.655719Z",
+            "source_cve": null,
+            "source_cvss_score": null,
+            "source_severity": "unknown",
+            "service": {
+              "port": null,
+              "protocol": null,
+              "observed_name": ""
+            }
+          }
+        ],
+        "candidates": [
+          {
+            "id": "review-sources",
+            "action": "request-review",
+            "tool": null,
+            "observation_ids": [
+              "7105561c-8304-4361-af1f-f84d8765bc32",
+              "a08bd366-16c3-45dd-bf94-84d4d77e2974",
+              "d7b0963d-f840-4dcb-9be5-db5fac6a294f",
+              "ee16a87f-8e6f-46db-95cc-590e7619cf50"
+            ],
+            "reason": "Review source evidence and uncertainty before making any validation claim."
+          }
+        ],
+        "failed_tools": [],
+        "conflicts": [],
+        "capabilities": [
+          {
+            "name": "Nmap",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Nessus",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Greenbone",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Nikto",
+            "mode": "unsupported",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "OWASP ZAP",
+            "mode": "unsupported",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Burp Suite",
+            "mode": "planned",
+            "recorded_import_parser_configured": true
+          },
+          {
+            "name": "Metasploit",
+            "mode": "planned",
+            "recorded_import_parser_configured": false
+          }
+        ],
+        "existing_same_scope_tools": {
+          "6d52c58c-b37a-40b3-9022-e2dbc852034d": [
+            "Nmap"
+          ]
+        },
+        "source_authenticity": "Not independently verified by model context",
+        "constraints": [
+          "recorded imports only",
+          "human review required",
+          "no scanner invocation"
+        ]
+      },
+      "validated_plan_steps": [],
+      "synthetic_artifact_sha256": "72250e8c3f7e0709f48014179d504a373324a6cbc576f2ff3960bd57ff32cf4f",
+      "blockers": [
+        "model-requested-review-or-stop"
+      ],
+      "duplicate_suppressed": true,
+      "label": "synthetic fixture; provider trace reports actual model status; no scanner or target contacted"
+    }
+  ],
+  "limitations": [
+    "Synthetic inputs are not genuine scanner evidence or T30 acceptance.",
+    "Human rationale review remains required; schema and policy checks do not prove reasoning quality."
+  ]
+}
