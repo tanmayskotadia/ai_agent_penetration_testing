@@ -2546,6 +2546,15 @@
       "ReasoningProposal": {
         "additionalProperties": false,
         "properties": {
+          "claims": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SourceClaim"
+            },
+            "maxItems": 100,
+            "title": "Claims",
+            "type": "array"
+          },
           "confidence": {
             "anyOf": [
               {
@@ -2960,6 +2969,75 @@
           "targets"
         ],
         "title": "ScopeVersion",
+        "type": "object"
+      },
+      "SourceClaim": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "evidence_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "fact",
+            "enum": [
+              "fact",
+              "inference",
+              "unknown"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "observation_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "requires_external_validation": {
+            "default": false,
+            "title": "Requires External Validation",
+            "type": "boolean"
+          },
+          "type": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "type",
+          "observation_id",
+          "evidence_id",
+          "asset_id"
+        ],
+        "title": "SourceClaim",
         "type": "object"
       },
       "SourceReviewCreate": {

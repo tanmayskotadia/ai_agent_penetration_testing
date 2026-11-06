@@ -9,15 +9,17 @@ from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import Connection
+from sqlalchemy import Connection, select
 
 from aegistrace.approvals import ActionRequest, validate_action
 from aegistrace.auth import Identity
 from aegistrace.evidence import EvidenceStore
+from aegistrace.grounding import SourceClaim, ground_claims
 from aegistrace.log_safety import safe_log_text
 from aegistrace.platform_api import record_request
 from aegistrace.reasoning_schema import proposals
 from aegistrace.repository import get_record, require_access
+from aegistrace.schema_v1 import observations
 from aegistrace.settings import Settings
 
 
@@ -32,6 +34,7 @@ class ReasoningProposal(BaseModel):
     validation_state: Literal["suspected", "unknown"] = "suspected"
     confidence: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     confidence_method: str | None = Field(default=None, max_length=200)
+    claims: tuple[SourceClaim, ...] = Field(default=(), max_length=100)
 
     @model_validator(mode="after")
     def explained_confidence(self) -> "ReasoningProposal":
@@ -98,8 +101,26 @@ def store_proposal(
     identifiers = set(
         re.findall(r"\b(?:CVE-[0-9]{4}-[0-9]{4,}|CWE-[0-9]+)\b", body.narrative.upper())
     )
-    if any(identifier not in cited_text for identifier in identifiers):
+    source_identifiers = set(re.findall(r"\b(?:CVE-[0-9]{4}-[0-9]{4,}|CWE-[0-9]+)\b", cited_text))
+    if not identifiers.issubset(source_identifiers):
         raise ValueError("identifier claim is absent from reviewed cited evidence")
+    source_rows = [
+        dict(row)
+        for row in connection.execute(
+            select(observations.c.payload)
+            .where(
+                observations.c.assessment_id == str(assessment_id),
+                observations.c.evidence_id.in_([str(v) for v in body.source_evidence_ids]),
+            )
+            .order_by(observations.c.id)
+            .limit(1001)
+        ).scalars()
+    ]
+    grounding = ground_claims([claim.model_dump() for claim in body.claims], source_rows)
+    if len(source_rows) > 1000:
+        for claim in grounding:
+            claim.update(value=None, state="unknown", information_kind="unknown")
+            claim["reasons"].append("source-context-limit-requires-narrower-citations")
     for action in body.proposed_actions:
         if not set(action.evidence_ids).issubset(body.source_evidence_ids):
             raise ValueError("action citations exceed reviewed context")
@@ -143,6 +164,9 @@ def store_proposal(
         "risk_flags": flags,
         "execution_enabled": False,
         "findings_created": 0,
+        "claims": grounding,
+        "reportable_narrative": None,
+        "narrative_status": "unreviewed-hypothesis; excluded from factual report prose",
     }
     connection.execute(
         proposals.insert().values(

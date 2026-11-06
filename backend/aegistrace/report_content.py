@@ -27,6 +27,7 @@ class VaptReportContent(BaseModel):
     approvals_and_decisions: dict[str, list[dict[str, Any]]]
     limitations: list[str]
     coverage: dict[str, Any]
+    grounded_claims: list[dict[str, Any]] = Field(default_factory=list)
 
 
 def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
@@ -115,6 +116,11 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
             },
             "limitations": limitations,
             "coverage": source.get("coverage", {}),
+            "grounded_claims": [
+                {"proposal_id": proposal["proposal_id"], **claim}
+                for proposal in source.get("grounded_proposals", [])
+                for claim in proposal.get("claims", [])
+            ],
         }
     ).model_dump(mode="json")
     return content

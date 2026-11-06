@@ -43,6 +43,14 @@
       "title": "Executive Summary",
       "type": "string"
     },
+    "grounded_claims": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Grounded Claims",
+      "type": "array"
+    },
     "impact_and_remediation": {
       "additionalProperties": true,
       "title": "Impact And Remediation",
