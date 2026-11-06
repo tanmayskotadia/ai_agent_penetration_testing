@@ -239,11 +239,6 @@ def freeze_export(
             selected_contexts[asset_id] = context
     from aegistrace.correlation import correlate_observations
 
-    correlations = correlate_observations(
-        selected_observations,
-        run_tools,
-        asset_context={key: value.get("request", {}) for key, value in selected_contexts.items()},
-    )
     selected_observation_ids = {str(value["id"]) for value in selected_observations}
     finding_review_rows = (
         connection.execute(
@@ -269,12 +264,20 @@ def freeze_export(
         selected_finding_reviews = [
             value
             for observation_id, value in latest_by_observation(
-                [dict(row) for row in finding_review_rows]
+                sorted(
+                    (dict(row) for row in finding_review_rows), key=lambda row: int(row["revision"])
+                )
             ).items()
             if observation_id in selected_observation_ids
         ]
     active_reviewed_clusters = coverage.get("observation_analytics", {}).get(
         "reviewed_clusters", []
+    )
+    correlations = correlate_observations(
+        selected_observations,
+        run_tools,
+        asset_context={key: value.get("request", {}) for key, value in selected_contexts.items()},
+        reviewer_decisions={value["observation_id"]: value for value in selected_finding_reviews},
     )
     correlations["reviewed_clusters"] = [
         group

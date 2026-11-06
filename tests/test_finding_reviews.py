@@ -131,6 +131,11 @@ def test_api_records_audited_reversible_triage_without_mutating_source_observati
     assert decision["confidence"] is None
     assert state["calibration_status"] == "not-calibrated"
     assert state["reviews"][-1]["id"] == first["id"]
+    coverage = client.get(base + "/coverage", headers=headers()).json()
+    ranked = coverage["observation_analytics"]["contextual_risk_ranking"]["ranked_observations"]
+    reviewed = next(item for item in ranked if item["observation_id"] == str(observation_ids[0]))
+    assert reviewed["priority"]["review_attention"] == "contradictory-evidence-review"
+    assert reviewed["priority"]["reviewer_decision"]["rationale"]
 
     post(
         path,
