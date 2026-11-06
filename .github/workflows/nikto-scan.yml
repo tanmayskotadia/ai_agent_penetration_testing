@@ -1,11 +1,20 @@
 name: Nikto genuine report
 
 on:
-  workflow_dispatch:   # run manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Leave empty to use the default branch. To pin a release, set a tag
+  # from https://github.com/sullo/nikto/tags (e.g. "2.6.0" if it exists).
+  NIKTO_REF: ""
 
 jobs:
   nikto:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       juice-shop:
         image: bkimminich/juice-shop
@@ -13,37 +22,63 @@ jobs:
           - 3000:3000
 
     steps:
+      - name: Install Nikto dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y perl libxml-writer-perl libnet-ssleay-perl libio-socket-ssl-perl
+
       - name: Wait for target to be ready
         run: |
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:3000 >/dev/null && echo "up" && exit 0
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000 >/dev/null; then
+              echo "target is up"
+              exit 0
+            fi
             sleep 5
           done
-          echo "target never came up"; exit 1
+          echo "target never came up"
+          exit 1
 
       - name: Get Nikto
         run: |
-          git clone https://github.com/sullo/nikto.git
+          if [ -n "$NIKTO_REF" ]; then
+            git clone --branch "$NIKTO_REF" --depth 1 https://github.com/sullo/nikto.git
+          else
+            git clone --depth 1 https://github.com/sullo/nikto.git
+          fi
           cd nikto/program
-          perl nikto.pl -Version | tee ../../nikto_version.txt
+          perl nikto.pl -Version 2>&1 | tee "$GITHUB_WORKSPACE/nikto_version.txt"
+          if ! grep -q "2\.6" "$GITHUB_WORKSPACE/nikto_version.txt"; then
+            echo "::warning::Nikto version does not look like 2.6.x. Set NIKTO_REF to a 2.6.x tag."
+          fi
 
       - name: Run Nikto (JSON)
         run: |
           cd nikto/program
           perl nikto.pl -h http://localhost:3000 \
-            -Format json -output "$GITHUB_WORKSPACE/nikto_report.json" \
-            -maxtime 600s -nointeractive || true
+            -Format json \
+            -output "$GITHUB_WORKSPACE/nikto_report.json" \
+            -maxtime 600s \
+            -nointeractive 2>&1 | tee "$GITHUB_WORKSPACE/nikto_run.log" || true
+          test -s "$GITHUB_WORKSPACE/nikto_report.json" || { echo "No report produced"; exit 1; }
 
       - name: Hash and sanity check
         run: |
+          ls -la
+          head -c 1500 nikto_report.json || true
+          echo
           test -s nikto_report.json
           python3 -m json.tool nikto_report.json > /dev/null
           sha256sum nikto_report.json | tee nikto_report.sha256
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: nikto-report
+          if-no-files-found: warn
           path: |
             nikto_report.json
             nikto_report.sha256
             nikto_version.txt
+            nikto_run.log
