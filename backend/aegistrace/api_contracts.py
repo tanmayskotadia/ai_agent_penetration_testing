@@ -135,6 +135,8 @@ class PlanIntake(ApiContract):
 
     @model_validator(mode="after")
     def scope_revision_pair(self) -> "PlanIntake":
+        if not self.message.strip():
+            raise ValueError("message must contain assessment intent")
         if (self.scope_id is None) != (self.scope_revision is None):
             raise ValueError("scope_id and scope_revision must be supplied together")
         if any(not item.strip() or len(item) > 500 for item in self.constraints):
@@ -145,6 +147,13 @@ class PlanIntake(ApiContract):
 class JobCreate(ApiContract):
     plan_id: UUID
     plan_revision: int = Field(ge=1)
+
+
+class PlanReviewCreate(ApiContract):
+    plan_revision: int = Field(ge=1)
+    plan_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+    decision: Literal["approve", "reject"]
+    rationale: str = Field(min_length=10, max_length=2000)
 
 
 class ImportCreate(ApiContract):
@@ -179,9 +188,10 @@ class WorkflowResource(ApiContract):
         "asset-contexts",
         "correlation-reviews",
         "source-reviews",
+        "plan-reviews",
     ]
     revision: int = Field(default=1, ge=1)
-    state: Literal["draft", "blocked", "pending-review", "pending-ingestion"]
+    state: Literal["draft", "blocked", "pending-review", "pending-ingestion", "reviewed"]
     reason: str | None = None
     mode: Literal["request-only", "recorded-import"] = "request-only"
     request: dict[str, object]

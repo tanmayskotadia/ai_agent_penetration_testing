@@ -6,6 +6,8 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlsplit
 
+from aegistrace.capabilities import capability_snapshot
+
 _URL = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 _HOST = re.compile(
     r"(?<![\w.-])(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+"
@@ -49,6 +51,7 @@ def build_intake_plan(
     scope: dict[str, Any] | None = None,
     constraints: Sequence[str] = (),
     prior_results: Sequence[dict[str, Any]] = (),
+    capabilities: Sequence[dict[str, Any]] | None = None,
 ) -> dict[str, object]:
     """Create explainable import-only steps from explicit scope and user intent.
 
@@ -56,6 +59,8 @@ def build_intake_plan(
     create scanner commands, or change live-scan capability.
     """
     text = " ".join(message.split())
+    registry = list(capabilities if capabilities is not None else capability_snapshot())
+    configured = {str(item["name"]): item for item in registry}
     mentions = _mentioned_targets(text)
     clarifications: list[str] = []
     blockers: list[str] = []
@@ -98,6 +103,14 @@ def build_intake_plan(
         requested_tools.append("OWASP ZAP")
     if "nikto" in lowered:
         requested_tools.append("Nikto")
+    for tool, terms in {
+        "Nessus": ("nessus",),
+        "Greenbone": ("greenbone", "openvas"),
+        "Burp Suite": ("burp",),
+        "Metasploit": ("metasploit",),
+    }.items():
+        if any(term in lowered for term in terms):
+            requested_tools.append(tool)
     if wants_web and any(word in lowered for word in ("api", "endpoint", "openapi")):
         requested_tools.append("OpenAPI")
     if not requested_tools:
@@ -153,6 +166,20 @@ def build_intake_plan(
             "Nikto": "Nikto JSON supplied by the participant",
             "OpenAPI": "OpenAPI JSON supplied by the participant; URLs are not fetched",
         }
+        entry = configured.get(tool)
+        if tool not in formats or (
+            tool != "OpenAPI"
+            and (
+                entry is None
+                or entry.get("mode") == "unsupported"
+                or not entry.get("guarded_containers")
+            )
+        ):
+            blockers.append("requested-tool-unavailable")
+            clarifications.append(
+                f"{tool} has no available configured import capability. Supply a supported source or revise the request."
+            )
+            continue
         capability_status = (
             "OpenAPI JSON parser is implemented; live API discovery and authenticated coverage remain unverified"
             if tool == "OpenAPI"
@@ -165,6 +192,17 @@ def build_intake_plan(
                 "tool": tool,
                 "mode": "recorded-import",
                 "capability_status": capability_status,
+                "registry_mode": entry.get("mode", "planned") if entry else "definition-parser",
+                "scope_id": str(scope["id"]) if scope is not None else None,
+                "scope_revision": scope.get("revision") if scope is not None else None,
+                "targets": scope_targets,
+                "exclusions": exclusions,
+                "profile": "recorded-import-only",
+                "limits": ["No network traffic, scanner execution or DNS resolution", *constraints],
+                "alternatives": [
+                    "Reuse an existing same-scope result",
+                    "Defer until a supported source is available",
+                ],
                 "rationale": (
                     f"{tool} is selected because it matches the stated "
                     + ("web/API" if tool in {"OWASP ZAP", "OpenAPI"} else "network/web evidence")
@@ -198,6 +236,8 @@ def build_intake_plan(
         )
     return {
         "planner": "deterministic-intake-v1",
+        "information_kind": "deterministic proposal; not observed evidence or AI inference",
+        "capability_snapshot": registry,
         "request_text": text,
         "scope_id": str(scope["id"]) if scope is not None else None,
         "scope_revision": scope.get("revision") if scope is not None else None,

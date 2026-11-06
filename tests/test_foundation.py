@@ -39,7 +39,11 @@ def test_health_is_not_fake_assessment_success(tmp_path: Path) -> None:
         assert not status["live_scans_enabled"] and not status["model_enabled"]
         assert len(status["tools"]) == 7
         assert {t["status"] for t in status["tools"]} == {"planned"}
-        assert client.post("/api/v1/jobs", json={"target": "unapproved.example"}).status_code == 404
+        # A built frontend mounts a static fallback (405); without it no route exists (404).
+        assert client.post("/api/v1/jobs", json={"target": "unapproved.example"}).status_code in {
+            404,
+            405,
+        }
 
 
 def test_fresh_database_migrates_and_downgrades(tmp_path: Path) -> None:
