@@ -1,0 +1,49 @@
+name: Nikto genuine report
+
+on:
+  workflow_dispatch:   # run manually from the Actions tab
+
+jobs:
+  nikto:
+    runs-on: ubuntu-latest
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop
+        ports:
+          - 3000:3000
+
+    steps:
+      - name: Wait for target to be ready
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000 >/dev/null && echo "up" && exit 0
+            sleep 5
+          done
+          echo "target never came up"; exit 1
+
+      - name: Get Nikto
+        run: |
+          git clone https://github.com/sullo/nikto.git
+          cd nikto/program
+          perl nikto.pl -Version | tee ../../nikto_version.txt
+
+      - name: Run Nikto (JSON)
+        run: |
+          cd nikto/program
+          perl nikto.pl -h http://localhost:3000 \
+            -Format json -output "$GITHUB_WORKSPACE/nikto_report.json" \
+            -maxtime 600s -nointeractive || true
+
+      - name: Hash and sanity check
+        run: |
+          test -s nikto_report.json
+          python3 -m json.tool nikto_report.json > /dev/null
+          sha256sum nikto_report.json | tee nikto_report.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nikto-report
+          path: |
+            nikto_report.json
+            nikto_report.sha256
+            nikto_version.txt
