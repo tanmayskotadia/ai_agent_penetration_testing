@@ -301,7 +301,7 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
     observation_ids = shared_source_candidate["observation_ids"]
     assert len({item["evidence_id"] for item in shared_source_candidate["observations"]}) == 2
     all_observations = snapshot["observation_analytics"]["ranked_observations"]
-    assert len(all_observations) == 5
+    assert len(all_observations) == 6
     assert "fixture-secret" not in json.dumps(snapshot["observation_analytics"])
     zap_only = [
         item
@@ -336,7 +336,7 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
         for item in reviewed_group["observations"]
     )
     after_review = client.get(base + "/coverage", headers=headers()).json()
-    assert after_review["observed_record_count"] == 5
+    assert after_review["observed_record_count"] == 6
     assert {
         item["observation_id"]
         for item in after_review["observation_analytics"]["ranked_observations"]
