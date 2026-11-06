@@ -259,7 +259,9 @@ def freeze_export(
         .all()
     )
     if len(finding_review_rows) > 1000:
-        limitations.append("Finding review history exceeds the report snapshot limit; reviewer triage is omitted.")
+        limitations.append(
+            "Finding review history exceeds the report snapshot limit; reviewer triage is omitted."
+        )
         selected_finding_reviews: list[dict[str, Any]] = []
     else:
         from aegistrace.finding_reviews import latest_by_observation

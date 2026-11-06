@@ -427,13 +427,21 @@ def render_evidence_report(
     lines.append(("Reviewer triage decisions", 0))
     triage = snapshot.get("finding_reviews", [])
     if not triage:
-        lines.append(("No reviewer triage decisions are recorded; confidence and validation remain unknown or source-reported.", 2))
+        lines.append(
+            (
+                "No reviewer triage decisions are recorded; confidence and validation remain unknown or source-reported.",
+                2,
+            )
+        )
     for decision in triage:
         for label, value in [
             ("Observation", decision.get("observation_id", "unknown")),
             ("Reviewer state", decision.get("validation_state", "unknown")),
             ("Information kind", decision.get("information_kind", "reviewer-decision")),
-            ("Confidence", decision.get("confidence") if decision.get("confidence") is not None else "unknown"),
+            (
+                "Confidence",
+                decision.get("confidence") if decision.get("confidence") is not None else "unknown",
+            ),
             ("Confidence method", decision.get("confidence_method") or "not supplied"),
             ("Calibration", decision.get("calibration_status", "not-calibrated")),
             ("Contradictory observations", decision.get("contradictory_observation_ids", [])),

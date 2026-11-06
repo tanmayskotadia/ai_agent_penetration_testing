@@ -71,4 +71,3 @@ def latest_by_observation(reviews: Iterable[dict[str, Any]]) -> dict[str, dict[s
                 if key in request
             }
     return latest
-

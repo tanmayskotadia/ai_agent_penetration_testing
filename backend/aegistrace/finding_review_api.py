@@ -159,4 +159,3 @@ def finding_review_router(engine: Engine, config: Settings) -> APIRouter:
         return mutation(engine, request, actor, request_payload, apply, 201)
 
     return router
-

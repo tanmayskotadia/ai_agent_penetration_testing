@@ -161,4 +161,3 @@ def test_api_records_audited_reversible_triage_without_mutating_source_observati
         headers=headers(issue_identity(settings, "triage-analyst", "analyst")),
     )
     assert analyst.status_code == 403
-
