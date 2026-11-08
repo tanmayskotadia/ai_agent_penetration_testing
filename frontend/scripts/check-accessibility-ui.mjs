@@ -86,7 +86,7 @@ try {
   await activate(page.getByRole("button", { name: "Inspect matching evidence", exact: true }));
   await page.getByRole("region", { name: "Evidence ev-test", exact: true }).getByText("e".repeat(64), { exact: true }).waitFor();
   await audit("Analyst desktop accessibility");
-  await page.getByRole("button", { name: /Report/ }).click();
+  await page.locator("#workspace-flow").getByRole("button", { name: /Report/ }).click();
   await page.getByRole("heading", { name: "Assessment presentation", exact: true }).waitFor();
   const download = page.waitForEvent("download");
   await activate(page.getByRole("button", { name: "Freeze latest results and download PDF", exact: true }));
