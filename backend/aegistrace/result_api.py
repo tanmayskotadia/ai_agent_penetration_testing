@@ -14,7 +14,7 @@ from aegistrace.pdf_report import render_evidence_report
 from aegistrace.repository import require_access
 from aegistrace.result_schema import exports, revisions
 from aegistrace.results import content_hash, freeze_export, review_late
-from aegistrace.schema_v1 import assets, observations
+from aegistrace.schema_v1 import assets, observations, scope_versions, tool_runs
 from aegistrace.settings import Settings
 
 
@@ -40,7 +40,7 @@ def result_router(engine: Engine, config: Settings) -> APIRouter:
         try:
             with engine.connect() as connection:
                 require_access(connection, assessment_id, actor.subject)
-                return [
+                values = [
                     dict(value)
                     for value in connection.execute(
                         select(revisions.c.payload)
@@ -48,6 +48,48 @@ def result_router(engine: Engine, config: Settings) -> APIRouter:
                         .order_by(revisions.c.run_id, revisions.c.revision)
                         .limit(200)
                     ).scalars()
+                ]
+                run_ids = list(dict.fromkeys(str(value["run_id"]) for value in values))
+                run_rows = (
+                    connection.execute(
+                        select(tool_runs.c.payload).where(
+                            tool_runs.c.assessment_id == str(assessment_id),
+                            tool_runs.c.id.in_(run_ids),
+                        )
+                    )
+                    .scalars()
+                    .all()
+                    if run_ids
+                    else []
+                )
+                runs = {str(value["id"]): dict(value) for value in run_rows}
+                scope_ids = list(
+                    dict.fromkeys(
+                        str(run["scope_id"]) for run in runs.values() if run.get("scope_id")
+                    )
+                )
+                scope_rows = (
+                    connection.execute(
+                        select(scope_versions.c.payload).where(
+                            scope_versions.c.assessment_id == str(assessment_id),
+                            scope_versions.c.id.in_(scope_ids),
+                        )
+                    )
+                    .scalars()
+                    .all()
+                    if scope_ids
+                    else []
+                )
+                scopes = {str(value["id"]): dict(value) for value in scope_rows}
+                return [
+                    value
+                    | {
+                        "scope_id": runs.get(str(value["run_id"]), {}).get("scope_id"),
+                        "scope_revision": scopes.get(
+                            str(runs.get(str(value["run_id"]), {}).get("scope_id")), {}
+                        ).get("revision"),
+                    }
+                    for value in values
                 ]
         except LookupError as error:
             raise HTTPException(404, "Resource not found") from error

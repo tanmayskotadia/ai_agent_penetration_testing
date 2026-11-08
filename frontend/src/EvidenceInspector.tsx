@@ -4,12 +4,12 @@ import type { ApiSchemas } from "./generated/api";
 
 type Metadata = ApiSchemas["EvidenceInspectorView"];
 
-export function EvidenceInspector({ assessmentId, token, evidenceId, observationId }: { assessmentId: string; token: string; evidenceId: string; observationId?: string }) {
+export function EvidenceInspector({ assessmentId, token, evidenceId, observationId, onChanged }: { assessmentId: string; token: string; evidenceId: string; observationId?: string; onChanged?: () => void }) {
   const [open, setOpen] = useState(false);
-  return <div><button onClick={() => setOpen(value => !value)}>{open ? "Close evidence inspector" : "Inspect matching evidence"}</button>{open && <Inspector key={assessmentId + evidenceId + (observationId ?? "")} assessmentId={assessmentId} token={token} evidenceId={evidenceId} observationId={observationId} />}</div>;
+  return <div><button onClick={() => setOpen(value => !value)}>{open ? "Close evidence inspector" : "Inspect matching evidence"}</button>{open && <Inspector key={assessmentId + evidenceId + (observationId ?? "")} assessmentId={assessmentId} token={token} evidenceId={evidenceId} observationId={observationId} onChanged={onChanged} />}</div>;
 }
 
-function Inspector({ assessmentId, token, evidenceId, observationId }: { assessmentId: string; token: string; evidenceId: string; observationId?: string }) {
+function Inspector({ assessmentId, token, evidenceId, observationId, onChanged }: { assessmentId: string; token: string; evidenceId: string; observationId?: string; onChanged?: () => void }) {
   const [metadata, setMetadata] = useState<Metadata | null>(null);
   const [snippet, setSnippet] = useState("");
   const [kind, setKind] = useState("");
@@ -40,10 +40,10 @@ function Inspector({ assessmentId, token, evidenceId, observationId }: { assessm
     try {
       if (action === "generate") {
         const result = await mutate<{ snippet: string; information_kind: string }>("", base + "/redaction", token, {}, crypto.randomUUID());
-        if (active.current) { setSnippet(result.snippet); setKind("Unreviewed redacted source derivative"); setMetadata(current => current ? { ...current, reviewed_derivative_available: false } : current); }
+        if (active.current) { setSnippet(result.snippet); setKind("Unreviewed redacted source derivative"); setMetadata(current => current ? { ...current, reviewed_derivative_available: false } : current); onChanged?.(); }
       } else if (action === "review") {
         await mutate("", base + "/redaction-review", token, {}, crypto.randomUUID());
-        if (active.current) { await reload(); setKind("Reviewed source derivative"); setStatus("Derivative review recorded. This does not confirm a vulnerability or approve an action."); }
+        if (active.current) { await reload(); setKind("Reviewed source derivative"); setStatus("Derivative review recorded. This does not confirm a vulnerability or approve an action."); onChanged?.(); }
       } else if (action === "read") {
         const result = await get<{ snippet: string }>("/reviewed-derivative");
         if (active.current) { setSnippet(result.snippet); setKind("Reviewed source derivative"); }

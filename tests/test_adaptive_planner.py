@@ -89,6 +89,13 @@ def prepare_case(context, raw=XML, reviewed=True):
         "allow_external_processing": True,
         "data_policy_reference": "TEST-ONLY-policy",
     }
+    listed = client.get(base + "/result-revisions", headers=headers())
+    assert listed.status_code == 200, listed.text
+    revision = next(
+        row for row in listed.json() if row["id"] == result.json()["result_revision_id"]
+    )
+    assert revision["scope_id"] == body["scope_id"]
+    assert revision["scope_revision"] == body["scope_revision"]
     return client, config, base, headers, body
 
 

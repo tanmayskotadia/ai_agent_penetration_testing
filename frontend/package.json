@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vite",
     "check": "tsc --noEmit",
-    "build": "tsc --noEmit && vite build"
+    "build": "tsc --noEmit && vite build",
+    "check:replan": "node scripts/check-replan-ui.mjs"
   },
   "dependencies": {
     "react": "19.3.1",
