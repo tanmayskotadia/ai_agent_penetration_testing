@@ -59,9 +59,15 @@ CI installs from `uv.lock` and `frontend/package-lock.json`, verifies migrations
 - `workers/aegistrace_workers`: bounded diagnostic worker scaffold; execution adapters are later work.
 - `reports/aegistrace_reports`: typed report-request placeholder; no generated findings.
 - `migrations`: reversible platform/domain/evidence/audit/API/ingestion schemas; no seeded vulnerabilities or assessments.
-- `frontend`: accessible workspace status and truthful seven-tool roadmap.
+- `frontend`: guided four-stage analyst workspace; see the [workspace flow and UI acceptance guide](docs/analyst-workspace.md).
 - [Requirements](docs/requirements.md), [architecture](docs/architecture.md), [threat model](docs/threat-model.md), [ADRs](docs/adr/README.md), [submission gates](docs/submission-gates.md).
 - [Prerequisites and observed resources](docs/prerequisites.md), [licensing assumptions](docs/licensing.md), [model/data policy](docs/model-data-policy.md), [lab authorization](docs/lab-authorization.md), [fixture provenance](docs/fixture-provenance.md).
+
+### Analyst workspace preview
+
+Synthetic UI walkthrough only; it does not show real assessment data or prove fresh-user acceptance. [Open the narrow-screen preview](docs/images/issue-107/workspace-mobile.png).
+
+![AegisTrace four-stage analyst workspace using synthetic demo data](docs/images/issue-107/workspace-desktop.png)
 
 ## Authorization, licenses and limitations
 

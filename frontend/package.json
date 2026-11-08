@@ -10,7 +10,8 @@
     "dev": "vite",
     "check": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
-    "check:replan": "node scripts/check-replan-ui.mjs"
+    "check:replan": "node scripts/check-replan-ui.mjs",
+    "check:workspace": "node scripts/check-workspace-ui.mjs"
   },
   "dependencies": {
     "react": "19.3.1",

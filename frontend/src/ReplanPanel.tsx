@@ -74,11 +74,12 @@ function explainBlocker(code: string): string {
   return messages[code] ?? code.replaceAll("-", " ");
 }
 
-export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
+export function ReplanPanel({ assessmentId, token, coverage, onChanged, onOpenEvidence }: {
   assessmentId: string;
   token: string;
   coverage: Coverage | null;
   onChanged: () => void;
+  onOpenEvidence?: (target: "source-review" | "assessment-timeline") => void;
 }) {
   const [scopes, setScopes] = useState<Scope[]>([]);
   const [revisions, setRevisions] = useState<Revision[]>([]);
@@ -291,7 +292,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
         <h4>{revision.tool} · evidence checks</h4>
         <p>Source provenance: {sourceReview ? `${sourceReview.decision} · ${sourceReview.provenance}` : "No source provenance review is recorded. Review it only if you personally checked the original and its permission basis."}</p>
         <p>Redaction: {inspector === undefined ? "Checking status…" : inspector?.reviewed_derivative_available ? "Human-reviewed derivative available" : "A current reviewed redacted derivative is required before provider context can be sent."}</p>
-        <a href="#source-review">Go to source provenance review</a>
+        <a href="#source-review" onClick={event => { if (onOpenEvidence) { event.preventDefault(); onOpenEvidence("source-review"); } }}>Go to source provenance review</a>
         <EvidenceInspector assessmentId={assessmentId} token={token} evidenceId={revision.evidence_id} onChanged={() => setInspectorReload(value => value + 1)} />
       </article>;
     })}
@@ -346,7 +347,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
       {candidates.length ? <ul>{candidates.map(item => <li key={String(item.id)}><strong>{String(item.id)}</strong> · {String(item.action)}{item.tool ? ` · ${String(item.tool)}` : ""} · observations {stringList(item.observation_ids).join(", ") || "none"}</li>)}</ul> : <p>No safe candidate is available from the supplied evidence.</p>}
       <p><strong>Provider trace:</strong> {String(provider.provider ?? "provider unknown")} · {String(provider.model ?? "model unavailable")} · {provider.provider_invoked === true ? "invoked" : "not invoked"} · {provider.model_called === true ? "live provider response" : testOnly ? "test-only fixture" : "no live response"}</p>
       <p>Plan ID: <code>{latestPlan.id}</code> · Context SHA-256: <code>{String(latestPlan.request.context_sha256 ?? "not recorded")}</code></p>
-      <p><a href="#assessment-setup">Open saved plan and its separate human review</a> · <a href="#assessment-timeline">Open audit trace</a></p>
+      <p><a href="#assessment-setup">Open saved plan and its separate human review</a> · <a href="#assessment-timeline" onClick={event => { if (onOpenEvidence) { event.preventDefault(); onOpenEvidence("assessment-timeline"); } }}>Open audit trace</a></p>
       <p className="notice">A recommendation is a draft. A separate human plan review is required. It never grants execution permission or creates a scan job.</p>
       <details><summary>Exact stored plan and sanitized provider trace</summary><pre tabIndex={0}>{JSON.stringify(latestPlan, null, 2)}</pre></details>
     </article>}
