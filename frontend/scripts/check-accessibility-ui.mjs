@@ -104,7 +104,7 @@ try {
   await summary.screenshot({ path: "../tmp/executive-mobile.png" });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
   await activate(page.getByRole("button", { name: "Open analyst view and source trace", exact: true }));
-  await page.getByRole("heading", { name: "Finding validation and uncertainty" }).waitFor();
+  await page.getByText("Analyst view includes source counts, coverage gaps, capability evidence and processing limits.", { exact: true }).waitFor();
   assert.equal(await page.getByLabel("Assessment request", { exact: true }).inputValue(), "TEST ONLY retained draft");
   await audit("Analyst mobile accessibility");
   await page.screenshot({ path: "../tmp/analyst-mobile.png" });
