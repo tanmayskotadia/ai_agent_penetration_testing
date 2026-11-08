@@ -79,6 +79,7 @@ try {
   await page.getByRole("checkbox", { name: /Nmap/ }).check();
   await page.getByLabel("What should the model reconsider?").fill("Compare current evidence and choose a safe next step");
   await page.getByLabel(/I explicitly consent/).waitFor();
+  await page.getByText(/does not send derivative text or raw originals/).waitFor();
   await page.getByRole("button", { name: "Replan from selected evidence" }).click();
   assert.equal(requests.at(-1).body.allow_external_processing, false, "consent remains explicit and unchecked by default");
   await page.getByRole("status").filter({ hasText: /consent or policy reference did not match/ }).waitFor();

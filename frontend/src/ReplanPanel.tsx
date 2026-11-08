@@ -260,7 +260,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
       <textarea value={requestText} onChange={event => setRequestText(event.target.value)} maxLength={1000} placeholder="For example: Given the current evidence, what is the safest useful next recorded-evidence step?" />
     </label>
     <label className="replan-consent"><input type="checkbox" checked={allowExternalProcessing} onChange={event => setAllowExternalProcessing(event.target.checked)} />
-      <span>I explicitly consent to send the selected observations and their human-reviewed redacted derivatives to the configured external model provider for this request. Raw originals are not sent. This does not authorize a scan or action.</span>
+      <span>I explicitly consent to send bounded assessment context for the selected observations and my request to the configured external model provider. The server requires a current human-reviewed redacted derivative for each source, but does not send derivative text or raw originals. Do not include secrets in the request. This does not authorize a scan or action.</span>
     </label>
     <label>Approved data-processing policy reference
       <input value={policyReference} onChange={event => setPolicyReference(event.target.value)} maxLength={300} placeholder="Enter the exact reference approved for this hosted service" />
