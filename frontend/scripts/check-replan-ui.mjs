@@ -11,6 +11,8 @@ try {
   let scopeRevision = 1;
   let hideEligible = false;
   let redactionReviewed = false;
+  let failedProviderAttempt = false;
+  const savedPlans = [];
   const requests = [];
   const evidenceId = "evidence-11111111-1111-4111-8111-111111111111";
   const revisionId = "revision-11111111-1111-4111-8111-111111111111";
@@ -23,7 +25,9 @@ try {
     let data = {}, status = 200;
     if (path.endsWith("/scopes")) {
       data = [{ id: `scope-${scopeRevision}`, revision: scopeRevision, targets: ["127.0.0.1"], exclusions: ["127.0.0.2"] }];
-    } else if (path.endsWith("/plans") || path.endsWith("/plan-reviews")) {
+    } else if (path.endsWith("/plans")) {
+      data = savedPlans;
+    } else if (path.endsWith("/plan-reviews")) {
       data = [];
     } else if (path.endsWith("/result-revisions")) {
       data = hideEligible ? [] : [
@@ -50,8 +54,18 @@ try {
         data = { id: "plan-policy", assessment_id: "test-assessment", kind: "plans", revision: 1, state: "blocked", mode: "request-only", reason: "external-data-policy-approval-required", request: { ...body, proposal: { information_kind: "unknown", decision: null, blockers: ["external-data-policy-approval-required"], candidates: [], steps: [], execution_enabled: false, provider: { provider_invoked: false, model_called: false } } } };
         status = 201;
       } else if (String(body.request_text).includes("provider failure")) {
+        failedProviderAttempt = true;
         const isRetry = body.retry_failed_attempt === true;
         data = { id: isRetry ? "plan-failure-retry" : "plan-failure", assessment_id: "test-assessment", kind: "plans", revision: isRetry ? 3 : 2, state: "blocked", mode: "request-only", reason: "provider-rate-limited", request: { ...body, proposal: { information_kind: "unknown", decision: null, blockers: ["provider-rate-limited"], candidates: [], steps: [], execution_enabled: false, provider: { provider: "groq", model: "TEST ONLY local model fixture", provider_invoked: true, model_called: false, provider_source: "test-only" } } } };
+        status = 201;
+      } else if (failedProviderAttempt && body.retry_failed_attempt !== true) {
+        data = { id: "plan-retry-required", assessment_id: "test-assessment", kind: "plans", revision: 4, state: "blocked", mode: "request-only", reason: "prior-provider-failure; explicit-reviewer-retry-required", request: { ...body, proposal: { information_kind: "unknown", decision: null, blockers: ["prior-provider-failure; explicit-reviewer-retry-required"], candidates: [], steps: [], execution_enabled: false, provider: { provider: "groq", model: "TEST ONLY local model fixture", provider_invoked: false, model_called: false } } } };
+        status = 201;
+      } else if (body.retry_failed_attempt === true) {
+        const success = requests.filter(item => item.path.endsWith("/reasoning/replan") && item.body.retry_failed_attempt === true).length > 1;
+        data = success
+          ? { id: "plan-retry-success", assessment_id: "test-assessment", kind: "plans", revision: 5, state: "draft", mode: "request-only", request: { ...body, proposal: { information_kind: "ai-inference", decision: { decision: "select", selected_candidate_id: "review-sources", rationale: "TEST ONLY: explicit retry fixture response.", observation_ids: [observationId], expected_information_gain: "TEST ONLY", assumptions: [], stop_conditions: ["Stop if scope changes"], rejected_alternatives: [] }, candidates: [{ id: "review-sources", action: "request-review", observation_ids: [observationId] }], steps: [], execution_enabled: false, provider: { provider: "groq", model: "TEST ONLY local model fixture", provider_invoked: true, model_called: false, provider_source: "test-only" } } } }
+          : { id: "plan-failure-retry", assessment_id: "test-assessment", kind: "plans", revision: 4, state: "blocked", mode: "request-only", reason: "provider-rate-limited", request: { ...body, proposal: { information_kind: "unknown", decision: null, blockers: ["provider-rate-limited"], candidates: [], steps: [], execution_enabled: false, provider: { provider: "groq", model: "TEST ONLY local model fixture", provider_invoked: true, model_called: false, provider_source: "test-only" } } } };
         status = 201;
       } else if (requests.filter(item => item.path.endsWith("/reasoning/replan") && item.body.request_text === body.request_text && item.body.allow_external_processing === body.allow_external_processing && item.body.data_policy_reference === body.data_policy_reference).length > 1) {
         data = { id: "plan-repeated", assessment_id: "test-assessment", kind: "plans", revision: 4, state: "blocked", mode: "request-only", reason: "unchanged-evidence-or-action", request: { ...body, proposal: { information_kind: "unknown", decision: null, blockers: ["unchanged-evidence-or-action; reuse-prior-plan-instead-of-repeating-model-call"], candidates: [], steps: [], execution_enabled: false, provider: { provider: "groq", model: "TEST ONLY local model fixture", provider_invoked: false, model_called: false } } } };
@@ -60,6 +74,13 @@ try {
         data = { id: "plan-test-only", assessment_id: "test-assessment", kind: "plans", revision: 2, state: "draft", mode: "request-only", request: { ...body, context_sha256: "d".repeat(64), proposal: { information_kind: "ai-inference", decision: { decision: "select", selected_candidate_id: "review-sources", rationale: "TEST ONLY: the selected observation supports reviewing the source before proposing more work.", observation_ids: [observationId], expected_information_gain: "TEST ONLY: verify which services are actually represented.", assumptions: ["TEST ONLY synthetic source data"], stop_conditions: ["Stop if scope changes"], rejected_alternatives: [] }, candidates: [{ id: "review-sources", action: "request-review", observation_ids: [observationId] }], steps: [], execution_enabled: false, provider: { provider: "groq", model: "TEST ONLY local model fixture", provider_invoked: true, model_called: false, provider_source: "test-only", response_id_sha256: "e".repeat(64) } } } };
         status = 201;
       }
+    }
+    if (path.endsWith("/reasoning/replan") && status === 201) {
+      if (data.request && typeof data.request === "object") data.request.adaptive = true;
+      const index = savedPlans.findIndex(plan => plan.id === data.id);
+      if (index >= 0) savedPlans.splice(index, 1);
+      data.revision = Math.max(data.revision ?? 0, ...savedPlans.map(plan => plan.revision ?? 0)) + 1;
+      savedPlans.push(data);
     }
     await route.fulfill({ status, json: data });
   });
@@ -108,6 +129,16 @@ try {
   await page.getByRole("button", { name: "Replan from selected evidence" }).click();
   await page.getByText(/provider rate-limited this request/).first().waitFor();
   await page.getByRole("button", { name: "Retry failed provider call" }).waitFor();
+  await page.getByLabel("What should the model reconsider?").fill("try a fresh bounded request");
+  await page.getByRole("button", { name: "Replan from selected evidence" }).click();
+  await page.getByText(/previous provider attempt failed/).first().waitFor();
+  await page.getByRole("button", { name: "Retry failed provider call" }).waitFor();
+  await page.reload();
+  await page.getByRole("heading", { name: "Replan from evidence" }).waitFor();
+  await page.getByRole("button", { name: "Retry failed provider call" }).waitFor();
+  assert.equal(await page.getByLabel("What should the model reconsider?").inputValue(), "try a fresh bounded request", "saved request text survives reload");
+  assert.equal(await page.getByLabel(/I explicitly consent/).isChecked(), false, "external-processing consent requires fresh confirmation after reload");
+  await page.getByLabel(/I explicitly consent/).check();
   await page.getByRole("button", { name: "Retry failed provider call" }).click();
   assert.equal(requests.filter(item => item.path.endsWith("/reasoning/replan") && item.body.retry_failed_attempt).length, 1);
 

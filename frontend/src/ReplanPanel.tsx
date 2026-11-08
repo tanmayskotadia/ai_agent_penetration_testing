@@ -119,14 +119,34 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
     setPlans(nextPlans);
     const latest = [...nextScopes].sort((a, b) => b.revision - a.revision)[0];
     const adaptivePlans = nextPlans.filter(plan => plan.request.adaptive === true);
-    const previousConversation = adaptivePlans
-      .sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0))[0]?.request.conversation_id;
+    const latestAdaptivePlan = adaptivePlans
+      .sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0))[0];
+    const previousConversation = latestAdaptivePlan?.request.conversation_id;
     if (typeof previousConversation === "string") setConversationId(previousConversation);
+    if (typeof latestAdaptivePlan?.request.request_text === "string") {
+      setRequestText(latestAdaptivePlan.request.request_text);
+    }
+    if (typeof latestAdaptivePlan?.request.data_policy_reference === "string") {
+      setPolicyReference(latestAdaptivePlan.request.data_policy_reference);
+    }
+    const latestProposal = asRecord(latestAdaptivePlan?.request.proposal);
+    const latestProvider = asRecord(latestProposal.provider);
+    const latestDecision = asRecord(latestProposal.decision);
+    const latestBlockers = stringList(latestProposal.blockers);
+    setRetry(
+      (latestProvider.provider_invoked === true && !Object.keys(latestDecision).length)
+        || latestBlockers.includes("prior-provider-failure; explicit-reviewer-retry-required"),
+    );
     if (latest) {
       const validIds = new Set(nextRevisions
         .filter(row => row.state === "normalized" && row.scope_id === latest.id)
         .map(row => row.id));
-      setSelectedRevisionIds(current => current.filter(id => validIds.has(id)));
+      const savedSelection = stringList(latestAdaptivePlan?.request.result_revision_ids)
+        .filter(id => validIds.has(id));
+      setSelectedRevisionIds(current => {
+        const currentSelection = current.filter(id => validIds.has(id));
+        return currentSelection.length ? currentSelection : savedSelection;
+      });
     } else setSelectedRevisionIds([]);
   }
 
@@ -186,7 +206,10 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
       setStatus(blockers.length
         ? `Saved blocked plan ${saved.id}. ${explainBlocker(blockers[0])}`
         : `Saved plan ${saved.id}. AI recommendation is ready for separate human review.`);
-      setRetry(provider.provider_invoked === true && !Object.keys(decision).length);
+      setRetry(
+        (provider.provider_invoked === true && !Object.keys(decision).length)
+          || blockers.includes("prior-provider-failure; explicit-reviewer-retry-required"),
+      );
       setConversationId(String(saved.request.conversation_id ?? conversationId));
       setInspectorReload(value => value + 1);
       setPlans(current => current.map(plan => plan.id === saved.id ? saved : plan));
