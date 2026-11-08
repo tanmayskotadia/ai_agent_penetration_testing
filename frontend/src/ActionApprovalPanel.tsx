@@ -8,7 +8,7 @@ const safe = (value: unknown) => String(value ?? "not supplied")
   .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
   .replace(/((?:password|secret|token|api[_-]?key)\s*[:=]\s*)[^\s&,;]+/gi, "$1[redacted]");
 
-export function ActionApprovalPanel({ assessmentId, token, onChanged }: { assessmentId: string; token: string; onChanged: () => void }) {
+export function ActionApprovalPanel({ assessmentId, token, onChanged, onOpenPlan }: { assessmentId: string; token: string; onChanged: () => void; onOpenPlan?: () => void }) {
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [scope, setScope] = useState<Scope | null>(null);
   const [ready, setReady] = useState(false);
@@ -74,7 +74,7 @@ export function ActionApprovalPanel({ assessmentId, token, onChanged }: { assess
       <p>{problem(item)}</p>
       <dl><dt>Exact target</dt><dd>{safe(item.action.destination_url)}</dd><dt>Template/module</dt><dd>{item.action.template}</dd><dt>Parameters</dt><dd><code>{JSON.stringify(item.action.parameters)}</code></dd>
       <dt>Runtime limit</dt><dd>{item.action.max_runtime_seconds} seconds</dd><dt>Expected impact</dt><dd>{safe(item.action.expected_impact)}</dd><dt>Rollback</dt><dd>{safe(item.action.rollback_instructions)}</dd>
-      <dt>Rationale</dt><dd>No separate rationale is supplied by the action contract. <a href="#assessment-setup">Review the referenced plan</a>: {item.action.plan_id}, revision {item.action.plan_revision}.</dd>
+      <dt>Rationale</dt><dd>No separate rationale is supplied by the action contract. <a href="#assessment-setup" onClick={event => { if (onOpenPlan) { event.preventDefault(); onOpenPlan(); } }}>Review the referenced plan</a>: {item.action.plan_id}, revision {item.action.plan_revision}.</dd>
       <dt>Scope</dt><dd>{item.scope_id} · revision {item.scope_revision}</dd><dt>Expiry</dt><dd>{item.valid_until}</dd><dt>Enforced action digest</dt><dd><code>{item.action_digest}</code></dd><dt>Parameter hash</dt><dd><code>{item.parameter_hash}</code></dd><dt>Policy/profile digests</dt><dd>{item.policy_digest} · {item.profile_digest ?? "not supplied"}</dd><dt>Reviewer</dt><dd>{item.reviewer ?? "no recorded reviewer"}</dd></dl>
       {!item.action.evidence_ids?.length && <p>No evidence references supplied by this action.</p>}
       {item.action.evidence_ids?.map(id => <div key={id}><p>Action evidence {id}</p><EvidenceInspector assessmentId={assessmentId} token={token} evidenceId={id} /></div>)}

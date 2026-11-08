@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { ApiSchemas } from "./generated/api";
 import { mutate } from "./api-client";
+import { EvidenceInspector } from "./EvidenceInspector";
 type Row = Record<string, unknown>;
 type Resource = ApiSchemas["WorkflowResource"];
 type FrameworkReference = { framework: string; status: "applicable" | "not-applicable" | "unknown"; identifier: string | null; supporting_observation_ids: string[]; rationale: string };
@@ -27,7 +28,9 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const active = useRef(false);
+  const formId = useId();
   const observations = rows(record(analytics).ranked_observations);
+  const selectedObservations = observations.filter(item => selected.includes(String(item.observation_id)));
   const path = `/api/v1/assessments/${encodeURIComponent(assessmentId)}/report-findings`;
   async function reload() {
     const response = await fetch(path, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
@@ -81,8 +84,18 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
     <p>A human reviewer can group source observations into a report finding and supply descriptions, impact, remediation and references. Technical impact requires an evidence basis; business impact requires stated assumptions. Remediation requires its observed basis and concrete verification or retest steps. Recommendations remain reviewer-supplied and are never marked as executed. Empty fields remain unknown.</p>
     <button disabled={busy} onClick={() => void reload().catch(error => setStatus(String(error)))}>Reload report content</button>
     <label>Report finding to edit<select aria-label="Report finding to edit" value={editing} onChange={event => edit(event.target.value)}><option value="">New report finding</option>{findings.map(item => <option key={item.id} value={String(item.request.finding_id)}>{String(item.request.title)} · revision {item.revision}</option>)}</select></label>
-    {!observations.length ? <p>Import and normalize source evidence before writing report findings.</p> : <form onSubmit={event => void save(event)}>
-      <label>Source observations<select aria-label="Report source observations" multiple value={selected} required onChange={event => setSelected([...event.target.selectedOptions].map(option => option.value))}>{observations.map(item => <option key={String(item.observation_id)} value={String(item.observation_id)}>{String(item.title)} · asset {String(item.asset_id)} · evidence {String(item.evidence_id)}</option>)}</select></label>
+    {!observations.length ? <p>Import and normalize source evidence before writing report findings.</p> : <>
+      <label>Source observations<select form={formId} aria-label="Report source observations" multiple value={selected} required onChange={event => setSelected([...event.target.selectedOptions].map(option => option.value))}>{observations.map(item => <option key={String(item.observation_id)} value={String(item.observation_id)}>{String(item.title)} · asset {String(item.asset_id)} · evidence {String(item.evidence_id)}</option>)}</select></label>
+      {selectedObservations.length > 0 && <div className="finding-sources">
+        <h4>Selected source evidence</h4>
+        <ul>{selectedObservations.map(item => <li key={String(item.observation_id)}>
+          <strong>{String(item.title || "Source observation")}</strong>
+          {typeof item.evidence_id === "string" && item.evidence_id
+            ? <EvidenceInspector assessmentId={assessmentId} token={token} evidenceId={item.evidence_id} observationId={String(item.observation_id)} />
+            : <p className="help-text">This observation has no source artifact reference in the current snapshot.</p>}
+        </li>)}</ul>
+      </div>}
+      <form id={formId} onSubmit={event => void save(event)}>
       {FIELDS.map(field => <label key={field}>{LABELS[field]}{["technical_impact_basis", "business_impact_basis", "remediation_basis", "verification_steps"].includes(field) && <span> (required when the corresponding impact or remediation is supplied)</span>}<textarea aria-label={LABELS[field]} required={["title", "description", "rationale"].includes(field) || field === "technical_impact_basis" && Boolean(fields.technical_impact?.trim()) || field === "business_impact_basis" && Boolean(fields.business_impact?.trim()) || ["remediation_basis", "verification_steps"].includes(field) && Boolean(fields.remediation?.trim())} minLength={field === "rationale" ? 10 : undefined} maxLength={field === "title" ? 500 : field === "rationale" ? 2000 : field === "remediation_owner" ? 200 : ["references", "verification_steps"].includes(field) ? 30000 : 4000} value={fields[field] ?? ""} onChange={event => setFields(current => ({ ...current, [field]: event.target.value }))} /></label>)}
       <fieldset className="standards-reference-editor"><legend>Applicable framework references</legend><p>Choose only a mapping supported by the selected observations. CVE, CWE and CVSS values are copied from source observations automatically and stay labeled source-reported. An ATT&amp;CK mapping is a reviewer hypothesis, not proof an adversary action occurred. Formal compliance is never inferred.</p>
         <label>Framework<select aria-label="Framework reference" value={referenceFramework} onChange={event => { setReferenceFramework(event.target.value); setReferenceIdentifier(""); }}>
@@ -94,8 +107,9 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
         <button type="button" className="button-secondary" disabled={!selected.length || referenceRationale.trim().length < 10 || referenceStatus === "applicable" && !referenceIdentifier} onClick={addStandardReference}>Add framework reference</button>
         {standardReferences.length > 0 && <ul aria-label="Framework references to save">{standardReferences.map((value, index) => <li key={`${value.framework}-${value.status}-${value.identifier}-${index}`}><span>{currentFramework?.key === value.framework ? currentFramework.name : catalog.find(item => item.key === value.framework)?.name ?? value.framework} · {value.status}{value.identifier ? ` · ${value.identifier}` : ""} · {value.supporting_observation_ids.length} linked observation(s) — {value.rationale}</span><button type="button" className="button-tertiary" aria-label={`Remove framework reference ${index + 1}`} onClick={() => setStandardReferences(values => values.filter((_, item) => item !== index))}>Remove</button></li>)}</ul>}
       </fieldset>
-      <button disabled={busy || revision === null || !selected.length}>Save reviewed report content</button>
-    </form>}
+      <button className="primary-action" disabled={busy || revision === null || !selected.length}>Save reviewed report content</button>
+      </form>
+    </>}
     <p role="status" aria-live="polite">{status}</p>
     <ul>{findings.map(item => <li key={item.id}>{String(item.request.title)} · finding {String(item.request.finding_id)} · content revision {item.revision} · reviewer {String(item.request.recorded_by)} · {String(item.request.recorded_at)}</li>)}</ul>
   </section>;
