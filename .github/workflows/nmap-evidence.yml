@@ -1,0 +1,60 @@
+name: Nmap evidence from a disposable loopback lab
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Install Nmap on the disposable runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends nmap
+
+      - name: Capture one local lab port
+        shell: bash
+        run: |
+          set -euo pipefail
+          lab=$(mktemp -d)
+          python3 -m http.server 3000 --bind 127.0.0.1 --directory "$lab" > "$RUNNER_TEMP/nmap-lab.log" 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          curl --noproxy '*' --fail --silent --show-error --retry 5 --retry-connrefused --max-time 2 http://127.0.0.1:3000/ >/dev/null
+          mkdir -p "$RUNNER_TEMP/nmap-evidence"
+          cd "$RUNNER_TEMP/nmap-evidence"
+          nmap --version > nmap-version.txt
+          nmap -sT -Pn -n --host-timeout 30s --max-retries 1 -p 3000 -oX nmap-report.xml 127.0.0.1
+          python3 - <<'PY'
+          import json
+          import xml.etree.ElementTree as ET
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = ET.parse("nmap-report.xml").getroot()
+          finish = root.find("./runstats/finished")
+          hosts = root.findall("./host")
+          assert root.tag == "nmaprun" and root.attrib["scanner"] == "nmap"
+          assert finish is not None and finish.attrib.get("exit") == "success"
+          assert len(hosts) == 1
+          assert [node.attrib["addr"] for node in hosts[0].findall("address")] == ["127.0.0.1"]
+          ports = hosts[0].findall("./ports/port")
+          assert len(ports) == 1 and ports[0].attrib == {"protocol": "tcp", "portid": "3000"}
+          assert ports[0].find("state").attrib["state"] == "open"
+          captured_at = datetime.fromtimestamp(int(finish.attrib["time"]), timezone.utc)
+          metadata = {"target": "127.0.0.1", "port": "3000/tcp", "version": root.attrib["version"],
+                      "captured_at": captured_at.isoformat(), "scope": "disposable runner loopback lab"}
+          Path("capture-metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+          PY
+          sha256sum nmap-report.xml > nmap-report.sha256
+
+      - name: Save the original and its provenance metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmap-loopback-evidence
+          path: ${{ runner.temp }}/nmap-evidence/
+          if-no-files-found: error
+          retention-days: 14
