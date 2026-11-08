@@ -1,9 +1,12 @@
 """Versioned requests; accepted requests are not completed scanner/report operations."""
 
+import re
 from typing import Literal
 from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+
+from aegistrace.standards import ReportStandardReferenceCreate
 
 
 class ApiContract(BaseModel):
@@ -216,14 +219,32 @@ class ReportFindingCreate(ApiContract):
     remediation_owner: str | None = Field(default=None, min_length=1, max_length=200)
     verification_steps: list[str] = Field(default_factory=list, max_length=12)
     references: list[str] = Field(default_factory=list, max_length=30)
+    standard_references: list[ReportStandardReferenceCreate] = Field(
+        default_factory=list, max_length=30
+    )
     rationale: str = Field(min_length=10, max_length=2000)
 
     @model_validator(mode="after")
     def unique_sources(self) -> "ReportFindingCreate":
         if len(set(self.observation_ids)) != len(self.observation_ids):
             raise ValueError("observation references must be unique")
+        if len(
+            {
+                (value.framework, value.status, value.identifier)
+                for value in self.standard_references
+            }
+        ) != len(self.standard_references):
+            raise ValueError("standard references must not contain duplicate framework decisions")
         if any(not value.strip() or len(value) > 1000 for value in self.references):
             raise ValueError("references must be bounded nonempty source descriptions")
+        if any(
+            re.search(
+                r"(?i)(?:CVE-\S+|CWE-\S+|CVSS(?:\s|:)|A\d{2}:20\d{2}|T\d{4}(?:\.\d{3})?|\b(?:ID|PR|DE|GV|RS|RC)\.[A-Z]{2}-\d{2}\b)",
+                value,
+            )
+            for value in self.references
+        ):
+            raise ValueError("standard identifiers must use structured, evidence-linked references")
         if self.technical_impact and not self.technical_impact_basis:
             raise ValueError("technical impact requires an explicit evidence basis")
         if not self.technical_impact and self.technical_impact_basis:

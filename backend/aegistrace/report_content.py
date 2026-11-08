@@ -5,6 +5,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from aegistrace.standards import (
+    CATALOG_REVISION,
+    FrozenStandardReference,
+    framework_register,
+    reviewer_reference,
+    source_references,
+)
+
 
 class DetailedReportFinding(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -28,6 +36,7 @@ class DetailedReportFinding(BaseModel):
     remediation_owner: str
     verification_steps: list[str]
     references: list[str]
+    standard_references: list[FrozenStandardReference]
     content_provenance: dict[str, Any]
 
 
@@ -88,6 +97,18 @@ def detailed_records(source: dict[str, Any]) -> list[dict[str, Any]]:
                 remediation_owner=note_body.get("remediation_owner") or "unknown",
                 verification_steps=note_body.get("verification_steps", []),
                 references=note_body.get("references", []),
+                standard_references=(
+                    [
+                        FrozenStandardReference.model_validate(
+                            reviewer_reference(value, set(members))
+                        )
+                        for value in note_body.get("standard_references", [])
+                    ]
+                    + [
+                        FrozenStandardReference.model_validate(value)
+                        for value in source_references(sources)
+                    ]
+                ),
                 content_provenance={
                     "record_id": note.get("id"),
                     "revision": note.get("revision"),
@@ -126,7 +147,10 @@ class VaptReportContent(BaseModel):
     limitations: list[str]
     coverage: dict[str, Any]
     grounded_claims: list[dict[str, Any]] = Field(default_factory=list)
-    content_revision: Literal["1.2"] = "1.2"
+    content_revision: Literal["1.3"] = "1.3"
+    standards_catalog_revision: str = CATALOG_REVISION
+    standards_register: list[dict[str, Any]] = Field(default_factory=list)
+    standard_references: list[FrozenStandardReference] = Field(default_factory=list)
     detailed_findings: list[DetailedReportFinding] = Field(default_factory=list)
     summary_counts: dict[str, int] = Field(default_factory=dict)
     execution_summary: list[dict[str, Any]] = Field(default_factory=list)
@@ -333,6 +357,27 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
     observations = source.get("observations", [])
     findings = source.get("findings", [])
     detailed = detailed_records(source)
+    all_references = [
+        reference for finding in detailed for reference in finding["standard_references"]
+    ]
+    all_references.insert(
+        0,
+        FrozenStandardReference(
+            framework="nist-sp-800-115",
+            name="NIST SP 800-115",
+            version="2008",
+            status="applicable",
+            relation="methodology",
+            identifier="SP 800-115",
+            title="Technical Guide to Information Security Testing and Assessment",
+            source_url="https://doi.org/10.6028/NIST.SP.800-115",
+            rationale=(
+                "Cited as a general testing-methodology reference. This report may contain recorded imports only; "
+                "the citation does not assert every NIST procedure or a live test was performed."
+            ),
+            validation="official publication reference; procedure applicability is limited by recorded scope and methods",
+        ).model_dump(mode="json"),
+    )
     reviewer_findings = [value for value in detailed if value["record_kind"] == "reviewer-finding"]
     analytics = source.get("correlation", {})
     reviewed_correlations = analytics.get("reviewed_clusters", [])
@@ -353,6 +398,7 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
                 "This export reflects selected frozen source revisions; it does not establish full target or endpoint coverage.",
                 "Participant-supplied authorization references and source metadata are not independently verified.",
                 "Source CVSS and severity are reproduced as reported and are not recalculated.",
+                "Standards references are source-reported or reviewer-mapped; they do not establish compliance, certification, vulnerability confirmation, or adversary activity.",
                 "External CVE/CWE advisory freshness, remediation correctness, and business impact have not been independently validated.",
                 "No live scan is claimed by a recorded-import workflow.",
                 *source.get("limitations", []),
@@ -405,6 +451,9 @@ def build_vapt_content(source: dict[str, Any]) -> dict[str, Any]:
             "reviewed_findings": findings,
             "finding_reviews": source.get("finding_reviews", []),
             "detailed_findings": detailed,
+            "standards_catalog_revision": CATALOG_REVISION,
+            "standards_register": framework_register(all_references),
+            "standard_references": all_references,
             "summary_counts": {
                 "source_observation_count": len(observations),
                 "reviewer_finding_count": len(reviewer_findings),

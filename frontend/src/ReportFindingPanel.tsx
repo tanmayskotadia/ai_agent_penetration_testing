@@ -4,6 +4,9 @@ import type { ApiSchemas } from "./generated/api";
 import { mutate } from "./api-client";
 type Row = Record<string, unknown>;
 type Resource = ApiSchemas["WorkflowResource"];
+type FrameworkReference = { framework: string; status: "applicable" | "not-applicable" | "unknown"; identifier: string | null; supporting_observation_ids: string[]; rationale: string };
+type CatalogEntry = { id: string; title: string; source_url?: string };
+type CatalogFramework = { key: string; name: string; version: string; role: string; description: string; entries: CatalogEntry[] };
 const record = (value: unknown): Row => value !== null && typeof value === "object" ? value as Row : {};
 const rows = (value: unknown): Row[] => Array.isArray(value) ? value as Row[] : [];
 const FIELDS = ["title", "description", "technical_impact", "technical_impact_basis", "business_impact", "business_impact_basis", "remediation", "remediation_basis", "remediation_owner", "verification_steps", "references", "rationale"] as const;
@@ -15,6 +18,12 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
   const [editing, setEditing] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [catalog, setCatalog] = useState<CatalogFramework[]>([]);
+  const [standardReferences, setStandardReferences] = useState<FrameworkReference[]>([]);
+  const [referenceFramework, setReferenceFramework] = useState("owasp-top-10-2025");
+  const [referenceStatus, setReferenceStatus] = useState<FrameworkReference["status"]>("applicable");
+  const [referenceIdentifier, setReferenceIdentifier] = useState("");
+  const [referenceRationale, setReferenceRationale] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const active = useRef(false);
@@ -23,15 +32,30 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
   async function reload() {
     const response = await fetch(path, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
     if (!response.ok) throw new Error(`Report content unavailable (${response.status}). Reload before saving.`);
-    const body = await response.json() as { revision: number; findings: Resource[] };
-    if (active.current) { setFindings(body.findings); setRevision(body.revision); }
+    const body = await response.json() as { revision: number; findings: Resource[]; reference_catalog?: { frameworks?: CatalogFramework[] } };
+    if (active.current) { setFindings(body.findings); setRevision(body.revision); setCatalog(body.reference_catalog?.frameworks ?? []); }
   }
   useEffect(() => { active.current = true; void reload().catch(error => { if (active.current) setStatus(String(error)); }); return () => { active.current = false; }; }, [path, token]);
   function edit(id: string) {
     setEditing(id);
     const value = findings.find(item => item.request.finding_id === id)?.request ?? {};
     setSelected(Array.isArray(value.observation_ids) ? value.observation_ids as string[] : []);
+    setStandardReferences(Array.isArray(value.standard_references) ? value.standard_references as FrameworkReference[] : []);
     setFields(Object.fromEntries(FIELDS.map(field => [field, ["references", "verification_steps"].includes(field) && Array.isArray(value[field]) ? value[field].join("\n") : String(value[field] ?? "")])));
+  }
+  const currentFramework = catalog.find(value => value.key === referenceFramework);
+  function addStandardReference() {
+    const entry = currentFramework?.entries.find(value => value.id === referenceIdentifier);
+    const supportedFramework = ["owasp-top-10-2025", "mitre-attack-enterprise", "nist-csf-2.0"].includes(referenceFramework);
+    if (!supportedFramework || selected.length === 0 || referenceRationale.trim().length < 10 || referenceStatus === "applicable" && !entry) return;
+    setStandardReferences(values => [...values, {
+      framework: referenceFramework,
+      status: referenceStatus,
+      identifier: referenceStatus === "applicable" ? referenceIdentifier : null,
+      supporting_observation_ids: [...selected],
+      rationale: referenceRationale.trim(),
+    }]);
+    setReferenceRationale("");
   }
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -45,9 +69,10 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
         remediation: fields.remediation?.trim() || null, remediation_basis: fields.remediation_basis?.trim() || null,
         remediation_owner: fields.remediation_owner?.trim() || null,
         verification_steps: (fields.verification_steps ?? "").split("\n").map(value => value.trim()).filter(Boolean),
-        references: (fields.references ?? "").split("\n").map(value => value.trim()).filter(Boolean) }, crypto.randomUUID());
+        references: (fields.references ?? "").split("\n").map(value => value.trim()).filter(Boolean),
+        standard_references: standardReferences }, crypto.randomUUID());
       if (!active.current) return;
-      await reload(); setEditing(""); setSelected([]); setFields({});
+      await reload(); setEditing(""); setSelected([]); setFields({}); setStandardReferences([]);
       setStatus("Reviewer report content saved. Freeze a new report containing all selected source revisions to include it. Prior frozen reports remain unchanged; this content does not confirm exploitability."); onChanged();
     } catch (error) { if (active.current) { setStatus(error instanceof Error ? error.message : "Report content was not saved."); await reload().catch(() => setRevision(null)); } }
     finally { if (active.current) setBusy(false); }
@@ -59,6 +84,16 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
     {!observations.length ? <p>Import and normalize source evidence before writing report findings.</p> : <form onSubmit={event => void save(event)}>
       <label>Source observations<select aria-label="Report source observations" multiple value={selected} required onChange={event => setSelected([...event.target.selectedOptions].map(option => option.value))}>{observations.map(item => <option key={String(item.observation_id)} value={String(item.observation_id)}>{String(item.title)} · asset {String(item.asset_id)} · evidence {String(item.evidence_id)}</option>)}</select></label>
       {FIELDS.map(field => <label key={field}>{LABELS[field]}{["technical_impact_basis", "business_impact_basis", "remediation_basis", "verification_steps"].includes(field) && <span> (required when the corresponding impact or remediation is supplied)</span>}<textarea aria-label={LABELS[field]} required={["title", "description", "rationale"].includes(field) || field === "technical_impact_basis" && Boolean(fields.technical_impact?.trim()) || field === "business_impact_basis" && Boolean(fields.business_impact?.trim()) || ["remediation_basis", "verification_steps"].includes(field) && Boolean(fields.remediation?.trim())} minLength={field === "rationale" ? 10 : undefined} maxLength={field === "title" ? 500 : field === "rationale" ? 2000 : field === "remediation_owner" ? 200 : ["references", "verification_steps"].includes(field) ? 30000 : 4000} value={fields[field] ?? ""} onChange={event => setFields(current => ({ ...current, [field]: event.target.value }))} /></label>)}
+      <fieldset className="standards-reference-editor"><legend>Applicable framework references</legend><p>Choose only a mapping supported by the selected observations. CVE, CWE and CVSS values are copied from source observations automatically and stay labeled source-reported. An ATT&amp;CK mapping is a reviewer hypothesis, not proof an adversary action occurred. Formal compliance is never inferred.</p>
+        <label>Framework<select aria-label="Framework reference" value={referenceFramework} onChange={event => { setReferenceFramework(event.target.value); setReferenceIdentifier(""); }}>
+          {catalog.filter(value => ["owasp-top-10-2025", "mitre-attack-enterprise", "nist-csf-2.0"].includes(value.key)).map(value => <option key={value.key} value={value.key}>{value.name} · {value.version}</option>)}
+        </select></label>
+        <label>Applicability<select aria-label="Framework applicability" value={referenceStatus} onChange={event => setReferenceStatus(event.target.value as FrameworkReference["status"])}><option value="applicable">Applicable mapping</option><option value="not-applicable">Not applicable</option><option value="unknown">Unknown</option></select></label>
+        {referenceStatus === "applicable" && <label>Curated identifier<select aria-label="Curated framework identifier" value={referenceIdentifier} onChange={event => setReferenceIdentifier(event.target.value)} required><option value="">Select a supported identifier</option>{currentFramework?.entries.map(value => <option value={value.id} key={value.id}>{value.id} · {value.title}</option>)}</select></label>}
+        <label>Mapping rationale<textarea aria-label="Framework mapping rationale" minLength={10} maxLength={2000} value={referenceRationale} onChange={event => setReferenceRationale(event.target.value)} placeholder="Explain how the selected observation supports this mapping, or why it is unknown/not applicable." /></label>
+        <button type="button" className="button-secondary" disabled={!selected.length || referenceRationale.trim().length < 10 || referenceStatus === "applicable" && !referenceIdentifier} onClick={addStandardReference}>Add framework reference</button>
+        {standardReferences.length > 0 && <ul aria-label="Framework references to save">{standardReferences.map((value, index) => <li key={`${value.framework}-${value.status}-${value.identifier}-${index}`}><span>{currentFramework?.key === value.framework ? currentFramework.name : catalog.find(item => item.key === value.framework)?.name ?? value.framework} · {value.status}{value.identifier ? ` · ${value.identifier}` : ""} · {value.supporting_observation_ids.length} linked observation(s) — {value.rationale}</span><button type="button" className="button-tertiary" aria-label={`Remove framework reference ${index + 1}`} onClick={() => setStandardReferences(values => values.filter((_, item) => item !== index))}>Remove</button></li>)}</ul>}
+      </fieldset>
       <button disabled={busy || revision === null || !selected.length}>Save reviewed report content</button>
     </form>}
     <p role="status" aria-live="polite">{status}</p>

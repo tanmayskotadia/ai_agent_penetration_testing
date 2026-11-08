@@ -16,6 +16,7 @@ from aegistrace.platform_api import record_request
 from aegistrace.repository import require_access
 from aegistrace.schema_v1 import assessments, observations
 from aegistrace.settings import Settings
+from aegistrace.standards import catalogue_payload, validate_mapping
 
 
 def report_finding_history(connection: Connection, assessment_id: UUID) -> list[dict[str, Any]]:
@@ -60,6 +61,7 @@ def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
                     "revision": history[-1]["revision"] if history else 0,
                     "findings": latest_report_findings(history),
                     "history": history,
+                    "reference_catalog": catalogue_payload(),
                 }
         except LookupError as error:
             raise HTTPException(404, "Assessment not found") from error
@@ -100,6 +102,16 @@ def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
             )
             if known != selected:
                 raise HTTPException(404, "Report observations must belong to this assessment")
+            for reference in body.standard_references:
+                try:
+                    validate_mapping(reference, selected)
+                except ValueError as error:
+                    raise HTTPException(422, str(error)) from error
+                for observation_id in reference.supporting_observation_ids:
+                    if str(observation_id) not in selected:
+                        raise HTTPException(
+                            404, "Standard mapping observations must belong to this finding"
+                        )
             for value in latest:
                 prior = value["request"]
                 if prior["finding_id"] != str(body.finding_id) and selected.intersection(

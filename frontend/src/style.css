@@ -118,6 +118,12 @@ main { max-width: 1180px; padding: clamp(20px, 4vw, 48px) clamp(14px, 3vw, 32px)
 .result-summary { margin-top: 18px; padding: 16px; border: 1px solid #3b6970; border-radius: 10px; background: #0d211f; }
 .result-summary h4 { margin-top: 0; }
 .result-summary > p:first-of-type { max-width: 75ch; }
+.standards-reference-editor { display: grid; gap: .65rem; margin: 14px 0; padding: 14px; border: 1px solid #476478; border-radius: 10px; background: #10202c; }
+.standards-reference-editor legend { padding: 0 .35rem; color: #e7f4f8; font-weight: 700; }
+.standards-reference-editor > p { margin: 0; color: var(--muted); }
+.standards-reference-editor label { margin: 0; }
+.standards-reference-editor ul { padding-left: 1.2rem; }
+.standards-reference-editor li { margin: .35rem 0; }
 .replay-controls { padding-top: 8px; border-top: 1px solid var(--line); }
 .replay-controls h4 { margin-bottom: .2rem; }
 .signin-card, .empty-state { max-width: 760px; margin: 22px auto; padding: clamp(16px, 3vw, 28px); border: 1px solid var(--line); border-radius: 14px; background: var(--surface-deep); }

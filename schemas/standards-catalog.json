@@ -1,0 +1,142 @@
+{
+  "frameworks": [
+    {
+      "description": "Technical guide for information security testing and assessment. A citation does not mean every procedure was performed.",
+      "entries": [],
+      "key": "nist-sp-800-115",
+      "name": "NIST SP 800-115",
+      "role": "methodology",
+      "source_url": "https://doi.org/10.6028/NIST.SP.800-115",
+      "version": "2008"
+    },
+    {
+      "description": "Web application risk-awareness categories; a reviewer mapping is not proof that a vulnerability exists.",
+      "entries": [
+        {
+          "id": "A01:2025",
+          "title": "Broken Access Control"
+        },
+        {
+          "id": "A02:2025",
+          "title": "Security Misconfiguration"
+        },
+        {
+          "id": "A03:2025",
+          "title": "Software Supply Chain Failures"
+        },
+        {
+          "id": "A04:2025",
+          "title": "Cryptographic Failures"
+        },
+        {
+          "id": "A05:2025",
+          "title": "Injection"
+        },
+        {
+          "id": "A06:2025",
+          "title": "Insecure Design"
+        },
+        {
+          "id": "A07:2025",
+          "title": "Authentication Failures"
+        },
+        {
+          "id": "A08:2025",
+          "title": "Software or Data Integrity Failures"
+        },
+        {
+          "id": "A09:2025",
+          "title": "Security Logging and Alerting Failures"
+        },
+        {
+          "id": "A10:2025",
+          "title": "Mishandling of Exceptional Conditions"
+        }
+      ],
+      "key": "owasp-top-10-2025",
+      "name": "OWASP Top 10",
+      "role": "risk-category",
+      "source_url": "https://top10.owasp.org/2025/",
+      "version": "2025"
+    },
+    {
+      "description": "Only identifiers present in the exact selected source observation are included; record validity and freshness are not independently checked.",
+      "entries": [],
+      "key": "cve",
+      "name": "CVE",
+      "role": "source-identifier",
+      "source_url": "https://www.cve.org/",
+      "version": "CVE Program; record version not pinned"
+    },
+    {
+      "description": "Scores, version, and vector are reproduced only when all are present in selected source evidence; AegisTrace does not calculate or recalibrate them.",
+      "entries": [],
+      "key": "cvss",
+      "name": "CVSS",
+      "role": "source-score",
+      "source_url": "https://www.first.org/cvss/v4-0/specification-document",
+      "version": "source-reported version; current reference CVSS 4.0"
+    },
+    {
+      "description": "Only identifiers present in selected source observations are included; they remain source-reported and may not be a validated mapping.",
+      "entries": [],
+      "key": "cwe",
+      "name": "CWE",
+      "role": "source-identifier",
+      "source_url": "https://cwe.mitre.org/data/",
+      "version": "CWE List 5.0"
+    },
+    {
+      "description": "A reviewer mapping is a taxonomy hypothesis. A vulnerability category or exposed port is not evidence that an adversary action occurred.",
+      "entries": [
+        {
+          "id": "T1190",
+          "source_url": "https://attack.mitre.org/techniques/T1190/",
+          "title": "Exploit Public-Facing Application"
+        },
+        {
+          "id": "T1059",
+          "source_url": "https://attack.mitre.org/techniques/T1059/",
+          "title": "Command and Scripting Interpreter"
+        },
+        {
+          "id": "T1078",
+          "source_url": "https://attack.mitre.org/techniques/T1078/",
+          "title": "Valid Accounts"
+        }
+      ],
+      "key": "mitre-attack-enterprise",
+      "name": "MITRE ATT&CK Enterprise",
+      "role": "reviewer-mapped-hypothesis",
+      "source_url": "https://attack.mitre.org/resources/updates/",
+      "version": "20.1 (2026-11-05)"
+    },
+    {
+      "description": "Outcome mappings support communication and do not establish control effectiveness, organizational conformance, or certification.",
+      "entries": [
+        {
+          "id": "ID.AM-01",
+          "title": "Inventories of hardware managed by the organization are maintained"
+        },
+        {
+          "id": "PR.AA-01",
+          "title": "Identities and credentials for authorized users, services, and hardware are managed by the organization"
+        },
+        {
+          "id": "PR.PS-01",
+          "title": "Configuration management practices are established and applied"
+        },
+        {
+          "id": "DE.CM-01",
+          "title": "Networks and network services are monitored to find potentially adverse events"
+        }
+      ],
+      "key": "nist-csf-2.0",
+      "name": "NIST CSF",
+      "role": "reviewer-mapped-outcome",
+      "source_url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20",
+      "version": "2.0 (2024-02-26)"
+    }
+  ],
+  "revision": "aegistrace-standards-2026-11-08.1"
+}

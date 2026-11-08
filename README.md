@@ -46,6 +46,7 @@ python scripts/export_requirements.py --check
 python scripts/validate_requirements.py
 uv run python scripts/export_domain_schemas.py --check
 uv run python scripts/export_api_contracts.py --check
+uv run python scripts/export_standards_catalog.py --check
 uv run python scripts/export_capabilities.py --check
 cd frontend
 npm run build
@@ -62,6 +63,7 @@ CI installs from `uv.lock` and `frontend/package-lock.json`, verifies migrations
 - `frontend`: guided four-stage analyst workspace; see the [workspace flow and UI acceptance guide](docs/analyst-workspace.md).
 - [Requirements](docs/requirements.md), [architecture](docs/architecture.md), [threat model](docs/threat-model.md), [ADRs](docs/adr/README.md), [submission gates](docs/submission-gates.md).
 - [Prerequisites and observed resources](docs/prerequisites.md), [licensing assumptions](docs/licensing.md), [model/data policy](docs/model-data-policy.md), [lab authorization](docs/lab-authorization.md), [fixture provenance](docs/fixture-provenance.md).
+- [Versioned standards references in frozen reports](docs/standards-mapping.md) explains source-reported identifiers, reviewer mappings, catalog revisions, and the no-compliance-claim rule.
 
 ### Analyst workspace preview
 

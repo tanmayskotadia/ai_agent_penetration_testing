@@ -3099,6 +3099,14 @@
             "title": "Schema Version",
             "type": "string"
           },
+          "standard_references": {
+            "items": {
+              "$ref": "#/components/schemas/ReportStandardReferenceCreate"
+            },
+            "maxItems": 30,
+            "title": "Standard References",
+            "type": "array"
+          },
           "technical_impact": {
             "anyOf": [
               {
@@ -3147,6 +3155,66 @@
           "rationale"
         ],
         "title": "ReportFindingCreate",
+        "type": "object"
+      },
+      "ReportStandardReferenceCreate": {
+        "additionalProperties": false,
+        "description": "Human mapping request. Source-derived identifiers are deliberately not accepted here.",
+        "properties": {
+          "framework": {
+            "enum": [
+              "owasp-top-10-2025",
+              "mitre-attack-enterprise",
+              "nist-csf-2.0"
+            ],
+            "title": "Framework",
+            "type": "string"
+          },
+          "identifier": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "applicable",
+              "not-applicable",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supporting_observation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Supporting Observation Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "framework",
+          "status",
+          "supporting_observation_ids",
+          "rationale"
+        ],
+        "title": "ReportStandardReferenceCreate",
         "type": "object"
       },
       "ReviewDecision": {

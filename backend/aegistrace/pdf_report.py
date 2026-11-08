@@ -147,6 +147,32 @@ def render_evidence_report(
             ("Validity", scope.get("valid_until") or "not supplied"),
         ]:
             lines.extend((part, 2) for part in _wrap(f"{label}: {_display(value)}"))
+        lines.append(("Standards and reference coverage", 0))
+        lines.extend(
+            (part, 2)
+            for part in _wrap(
+                f"Catalogue {content.get('standards_catalog_revision', 'unknown')}. Framework references support communication only; they do not establish formal compliance or certification."
+            )
+        )
+        for framework in content.get("standards_register", []):
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"{framework.get('name', 'unknown')} v{framework.get('version', 'unknown')} | "
+                    f"status {framework.get('status', 'unknown')} | "
+                    f"{framework.get('rationale', 'unknown')} | source {framework.get('source_url', 'unknown')}"
+                )
+            )
+        for reference in content.get("standard_references", []):
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"{reference.get('framework', 'unknown')} {reference.get('identifier') or 'unknown'} "
+                    f"({reference.get('relation', 'unknown')}; {reference.get('version', 'unknown')}) | "
+                    f"status {reference.get('status', 'unknown')} | source {reference.get('source_url', 'unknown')} | "
+                    f"observations {reference.get('supporting_observation_ids', [])} | {reference.get('validation', 'unknown')}"
+                )
+            )
         methodology = content.get("methodology", {})
         lines.append(("Methodology", 0))
         for label, value in [
@@ -302,6 +328,18 @@ def render_evidence_report(
                 ("Content provenance", finding["content_provenance"]),
             ]:
                 lines.extend((part, 2) for part in _wrap(f"{label}: {value}"))
+            for reference in finding.get("standard_references", []):
+                lines.extend(
+                    (part, 2)
+                    for part in _wrap(
+                        f"Standards reference: {reference.get('name', reference.get('framework', 'unknown'))} "
+                        f"{reference.get('identifier') or 'unknown'} v{reference.get('version', 'unknown')} | "
+                        f"{reference.get('relation', 'unknown')} | {reference.get('status', 'unknown')} | "
+                        f"rationale: {reference.get('rationale', 'unknown')} | "
+                        f"observations: {reference.get('supporting_observation_ids', [])} | "
+                        f"source: {reference.get('source_url', 'unknown')} | {reference.get('validation', 'unknown')}"
+                    )
+                )
             for observed in finding["source_records"]:
                 lines.extend(
                     (part, 2)

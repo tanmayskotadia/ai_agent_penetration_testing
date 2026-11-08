@@ -93,6 +93,13 @@
           "title": "Source Records",
           "type": "array"
         },
+        "standard_references": {
+          "items": {
+            "$ref": "#/$defs/FrozenStandardReference"
+          },
+          "title": "Standard References",
+          "type": "array"
+        },
         "technical_impact": {
           "title": "Technical Impact",
           "type": "string"
@@ -138,9 +145,108 @@
         "remediation_owner",
         "verification_steps",
         "references",
+        "standard_references",
         "content_provenance"
       ],
       "title": "DetailedReportFinding",
+      "type": "object"
+    },
+    "FrozenStandardReference": {
+      "additionalProperties": false,
+      "description": "Reference representation stored in the immutable JSON/PDF snapshot.",
+      "properties": {
+        "framework": {
+          "title": "Framework",
+          "type": "string"
+        },
+        "identifier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identifier"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "methodology",
+            "reviewer-mapped",
+            "source-reported"
+          ],
+          "title": "Relation",
+          "type": "string"
+        },
+        "source_record_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Record Ids",
+          "type": "array"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "applicable",
+            "not-applicable",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "supporting_observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Observation Ids",
+          "type": "array"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "validation": {
+          "title": "Validation",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "framework",
+        "name",
+        "version",
+        "status",
+        "relation",
+        "source_url",
+        "rationale",
+        "validation"
+      ],
+      "title": "FrozenStandardReference",
       "type": "object"
     }
   },
@@ -176,8 +282,8 @@
       "type": "array"
     },
     "content_revision": {
-      "const": "1.2",
-      "default": "1.2",
+      "const": "1.3",
+      "default": "1.3",
       "title": "Content Revision",
       "type": "string"
     },
@@ -312,6 +418,26 @@
       },
       "title": "Source Severity Distribution",
       "type": "object"
+    },
+    "standard_references": {
+      "items": {
+        "$ref": "#/$defs/FrozenStandardReference"
+      },
+      "title": "Standard References",
+      "type": "array"
+    },
+    "standards_catalog_revision": {
+      "default": "aegistrace-standards-2026-11-08.1",
+      "title": "Standards Catalog Revision",
+      "type": "string"
+    },
+    "standards_register": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Standards Register",
+      "type": "array"
     },
     "summary_counts": {
       "additionalProperties": {

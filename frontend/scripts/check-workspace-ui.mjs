@@ -11,6 +11,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   page.on("pageerror", error => console.error("Browser error:", error.message));
   const requests = [];
+  const reportWrites = [];
   const coverage = {
     coverage_state: "no-evidence",
     captured_at: "2026-11-08T00:00:00Z",
@@ -21,7 +22,7 @@ try {
     gaps: ["No evidence has been imported in this synthetic walkthrough."],
     tool_evidence: [],
     source_reviews: [],
-    observation_analytics: { ranked_observations: [] },
+    observation_analytics: { ranked_observations: [{ observation_id: "obs-test", title: "TEST ONLY missing header", asset_id: "asset-test", evidence_id: "evidence-test", source_tool: "TEST ONLY", priority: { local_priority_index: null, review_attention: "standard-review", state: "unknown", missing_context: [], factors: {} }, source_severity: "unknown", source_cvss_score: null }] },
     prototype_gate: {},
     operation_coverage: {},
   };
@@ -36,10 +37,19 @@ try {
     else if (path.endsWith("/assessments") && request.method() === "GET") data = [{ id: "assessment-alpha", name: "Portfolio demo assessment" }, { id: "assessment-beta", name: "Second synthetic assessment" }];
     else if (path.endsWith("/assessments") && request.method() === "POST") data = { id: "assessment-created", name: JSON.parse(request.postData() ?? "{}").name };
     else if (path.endsWith("/coverage")) data = coverage;
-    else if (path.endsWith("/report-findings")) data = { revision: 0, findings: [] };
+    else if (path.endsWith("/report-findings") && request.method() === "POST") {
+      reportWrites.push(JSON.parse(request.postData() ?? "{}"));
+      data = { id: "report-content-test", revision: 1, request: reportWrites.at(-1) };
+      status = 201;
+    }
+    else if (path.endsWith("/report-findings")) data = { revision: 0, findings: [], reference_catalog: { frameworks: [
+      { key: "owasp-top-10-2025", name: "OWASP Top 10", version: "2025", role: "risk-category", description: "TEST ONLY", entries: [{ id: "A02:2025", title: "Security Misconfiguration" }] },
+      { key: "mitre-attack-enterprise", name: "MITRE ATT&CK Enterprise", version: "20.1", role: "reviewer-mapped-hypothesis", description: "TEST ONLY", entries: [] },
+      { key: "nist-csf-2.0", name: "NIST CSF", version: "2.0", role: "reviewer-mapped-outcome", description: "TEST ONLY", entries: [] },
+    ] } };
     else if (path.endsWith("/events")) { data = ""; contentType = "text/event-stream"; }
     else if (path.endsWith("/controls")) data = { stopped: false, epoch: 0, jobs: [] };
-    else if (path.endsWith("/finding-reviews")) data = { reviews: [] };
+    else if (path.endsWith("/finding-reviews")) data = { revision: 0, latest_by_observation: {}, reviews: [], history_truncated: false };
     else if (path.endsWith("/logout")) data = { revoked: true };
     else if (request.method() === "POST") { data = {}; status = 201; }
     await route.fulfill({ status, contentType, body: contentType === "text/event-stream" ? "" : JSON.stringify(data) });
@@ -75,6 +85,19 @@ try {
   assert.ok(dimensions.content <= dimensions.viewport, `mobile layout has no horizontal overflow (${JSON.stringify(dimensions)})`);
   await stages.nth(2).click();
   await page.getByRole("heading", { name: "Reviewer risk context" }).waitFor();
+  await page.getByRole("heading", { name: "Evidence-backed report content" }).waitFor();
+  await page.getByLabel("Report source observations").selectOption("obs-test");
+  await page.getByLabel("Finding title").fill("TEST ONLY reviewed finding");
+  await page.getByLabel("Evidence-backed description").fill("TEST ONLY description linked to the synthetic observation.");
+  await page.getByLabel("Reviewer rationale for this content").fill("TEST ONLY rationale; no vulnerability confirmation.");
+  await page.getByLabel("Curated framework identifier").selectOption("A02:2025");
+  await page.getByLabel("Framework mapping rationale").fill("TEST ONLY selected observation indicates a header configuration review.");
+  await page.getByRole("button", { name: "Add framework reference" }).click();
+  await page.getByRole("list", { name: "Framework references to save" }).getByText(/A02:2025/).waitFor();
+  await page.getByRole("button", { name: "Save reviewed report content" }).click();
+  assert.equal(reportWrites.length, 1, "report finding is posted exactly once");
+  assert.equal(reportWrites[0].standard_references[0].identifier, "A02:2025", "UI submits the curated framework identifier");
+  assert.deepEqual(reportWrites[0].standard_references[0].supporting_observation_ids, ["obs-test"], "mapping is linked to the selected observation");
   await stages.nth(3).click();
   await page.getByRole("heading", { name: "Assessment presentation" }).waitFor();
   await page.getByText("Create another assessment").click();

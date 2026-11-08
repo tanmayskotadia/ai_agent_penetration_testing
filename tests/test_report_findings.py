@@ -24,6 +24,11 @@ def synthetic_report_source():
             "source_severity": "medium",
             "validation_state": "suspected",
             "confidence": None,
+            "cve": "CVE-2024-12345",
+            "cwe": "CWE-79",
+            "cvss_score": 7.1,
+            "cvss_version": "4.0",
+            "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H",
         },
         {
             "id": "observation-b",
@@ -54,6 +59,15 @@ def synthetic_report_source():
             "TEST ONLY rerun the relevant safe check and compare the result.",
         ],
         "references": ["TEST ONLY internal configuration baseline"],
+        "standard_references": [
+            {
+                "framework": "owasp-top-10-2025",
+                "status": "applicable",
+                "identifier": "A02:2025",
+                "supporting_observation_ids": ["observation-a"],
+                "rationale": "TEST ONLY reviewer mapping stored for serialization coverage.",
+            }
+        ],
         "recorded_by": "test-reviewer",
         "recorded_at": "2026-11-07T00:00:00Z",
         "rationale": "Synthetic source review for report content regression.",
@@ -129,7 +143,7 @@ def synthetic_report_source():
 def test_populated_multi_asset_contract_and_counts_reconcile():
     source_value = synthetic_report_source()
     content = build_vapt_content(source_value)
-    assert content["content_revision"] == "1.2"
+    assert content["content_revision"] == "1.3"
     assert content["summary_counts"]["reviewer_finding_count"] == 1
     assert content["summary_counts"]["source_observation_count"] == 2
     assert content["summary_counts"]["source_occurrence_count"] == 2
@@ -142,6 +156,17 @@ def test_populated_multi_asset_contract_and_counts_reconcile():
     assert len(finding["verification_steps"]) == 2
     assert finding["remediation_owner"] == "TEST ONLY platform team"
     assert finding["content_provenance"]["reviewer"] == "test-reviewer"
+    assert finding["standard_references"][0]["identifier"] == "A02:2025"
+    assert finding["standard_references"][0]["supporting_observation_ids"] == ["observation-a"]
+    source_reference_ids = {value["identifier"] for value in finding["standard_references"]}
+    assert {"CVE-2024-12345", "CWE-79", "7.1 / 4.0"} <= source_reference_ids
+    assert all(
+        value["relation"] == "source-reported"
+        for value in finding["standard_references"]
+        if value["framework"] in {"cve", "cwe", "cvss"}
+    )
+    assert content["standards_catalog_revision"] == "aegistrace-standards-2026-11-08.1"
+    assert len(content["standards_register"]) == 7
     assert finding["source_records"][1]["cvss_score"] is None
     assert content["approvals_and_decisions"]["action_approvals"][0]["state"] == "denied"
     assert content["execution_summary"][0]["state"] == "partial"
@@ -166,6 +191,9 @@ def test_populated_multi_asset_contract_and_counts_reconcile():
     assert b"Remediation owner \\(reviewer supplied\\)" in pdf
     assert b"TEST ONLY platform team" in pdf
     assert b"Verification/retest steps:" in pdf and b"denied-test" in pdf
+    assert b"Standards and reference coverage" in pdf
+    assert b"formal compliance" in pdf
+    assert b"A02:2025" in pdf and b"CVE-2024-12345" in pdf
     assert b"Observation 1: TEST ONLY header observation" not in pdf
 
 
@@ -220,6 +248,17 @@ def test_business_impact_and_remediation_require_basis_and_verification():
     assert valid.remediation_owner == "TEST ONLY operations team"
 
 
+def test_unstructured_standard_identifiers_are_rejected():
+    base = {
+        "observation_ids": [str(uuid4())],
+        "title": "TEST ONLY report finding",
+        "description": "TEST ONLY source-backed description.",
+        "rationale": "TEST ONLY analyst review rationale.",
+    }
+    with pytest.raises(ValueError, match="structured, evidence-linked"):
+        ReportFindingCreate.model_validate(base | {"references": ["CVE-2024-99999"]})
+
+
 def test_report_input_freezes_revisions_and_rejects_stale_or_unowned_sources(import_context):
     client, config = import_context
     base, _, imported, _, _, _ = source(import_context)
@@ -247,9 +286,28 @@ def test_report_input_freezes_revisions_and_rejects_stale_or_unowned_sources(imp
         "remediation_owner": "TEST ONLY platform team",
         "verification_steps": ["TEST ONLY validate the change with a safe repeat check."],
         "references": ["TEST ONLY baseline"],
+        "standard_references": [
+            {
+                "framework": "nist-csf-2.0",
+                "status": "applicable",
+                "identifier": "ID.AM-01",
+                "supporting_observation_ids": [normalized["observation_ids"][0]],
+                "rationale": "TEST ONLY mapping validation; not a real CSF assessment.",
+            }
+        ],
         "rationale": "TEST ONLY content review; no exploitation proof.",
     }
     path = base + "/report-findings"
+    catalog = client.get(path, headers=headers()).json()["reference_catalog"]
+    assert len(catalog["frameworks"]) == 7
+    bad_reference = body["standard_references"][0] | {"identifier": "ID.AM-99"}
+    rejected_mapping = client.post(
+        path,
+        json=body | {"standard_references": [bad_reference]},
+        headers=headers(),
+    )
+    assert rejected_mapping.status_code == 422
+    assert "versioned supported catalogue" in rejected_mapping.text
     assert client.post(path, json=body, headers=headers("analyst")).status_code == 403
     assert (
         client.post(
@@ -276,6 +334,10 @@ def test_report_input_freezes_revisions_and_rejects_stale_or_unowned_sources(imp
         first["snapshot"]["content"]["detailed_findings"][0]["description"] == body["description"]
     )
     assert first["snapshot"]["evidence_references"][0]["sha256"]
+    frozen_finding = first["snapshot"]["content"]["detailed_findings"][0]
+    assert frozen_finding["standard_references"][0]["identifier"] == "ID.AM-01"
+    assert frozen_finding["standard_references"][0]["relation"] == "reviewer-mapped"
+    assert len(first["snapshot"]["content"]["standards_register"]) == 7
     changed = client.post(
         path,
         json=body
