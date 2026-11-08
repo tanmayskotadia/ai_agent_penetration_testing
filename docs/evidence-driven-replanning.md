@@ -13,6 +13,8 @@ The analyst workspace can ask the configured reasoning provider to recommend a b
 
 If the scope changes, reload and select evidence again. If there is no eligible evidence, stop and import an authorized recorded artifact. Provider configuration, policy mismatch, redaction review, validation, budget, or rate-limit blockers are shown without treating a failed response as a recommendation. A retry after provider failure is a separate, explicit action. Repeating an unchanged evidence/action request reuses the saved plan instead of making another provider call.
 
+When a conversation reaches its plan-revision limit, review the saved blocked plan and use **Start new conversation**. This gives the next request a fresh conversation ID while preserving the prior plan and evidence history. The app clears external-processing consent, so review the data and consent again before another provider call. This does not reset the assessment-wide provider-call limit or bypass duplicate-decision checks.
+
 ## Hosted acceptance still requires a human operator
 
 Code-level and synthetic browser checks do not prove that the hosted provider is configured or that sending a particular bounded context is acceptable. Before a real provider-backed rehearsal, the operator must review the service's privacy/data-processing terms and private configuration, inspect the selected sources and their redacted derivatives, decide whether the normalized assessment context is permitted for external processing, and provide the approved policy reference plus request-scoped consent in the UI. Never paste an API key into the UI or chat. The derivative is required for review/access control but its text is not passed to the provider.

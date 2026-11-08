@@ -72,6 +72,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState(false);
   const [retry, setRetry] = useState(false);
+  const [reviewedBeforeNewConversation, setReviewedBeforeNewConversation] = useState(false);
   const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
   const pendingMutation = useRef<{ body: string; key: string } | null>(null);
   const active = useRef(true);
@@ -123,10 +124,10 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
       .sort((a, b) => (b.revision ?? 0) - (a.revision ?? 0))[0];
     const previousConversation = latestAdaptivePlan?.request.conversation_id;
     if (typeof previousConversation === "string") setConversationId(previousConversation);
-    if (typeof latestAdaptivePlan?.request.request_text === "string") {
+    if (!requestText.trim() && typeof latestAdaptivePlan?.request.request_text === "string") {
       setRequestText(latestAdaptivePlan.request.request_text);
     }
-    if (typeof latestAdaptivePlan?.request.data_policy_reference === "string") {
+    if (!policyReference.trim() && typeof latestAdaptivePlan?.request.data_policy_reference === "string") {
       setPolicyReference(latestAdaptivePlan.request.data_policy_reference);
     }
     const latestProposal = asRecord(latestAdaptivePlan?.request.proposal);
@@ -217,7 +218,16 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
     } catch (error) {
       const failure = error as Error & { status?: number };
       if (failure.status === 409) {
-        setStatus(`The server rejected this stale or over-budget request. ${failure.message} Your request text and consent stay in this form; reload the current scope before trying again.`);
+        const conversationBudgetExhausted = failure.message.includes("Adaptive plan budget exhausted");
+        if (conversationBudgetExhausted) {
+          setRetry(
+            (provider.provider_invoked === true && !Object.keys(decision).length)
+              || blockers.includes("prior-provider-failure; explicit-reviewer-retry-required"),
+          );
+          setStatus("This conversation reached its adaptive-plan limit. No provider call was made for this request. Review the saved plan above, acknowledge the review, then start a new conversation. The assessment-wide provider-call limit still applies.");
+        } else {
+          setStatus(`The server rejected this stale or over-budget request. ${failure.message} Your request text and consent stay in this form; reload the current scope before trying again.`);
+        }
         await reload().catch(() => {});
       } else {
         setStatus(failure.message || "The request failed. Your inputs remain available; retry only after reviewing the reason.");
@@ -294,6 +304,16 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
       {retry && <button disabled={busy} onClick={() => void submit(true)}>Retry failed provider call</button>}
       <button disabled={busy} onClick={() => { void reload().then(() => setStatus("Reloaded active scope, normalized evidence, and saved plans." )).catch(error => setLoadError(error instanceof Error ? error.message : "Reload failed.")); }}>Reload scope and evidence</button>
     </div>
+    {latestPlan?.state === "blocked" && retry && <div className="replan-new-conversation" role="group" aria-label="Start a fresh replanning conversation">
+      <label><input type="checkbox" checked={reviewedBeforeNewConversation} onChange={event => setReviewedBeforeNewConversation(event.target.checked)} />
+        I reviewed the saved blocked plan above. Start a separate conversation if I still need a new provider attempt.</label>
+      <button disabled={busy || !reviewedBeforeNewConversation} onClick={() => {
+        setConversationId(crypto.randomUUID());
+        setAllowExternalProcessing(false);
+        setReviewedBeforeNewConversation(false);
+        setStatus("Started a new conversation. The prior plan remains saved. Review it, confirm external-processing consent again, then explicitly retry if another provider call is appropriate. Assessment-wide budget and duplicate-decision checks still apply.");
+      }}>Start new conversation</button>
+    </div>}
     <p role="status" aria-live="polite">{status}</p>
     {latestPlan && <article className="replan-result" aria-label="Saved replanning result">
       <div className="replan-heading"><h4>Saved plan revision {latestPlan.revision} · {latestPlan.state}</h4>{testOnly && <strong className="test-only-badge">TEST ONLY · synthetic response</strong>}</div>

@@ -46,7 +46,10 @@ try {
       data = { state: "reviewed" };
       status = 201;
     } else if (path.endsWith("/reasoning/replan")) {
-      if (String(body.request_text).includes("stale scope")) {
+      if (String(body.request_text).includes("budget exhausted") && body.retry_failed_attempt !== true) {
+        data = { message: "Adaptive plan budget exhausted; review before starting a new conversation" };
+        status = 409;
+      } else if (String(body.request_text).includes("stale scope")) {
         scopeRevision = 2;
         data = { message: "Stale scope revision" };
         status = 409;
@@ -141,6 +144,17 @@ try {
   await page.getByLabel(/I explicitly consent/).check();
   await page.getByRole("button", { name: "Retry failed provider call" }).click();
   assert.equal(requests.filter(item => item.path.endsWith("/reasoning/replan") && item.body.retry_failed_attempt).length, 1);
+
+  await page.getByLabel("What should the model reconsider?").fill("budget exhausted test");
+  await page.getByRole("button", { name: "Replan from selected evidence" }).click();
+  await page.getByText(/This conversation reached its adaptive-plan limit/).waitFor();
+  await page.getByLabel(/I reviewed the saved blocked plan above/).check();
+  const oldConversationId = requests.filter(item => item.path.endsWith("/reasoning/replan")).at(-1).body.conversation_id;
+  await page.getByRole("button", { name: "Start new conversation" }).click();
+  assert.equal(await page.getByLabel(/I explicitly consent/).isChecked(), false, "new conversation requires fresh external-processing consent");
+  await page.getByLabel(/I explicitly consent/).check();
+  await page.getByRole("button", { name: "Retry failed provider call" }).click();
+  assert.notEqual(requests.filter(item => item.path.endsWith("/reasoning/replan")).at(-1).body.conversation_id, oldConversationId, "new conversation uses a fresh identifier");
 
   await page.getByLabel("What should the model reconsider?").fill("stale scope test");
   await page.getByRole("button", { name: "Replan from selected evidence" }).click();

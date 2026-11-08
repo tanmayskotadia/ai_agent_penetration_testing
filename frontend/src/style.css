@@ -42,6 +42,9 @@ code { overflow-wrap: anywhere; } fieldset { border: 1px solid #78909f; }
 .replan-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
 .replan-heading h3, .replan-heading h4 { margin-block: .25rem; }
 .replan-context, .replan-evidence, .replan-result { border: 1px solid #426078; border-radius: 10px; padding: 14px; margin-block: 14px; }
+.replan-new-conversation { border-left: 3px solid #d5a94f; margin-block: 12px; padding: 12px; }
+.replan-new-conversation label { align-items: flex-start; display: flex; gap: 8px; }
+.replan-new-conversation button { margin-top: 10px; }
 .replan-context { display: grid; gap: .25rem; background: #0d1a24; }
 .replan-revisions { display: grid; gap: .5rem; max-height: 22rem; overflow: auto; }
 .replan-revision { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: .65rem; align-items: start; padding: .75rem; margin: 0; border: 1px solid #344f63; border-radius: 8px; background: #0d1a24; }
