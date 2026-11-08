@@ -68,6 +68,11 @@ _PUBLIC_APPLICATION_TABLES = (
 
 
 def upgrade() -> None:
+    # RLS and the Supabase grants below are PostgreSQL-specific. SQLite is
+    # used by lightweight migration tests and must not claim to enforce them.
+    if op.get_bind().dialect.name != "postgresql":
+        return
+
     for table_name in _PUBLIC_APPLICATION_TABLES:
         op.execute(f'ALTER TABLE public."{table_name}" ENABLE ROW LEVEL SECURITY')
 
@@ -122,18 +127,9 @@ def upgrade() -> None:
 
     # Function EXECUTE is granted to PUBLIC by PostgreSQL unless changed.
     # Existing public-schema functions here are trigger-only integrity guards.
-    op.execute(
-        "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
-        "REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC"
-    )
-    op.execute(
-        "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
-        "REVOKE ALL ON TABLES FROM PUBLIC"
-    )
-    op.execute(
-        "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
-        "REVOKE ALL ON SEQUENCES FROM PUBLIC"
-    )
+    op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC")
+    op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC")
+    op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM PUBLIC")
 
     # These integrity guards use no application objects. Pin their search path
     # to pg_catalog so future writable schemas cannot shadow built-ins.
@@ -143,13 +139,12 @@ def upgrade() -> None:
         "aegis_results_immutable",
         "aegis_progress_immutable",
     ):
-        op.execute(
-            f'ALTER FUNCTION public."{function_name}"() '
-            "SET search_path = pg_catalog"
-        )
+        op.execute(f'ALTER FUNCTION public."{function_name}"() SET search_path = pg_catalog')
 
 
 def downgrade() -> None:
+    if op.get_bind().dialect.name != "postgresql":
+        return
     raise RuntimeError(
         "This security migration is intentionally irreversible; restore only "
         "explicitly reviewed, least-privilege grants in a new migration."
