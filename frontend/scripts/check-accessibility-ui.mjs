@@ -66,8 +66,8 @@ try {
   await tabTo(page.getByLabel("Username", { exact: true })); await page.keyboard.type("test-reviewer");
   await tabTo(page.getByLabel("Password", { exact: true })); await page.keyboard.type("test-only-password");
   await activate(page.getByRole("button", { name: "Sign in", exact: true }));
-  await page.getByLabel("New assessment", { exact: true }).waitFor();
-  await tabTo(page.getByLabel("New assessment", { exact: true })); await page.keyboard.type("TEST ONLY keyboard assessment");
+  await page.getByLabel("Assessment name", { exact: true }).waitFor();
+  await tabTo(page.getByLabel("Assessment name", { exact: true })); await page.keyboard.type("TEST ONLY keyboard assessment");
   await activate(page.getByRole("button", { name: "Create assessment", exact: true }));
   await page.getByRole("heading", { name: "Assessment presentation", exact: true }).waitFor();
   assert.equal(assessment.name, "TEST ONLY keyboard assessment");
