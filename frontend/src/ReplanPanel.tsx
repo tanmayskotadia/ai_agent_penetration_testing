@@ -30,6 +30,28 @@ const asRecord = (value: unknown): Row =>
 const asList = (value: unknown): Row[] =>
   Array.isArray(value) ? value.filter(item => item !== null && typeof item === "object") as Row[] : [];
 const stringList = (value: unknown): string[] => Array.isArray(value) ? value.map(String) : [];
+function hasRetryableProviderFailure(plans: Plan[], latest: Plan | null | undefined): boolean {
+  if (!latest) return false;
+  const latestProposal = asRecord(latest.request.proposal);
+  const latestProvider = asRecord(latestProposal.provider);
+  const latestDecision = asRecord(latestProposal.decision);
+  const latestBlockers = stringList(latestProposal.blockers);
+  if (latestBlockers.includes("prior-provider-failure; explicit-reviewer-retry-required")) return true;
+
+  const fingerprint = latest.request.action_fingerprint;
+  if (typeof fingerprint !== "string" || !fingerprint) return false;
+  const sameAction = plans.filter(plan => plan.request.adaptive === true
+    && plan.request.action_fingerprint === fingerprint);
+  // A successful prior decision takes precedence: the server will not repeat it.
+  if (sameAction.some(plan => Object.keys(asRecord(asRecord(plan.request.proposal).decision)).length > 0)) {
+    return false;
+  }
+  return sameAction.some(plan => {
+    const proposal = asRecord(plan.request.proposal);
+    return asRecord(proposal.provider).provider_invoked === true
+      && Object.keys(asRecord(proposal.decision)).length === 0;
+  }) || (latestProvider.provider_invoked === true && !Object.keys(latestDecision).length);
+}
 const displayTime = (value: string) => {
   const time = new Date(value);
   return Number.isNaN(time.valueOf()) ? value : time.toLocaleString();
@@ -130,14 +152,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
     if (!policyReference.trim() && typeof latestAdaptivePlan?.request.data_policy_reference === "string") {
       setPolicyReference(latestAdaptivePlan.request.data_policy_reference);
     }
-    const latestProposal = asRecord(latestAdaptivePlan?.request.proposal);
-    const latestProvider = asRecord(latestProposal.provider);
-    const latestDecision = asRecord(latestProposal.decision);
-    const latestBlockers = stringList(latestProposal.blockers);
-    setRetry(
-      (latestProvider.provider_invoked === true && !Object.keys(latestDecision).length)
-        || latestBlockers.includes("prior-provider-failure; explicit-reviewer-retry-required"),
-    );
+    setRetry(hasRetryableProviderFailure(nextPlans, latestAdaptivePlan));
     if (latest) {
       const validIds = new Set(nextRevisions
         .filter(row => row.state === "normalized" && row.scope_id === latest.id)
@@ -201,16 +216,11 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
       setResult(saved);
       setPlans(current => [...current.filter(plan => plan.id !== saved.id), saved]);
       const proposal = asRecord(saved.request.proposal);
-      const provider = asRecord(proposal.provider);
-      const decision = asRecord(proposal.decision);
       const blockers = stringList(proposal.blockers);
       setStatus(blockers.length
         ? `Saved blocked plan ${saved.id}. ${explainBlocker(blockers[0])}`
         : `Saved plan ${saved.id}. AI recommendation is ready for separate human review.`);
-      setRetry(
-        (provider.provider_invoked === true && !Object.keys(decision).length)
-          || blockers.includes("prior-provider-failure; explicit-reviewer-retry-required"),
-      );
+      setRetry(hasRetryableProviderFailure([...plans.filter(plan => plan.id !== saved.id), saved], saved));
       setConversationId(String(saved.request.conversation_id ?? conversationId));
       setInspectorReload(value => value + 1);
       setPlans(current => current.map(plan => plan.id === saved.id ? saved : plan));
@@ -220,10 +230,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged }: {
       if (failure.status === 409) {
         const conversationBudgetExhausted = failure.message.includes("Adaptive plan budget exhausted");
         if (conversationBudgetExhausted) {
-          setRetry(
-            (provider.provider_invoked === true && !Object.keys(decision).length)
-              || blockers.includes("prior-provider-failure; explicit-reviewer-retry-required"),
-          );
+          setRetry(hasRetryableProviderFailure(plans, latestPlan));
           setStatus("This conversation reached its adaptive-plan limit. No provider call was made for this request. Review the saved plan above, acknowledge the review, then start a new conversation. The assessment-wide provider-call limit still applies.");
         } else {
           setStatus(`The server rejected this stale or over-budget request. ${failure.message} Your request text and consent stay in this form; reload the current scope before trying again.`);

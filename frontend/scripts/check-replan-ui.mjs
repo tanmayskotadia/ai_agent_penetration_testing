@@ -79,7 +79,13 @@ try {
       }
     }
     if (path.endsWith("/reasoning/replan") && status === 201) {
-      if (data.request && typeof data.request === "object") data.request.adaptive = true;
+      if (data.request && typeof data.request === "object") {
+        data.request.adaptive = true;
+        data.request.action_fingerprint ??= body.request_text.includes("provider failure")
+          || body.request_text.includes("fresh bounded request")
+          ? "failed-synthetic-action"
+          : String(body.request_text);
+      }
       const index = savedPlans.findIndex(plan => plan.id === data.id);
       if (index >= 0) savedPlans.splice(index, 1);
       data.revision = Math.max(data.revision ?? 0, ...savedPlans.map(plan => plan.revision ?? 0)) + 1;
@@ -135,6 +141,10 @@ try {
   await page.getByLabel("What should the model reconsider?").fill("try a fresh bounded request");
   await page.getByRole("button", { name: "Replan from selected evidence" }).click();
   await page.getByText(/previous provider attempt failed/).first().waitFor();
+  await page.getByRole("button", { name: "Retry failed provider call" }).waitFor();
+  await page.getByLabel(/I explicitly consent/).uncheck();
+  await page.getByRole("button", { name: "Replan from selected evidence" }).click();
+  await page.getByRole("status").filter({ hasText: /consent or policy reference did not match/ }).waitFor();
   await page.getByRole("button", { name: "Retry failed provider call" }).waitFor();
   await page.reload();
   await page.getByRole("heading", { name: "Replan from evidence" }).waitFor();
