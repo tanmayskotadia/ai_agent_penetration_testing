@@ -7,7 +7,11 @@ The authenticated analyst workspace is organized into four stages that can be re
 3. **Findings & review** — inspect action-bound approvals, record analyst context, review duplicate suggestions, and write evidence-linked findings.
 4. **Report** — choose executive or analyst presentation, inspect coverage and unknowns, and freeze a point-in-time PDF.
 
-The assessment selector and recorded-evidence mode remain visible. Analysts can create another assessment from the workspace. Stage tabs show simple progress text, and each stage presents a suggested next safe action. Tool status and detailed processing JSON are expandable. Changing stages preserves form state; changing assessments reloads assessment-specific data. The audit timeline can be opened from any stage.
+The stage bar identifies the active assessment and its recorded-evidence mode. Each stage has a primary shortcut to the form or review panel relevant to its current state. The shortcut moves keyboard focus to the destination. The Evidence stage also links directly to replanning. Tool capabilities and the audit timeline are available from every stage.
+
+The import form separates the original file, its represented targets and exclusions, and its capture metadata. The processing summary shows the outcome and reason, with technical output available on demand. A successful import links to provenance review. In Findings & review, select a source observation to inspect its original reference and hash before saving. The Report stage separates presentation mode from PDF export, shows the frozen export ID, and groups recorded workflow checks separately from live execution and lab checks.
+
+Changing stages preserves drafts. Switching to another assessment clears the import draft and loads that assessment's own data. A failed coverage request shows a recovery action, and a permission error or expired session gets its own message.
 
 ## Automated UI walkthrough
 
@@ -17,13 +21,14 @@ From `frontend/`:
 npm run build
 npm run check:workspace
 npm run check:replan
+node scripts/check-accessibility-ui.mjs
 ```
 
-`check:workspace` uses synthetic API fixtures and verifies sign-in, stage navigation, preserved assessment/request/scope state, audit visibility, desktop and narrow layouts, report-stage navigation, and that navigation submits no scan or approval action. It does not claim a fresh human reviewer completed the end-to-end workflow.
+`check:workspace` uses synthetic API fixtures to verify stage navigation, focus at shortcut destinations, coverage recovery, draft preservation within an assessment, draft isolation between assessments, and narrow layout. The accessibility journey covers keyboard operation, action denial and PDF download, and runs axe checks in both presentation modes.
 
 ## Safe screenshots
 
-The screenshots below use a mocked, synthetic assessment and contain no credentials, private hostnames, or scanner results. They demonstrate layout only; they are not evidence that an assessment, import, finding review, or report export has succeeded.
+The screenshots use a synthetic assessment with no imported files. Compare with the [previous desktop layout](https://github.com/tanmayskotadia/ai_agent_penetration_testing/blob/d81a093543e048be605c359d3318f53d18ec2e2f/docs/images/issue-107/workspace-desktop.png) and [previous mobile layout](https://github.com/tanmayskotadia/ai_agent_penetration_testing/blob/d81a093543e048be605c359d3318f53d18ec2e2f/docs/images/issue-107/workspace-mobile.png).
 
 ![Synthetic desktop workspace walkthrough](images/issue-107/workspace-desktop.png)
 
