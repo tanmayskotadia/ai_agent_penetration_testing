@@ -69,10 +69,11 @@ try {
   await page.getByLabel("Assessment name", { exact: true }).waitFor();
   await tabTo(page.getByLabel("Assessment name", { exact: true })); await page.keyboard.type("TEST ONLY keyboard assessment");
   await activate(page.getByRole("button", { name: "Create assessment", exact: true }));
-  await page.getByRole("heading", { name: "Assessment presentation", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Scope & plan", exact: true }).waitFor();
   assert.equal(assessment.name, "TEST ONLY keyboard assessment");
   // An existing scope is supplied by another authorized setup action for review fixtures.
   scopes.push({ id: "scope-test", revision: 1, targets: ["192.0.2.10"], exclusions: [], mode: "recorded-import" });
+  await page.getByRole("button", { name: /Findings & review/ }).click();
   await activate(page.getByRole("button", { name: "Reload action approvals", exact: true }));
   const card = page.getByRole("article", { name: "Action approval-test", exact: true });
   await activate(card.getByRole("button", { name: "Review denial", exact: true }));
@@ -85,6 +86,8 @@ try {
   await activate(page.getByRole("button", { name: "Inspect matching evidence", exact: true }));
   await page.getByRole("region", { name: "Evidence ev-test", exact: true }).getByText("e".repeat(64), { exact: true }).waitFor();
   await audit("Analyst desktop accessibility");
+  await page.getByRole("button", { name: /Report/ }).click();
+  await page.getByRole("heading", { name: "Assessment presentation", exact: true }).waitFor();
   const download = page.waitForEvent("download");
   await activate(page.getByRole("button", { name: "Freeze latest results and download PDF", exact: true }));
   assert.ok((await download).suggestedFilename().endsWith(".pdf"));
