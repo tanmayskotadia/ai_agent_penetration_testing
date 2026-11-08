@@ -46,7 +46,7 @@ late_outputs = sa.Table(
 def protect_results(connection: sa.Connection) -> None:
     if connection.dialect.name == "postgresql":
         connection.exec_driver_sql(
-            "CREATE FUNCTION aegis_results_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'result/export revisions are immutable'; END $$"
+            "CREATE FUNCTION aegis_results_immutable() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$ BEGIN RAISE EXCEPTION 'result/export revisions are immutable'; END $$"
         )
     for name in ["result_revisions", "result_exports"]:
         if connection.dialect.name == "postgresql":

@@ -32,7 +32,7 @@ progress_events = sa.Table(
 def protect_progress(connection: sa.Connection) -> None:
     if connection.dialect.name == "postgresql":
         connection.exec_driver_sql(
-            "CREATE FUNCTION aegis_progress_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'job progress history is immutable'; END $$"
+            "CREATE FUNCTION aegis_progress_immutable() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$ BEGIN RAISE EXCEPTION 'job progress history is immutable'; END $$"
         )
         connection.exec_driver_sql(
             "CREATE TRIGGER job_progress_immutable BEFORE UPDATE OR DELETE ON job_progress_events FOR EACH ROW EXECUTE FUNCTION aegis_progress_immutable()"

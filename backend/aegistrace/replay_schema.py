@@ -18,7 +18,7 @@ manifests = sa.Table(
 def protect_replays(connection: sa.Connection) -> None:
     if connection.dialect.name == "postgresql":
         connection.exec_driver_sql(
-            "CREATE FUNCTION aegis_replay_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'replay manifests are immutable'; END $$"
+            "CREATE FUNCTION aegis_replay_immutable() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$ BEGIN RAISE EXCEPTION 'replay manifests are immutable'; END $$"
         )
         connection.exec_driver_sql(
             "CREATE TRIGGER replay_immutable BEFORE UPDATE OR DELETE ON replay_manifests FOR EACH ROW EXECUTE FUNCTION aegis_replay_immutable()"

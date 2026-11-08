@@ -27,7 +27,8 @@ events = sa.Table(
 def install_guards(connection: sa.Connection) -> None:
     if connection.dialect.name == "postgresql":
         connection.exec_driver_sql("""CREATE FUNCTION aegistrace_deny_audit_mutation() RETURNS trigger
-        LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'audit history is append-only'; END; $$""")
+        LANGUAGE plpgsql SET search_path = pg_catalog
+        AS $$ BEGIN RAISE EXCEPTION 'audit history is append-only'; END; $$""")
         connection.exec_driver_sql(
             "CREATE TRIGGER audit_append_only BEFORE UPDATE OR DELETE OR TRUNCATE ON audit_events FOR EACH STATEMENT EXECUTE FUNCTION aegistrace_deny_audit_mutation()"
         )
