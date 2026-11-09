@@ -206,7 +206,12 @@ def render_evidence_report(
     content = snapshot.get("content")
     if isinstance(content, dict):
         lines.append(("Executive summary from frozen evidence and reviewer records", 0))
-        lines.extend((part, 2) for part in _wrap(content.get("executive_summary", "Unknown")))
+        for index, paragraph in enumerate(
+            content.get("executive_summary", "Unknown").split("\n\n")
+        ):
+            if index:
+                lines.append(("", 2))
+            lines.extend((part, 2) for part in _wrap(paragraph))
         lines.append(("Assessment scope and rules of engagement", 0))
         scope = content.get("scope", {})
         for label, value in [

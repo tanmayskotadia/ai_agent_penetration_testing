@@ -1,5 +1,6 @@
 """Versioned, source-linked VAPT report content, including explicit unknowns."""
 
+from textwrap import shorten
 from typing import Any, Literal
 from uuid import UUID
 
@@ -352,8 +353,49 @@ def executive_summary_text(
         "Only selected frozen revisions are represented. Target coverage, authorization, source authenticity, "
         "and unselected assets/endpoints are not independently verified; no live scan is claimed."
     )
-    return " ".join(
-        (overview, validation, severity_text, priority_text, action_text, processing, boundary)
+    if reviewer_findings:
+        finding = reviewer_findings[0]
+        title = shorten(finding["title"], width=160, placeholder="...")
+        description = shorten(finding["description"], width=260, placeholder="...")
+        lead = f"Finding highlighted for review: {title}. {description}"
+    elif observations:
+        lead = (
+            "The selected records contain observations for review. No report finding was recorded."
+        )
+    else:
+        lead = "The selected records contain no observations. Coverage remains unknown."
+
+    recommendation = next(
+        (finding for finding in reviewer_findings if finding["remediation"] != "unknown"), None
+    )
+    if recommendation is None:
+        next_step = "No next step was recorded in the report findings."
+    else:
+        recommendation_title = shorten(recommendation["title"], width=160, placeholder="...")
+        action = shorten(recommendation["remediation"], width=260, placeholder="...")
+        next_step = f"Suggested next step for {recommendation_title}: {action}"
+
+    scope_note = "Coverage is limited to the selected records."
+    if exceptional:
+        scope_note += " Some sources could not be processed fully."
+    if not impact_count:
+        scope_note += " Business impact remains unknown."
+    return "\n\n".join(
+        (
+            f"{lead} {scope_note}",
+            next_step,
+            " ".join(
+                (
+                    overview,
+                    validation,
+                    severity_text,
+                    priority_text,
+                    action_text,
+                    processing,
+                    boundary,
+                )
+            ),
+        )
     )
 
 
