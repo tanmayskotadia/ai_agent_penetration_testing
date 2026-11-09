@@ -35,7 +35,7 @@ Complete these steps only with a target and test actions the participant is auth
 ## T30 closure evidence checklist
 
 - [ ] Hosted integration test for the test-only vertical slice passes on the exact implementation commit (the prior commit passed CI; verify the new PDF-content assertion on the next CI run).
-- [ ] One genuine participant-owned authorized assessment contains at least three version-matched network/web sources (Nmap plus web scanner/import sources); synthetic tests and an OpenAPI definition alone do not satisfy this count.
+- [ ] One documented scope revision contains genuine, reviewed Nmap, ZAP and Nikto recordings. The readiness check evaluates each scope separately. Sources from different revisions, synthetic fixtures, and OpenAPI definitions do not satisfy this check.
 - [ ] Reviewer has inspected and correctly classified each original source and its authorization basis.
 - [ ] A real end-to-end run demonstrates scope rejection, safe denial, normalized evidence links, correlation/risk review, a complete reviewed PDF, and one truthful failure path.
 - [ ] Any live API session result is linked to declared operations, approved credentials, and the actual isolated worker run; identity remains unknown unless independently verified.

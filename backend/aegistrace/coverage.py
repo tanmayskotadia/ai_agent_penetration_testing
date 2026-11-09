@@ -3,7 +3,7 @@
 import hashlib
 import json
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -33,6 +33,63 @@ from aegistrace.schema_v1 import (
 )
 
 ROW_LIMIT = 1000
+CORE_SCANNERS = {"Nmap", "OWASP ZAP", "Nikto"}
+
+
+def same_scope_source_gates(
+    sources: list[dict[str, Any]],
+    runs: dict[str, dict[str, Any]],
+    scopes: dict[str, dict[str, Any]],
+    now: datetime,
+) -> tuple[list[str], list[dict[str, str]]]:
+    """Return only sources that belong to a complete set on one scope revision."""
+    recorded: dict[str, list[dict[str, str]]] = defaultdict(list)
+    live: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for source in sources:
+        if source.get("state") != "normalized" or source.get("authenticity") != "reviewer-verified":
+            continue
+        run = runs.get(str(source.get("run_id")))
+        if run is None or run.get("tool") not in CORE_SCANNERS:
+            continue
+        scope_id = str(run.get("scope_id"))
+        scope = scopes.get(scope_id)
+        reference = scope.get("authorization_reference") if scope else None
+        if scope is None or not isinstance(reference, str) or not reference.strip():
+            continue
+        entry = {
+            "run_id": str(run["id"]),
+            "source_id": str(source["id"]),
+            "scope_id": scope_id,
+            "tool": str(run["tool"]),
+        }
+        if run.get("mode") == scope.get("mode") == "recorded-import":
+            recorded[scope_id].append(entry)
+        elif (
+            run.get("mode") == "live"
+            and run.get("state") == "completed"
+            and scope.get("mode") == "live-request"
+        ):
+            try:
+                expires = datetime.fromisoformat(str(scope.get("valid_until")))
+            except ValueError:
+                continue
+            if expires.tzinfo is not None and expires > now:
+                live[scope_id].append(entry)
+
+    recorded_ids = sorted(
+        entry["source_id"]
+        for group in recorded.values()
+        if CORE_SCANNERS.issubset({entry["tool"] for entry in group})
+        for entry in group
+    )
+    live_sources = [
+        entry
+        for group in live.values()
+        if "Nmap" in {entry["tool"] for entry in group}
+        and any(entry["tool"] != "Nmap" for entry in group)
+        for entry in group
+    ]
+    return recorded_ids, live_sources
 
 
 def effective_job_state(row: dict[str, Any], *, native: bool) -> str:
@@ -476,8 +533,7 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
         for row in source_rows
         if row.get("state") == "normalized" and row.get("authenticity") == "reviewer-verified"
     }
-    core = {"Nmap", "OWASP ZAP", "Nikto"}
-    reviewed_core_imports = core & reviewed_source_tools
+    reviewed_core_imports = CORE_SCANNERS & reviewed_source_tools
     gaps = []
     if not normalized & {"Nmap", "Nessus", "Greenbone"}:
         gaps.append("No normalized network-scanner source observed in this snapshot")
@@ -583,41 +639,11 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
         if row.get("parser_revision") in {"zap-v1", "nikto-v1"} and row.get("state") == "normalized"
         for item in row.get("endpoint_ids", [])
     }
-    live_run_by_id = {str(run["id"]): run for run in run_rows}
-    now = datetime.now(UTC)
-    authorized_live_tools: set[str] = set()
-    live_demo_sources: list[dict[str, str]] = []
-    for source in source_rows:
-        run = live_run_by_id.get(str(source.get("run_id")))
-        scope = scope_by_id.get(str(run.get("scope_id"))) if run else None
-        if run is None or scope is None or source.get("authenticity") != "reviewer-verified":
-            continue
-        try:
-            valid_until = datetime.fromisoformat(str(scope.get("valid_until")))
-        except (TypeError, ValueError):
-            continue
-        if (
-            source.get("state") == "normalized"
-            and run.get("mode") == "live"
-            and run.get("state") == "completed"
-            and scope.get("mode") == "live-request"
-            and isinstance(scope.get("authorization_reference"), str)
-            and bool(scope["authorization_reference"].strip())
-            and valid_until > now
-        ):
-            tool_name = run_tools.get(str(run["id"]))
-            if tool_name:
-                authorized_live_tools.add(tool_name)
-                live_demo_sources.append(
-                    {
-                        "run_id": str(run["id"]),
-                        "source_id": str(source["id"]),
-                        "scope_id": str(scope["id"]),
-                        "tool": tool_name,
-                    }
-                )
-    authorized_lab_demo = "Nmap" in authorized_live_tools and bool(
-        authorized_live_tools & {"OWASP ZAP", "Nikto"}
+    reviewed_recorded_ids, live_demo_sources = same_scope_source_gates(
+        source_rows,
+        {str(run["id"]): run for run in run_rows},
+        scope_by_id,
+        datetime.now(UTC),
     )
     live_operations = operations["live-request"]
     full_declared_endpoint_coverage = (
@@ -720,21 +746,15 @@ def assessment_coverage(connection: Connection, assessment_id: UUID) -> dict[str
         ],
         "prototype_gate": {
             "three_verified_network_and_web_imports": {
-                "passed": not truncated and core.issubset(reviewed_source_tools),
-                "evidence": sorted(
-                    str(row["id"])
-                    for row in source_rows
-                    if row.get("state") == "normalized"
-                    and row.get("authenticity") == "reviewer-verified"
-                    and run_tools.get(str(row.get("run_id"))) in core
-                ),
+                "passed": not truncated and bool(reviewed_recorded_ids),
+                "evidence": reviewed_recorded_ids,
                 "reviewed_tools": sorted(reviewed_core_imports),
-                "limitation": "Reviewer source verification is a human assertion; it does not establish live tool capability or grant scan authority.",
+                "limitation": "Reviewed Nmap, ZAP and Nikto recordings must share one scope revision with a recorded authorization reference. Source review does not grant scan authority.",
             },
             "authorized_lab_demonstration": {
-                "passed": not truncated and authorized_lab_demo,
+                "passed": not truncated and bool(live_demo_sources),
                 "evidence": live_demo_sources,
-                "limitation": "Authorization references are participant supplied; retain and independently review the underlying permission evidence.",
+                "limitation": "Live network and web runs must share one unexpired scope revision. Independently review the underlying permission evidence.",
             },
             "authenticated_api_session_coverage": {
                 "passed": auth_gate,
