@@ -118,7 +118,12 @@ def detailed_records(source: dict[str, Any]) -> list[dict[str, Any]]:
                     "basis": "reviewer supplied; not independently verified"
                     if note
                     else "source observation; no reviewer narrative",
-                },
+                }
+                | (
+                    {"recommendation": note_body["recommendation_trace"]}
+                    if note_body.get("recommendation_trace")
+                    else {}
+                ),
             ).model_dump(mode="json")
         )
     return result

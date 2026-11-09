@@ -204,9 +204,15 @@ class ReportCreate(ApiContract):
     format: Literal["pdf", "json"] = "pdf"
 
 
+class ReportRecommendationReference(ApiContract):
+    plan_id: UUID
+    disposition: Literal["used", "edited", "considered"]
+
+
 class ReportFindingCreate(ApiContract):
     expected_revision: int = Field(default=0, ge=0)
     finding_id: UUID | None = None
+    recommendation: ReportRecommendationReference | None = None
     observation_ids: list[UUID] = Field(min_length=1, max_length=100)
     title: str = Field(min_length=1, max_length=500)
     description: str = Field(min_length=1, max_length=4000)

@@ -160,7 +160,13 @@ try {
   await page.getByLabel("Framework mapping rationale").fill("TEST ONLY selected observation indicates a header configuration review.");
   await page.getByRole("button", { name: "Add framework reference" }).click();
   await page.getByRole("list", { name: "Framework references to save" }).getByText(/A02:2025/).waitFor();
+  await page.getByText("Related recommendation", { exact: true }).click();
+  const recommendationPlanId = "e6ff444c-8e7a-4ce9-ab58-a7956eb3c6e1";
+  await page.getByLabel("Recommendation plan ID").fill(recommendationPlanId);
+  assert.ok(await page.getByRole("button", { name: "Save reviewed report content" }).isDisabled());
+  await page.getByLabel("How did you use this recommendation?").selectOption("edited");
   await page.getByRole("button", { name: "Save reviewed report content" }).click();
+  assert.deepEqual(reportWrites[0].recommendation, { plan_id: recommendationPlanId, disposition: "edited" });
   assert.equal(reportWrites.length, 1, "report finding is posted exactly once");
   assert.equal(reportWrites[0].standard_references[0].identifier, "A02:2025", "UI submits the curated framework identifier");
   assert.deepEqual(reportWrites[0].standard_references[0].supporting_observation_ids, ["obs-test"], "mapping is linked to the selected observation");

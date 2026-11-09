@@ -70,3 +70,7 @@ Durable scan-job snapshots use the same assessment access check as other private
 Check `/health/live` for the API process and `/health/ready` for the database and migration head. Compare the deploy revision with the release record before investigating results. The public system-status endpoint lists configuration and tool modes. Use an authorized assessment's activity timeline for job, policy, or evidence outcomes.
 
 In Render logs, filter for `request.completed`. Each record contains the HTTP status, elapsed time, request and correlation IDs, and the server-owned route template. Successful health probes are omitted. Failed readiness checks remain visible. The service disables raw access logging to keep query strings and URL parameters out of these records. Use a request ID to correlate an error with the assessment audit timeline.
+
+### Link a recommendation to a report finding
+
+In **Findings & review**, select the cited observations and expand **Related recommendation**. Paste the plan ID from **Scope & plan** and record how it informed the finding. The API checks that the saved recommendation belongs to the same assessment and cites only observations selected for that finding. Frozen PDF and JSON preserve the plan ID, proposal ID, citations and recorded review outcome separately from the finding text.

@@ -17,6 +17,8 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
   const [findings, setFindings] = useState<Resource[]>([]);
   const [revision, setRevision] = useState<number | null>(null);
   const [editing, setEditing] = useState("");
+  const [planId, setPlanId] = useState("");
+  const [disposition, setDisposition] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [catalog, setCatalog] = useState<CatalogFramework[]>([]);
@@ -42,6 +44,9 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
   function edit(id: string) {
     setEditing(id);
     const value = findings.find(item => item.request.finding_id === id)?.request ?? {};
+    const recommendation = record(value.recommendation);
+    setPlanId(String(recommendation.plan_id ?? ""));
+    setDisposition(String(recommendation.disposition ?? ""));
     setSelected(Array.isArray(value.observation_ids) ? value.observation_ids as string[] : []);
     setStandardReferences(Array.isArray(value.standard_references) ? value.standard_references as FrameworkReference[] : []);
     setFields(Object.fromEntries(FIELDS.map(field => [field, ["references", "verification_steps"].includes(field) && Array.isArray(value[field]) ? value[field].join("\n") : String(value[field] ?? "")])));
@@ -73,9 +78,11 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
         remediation_owner: fields.remediation_owner?.trim() || null,
         verification_steps: (fields.verification_steps ?? "").split("\n").map(value => value.trim()).filter(Boolean),
         references: (fields.references ?? "").split("\n").map(value => value.trim()).filter(Boolean),
-        standard_references: standardReferences }, crypto.randomUUID());
+        standard_references: standardReferences,
+        recommendation: planId.trim() ? { plan_id: planId.trim(), disposition } : null }, crypto.randomUUID());
       if (!active.current) return;
       await reload(); setEditing(""); setSelected([]); setFields({}); setStandardReferences([]);
+      setPlanId(""); setDisposition("");
       setStatus("Reviewer report content saved. Freeze a new report containing all selected source revisions to include it. Prior frozen reports remain unchanged; this content does not confirm exploitability."); onChanged();
     } catch (error) { if (active.current) { setStatus(error instanceof Error ? error.message : "Report content was not saved."); await reload().catch(() => setRevision(null)); } }
     finally { if (active.current) setBusy(false); }
@@ -107,7 +114,18 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
         <button type="button" className="button-secondary" disabled={!selected.length || referenceRationale.trim().length < 10 || referenceStatus === "applicable" && !referenceIdentifier} onClick={addStandardReference}>Add framework reference</button>
         {standardReferences.length > 0 && <ul aria-label="Framework references to save">{standardReferences.map((value, index) => <li key={`${value.framework}-${value.status}-${value.identifier}-${index}`}><span>{currentFramework?.key === value.framework ? currentFramework.name : catalog.find(item => item.key === value.framework)?.name ?? value.framework} · {value.status}{value.identifier ? ` · ${value.identifier}` : ""} · {value.supporting_observation_ids.length} linked observation(s) — {value.rationale}</span><button type="button" className="button-tertiary" aria-label={`Remove framework reference ${index + 1}`} onClick={() => setStandardReferences(values => values.filter((_, item) => item !== index))}>Remove</button></li>)}</ul>}
       </fieldset>
-      <button className="primary-action" disabled={busy || revision === null || !selected.length}>Save reviewed report content</button>
+      <details>
+        <summary>Related recommendation</summary>
+        <p>Copy a saved plan ID from Scope &amp; plan and select all observations cited by that plan.</p>
+        <label>Recommendation plan ID<input value={planId} onChange={event => setPlanId(event.target.value)} maxLength={36} autoComplete="off" /></label>
+        {planId.trim() && <label>How did you use this recommendation?<select required value={disposition} onChange={event => setDisposition(event.target.value)}>
+          <option value="">Choose a review outcome</option>
+          <option value="used">Informed this finding</option>
+          <option value="edited">Informed revised wording</option>
+          <option value="considered">Considered only</option>
+        </select></label>}
+      </details>
+      <button className="primary-action" disabled={busy || revision === null || !selected.length || Boolean(planId.trim() && !disposition)}>Save reviewed report content</button>
       </form>
     </>}
     <p role="status" aria-live="polite">{status}</p>

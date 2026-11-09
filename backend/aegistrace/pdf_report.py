@@ -397,9 +397,30 @@ def render_evidence_report(
                 ("Remediation owner (reviewer supplied)", finding["remediation_owner"]),
                 ("Verification/retest steps", finding["verification_steps"]),
                 ("References", finding["references"]),
-                ("Content provenance", finding["content_provenance"]),
+                (
+                    "Content provenance",
+                    {
+                        key: value
+                        for key, value in finding["content_provenance"].items()
+                        if key != "recommendation"
+                    },
+                ),
             ]:
                 lines.extend((part, 2) for part in _wrap(f"{label}: {value}"))
+            recommendation = finding["content_provenance"].get("recommendation")
+            if recommendation:
+                for label, value in [
+                    ("AI recommendation review", recommendation["disposition"]),
+                    (
+                        "Plan",
+                        f"{recommendation['plan_id']} (revision {recommendation['plan_revision']})",
+                    ),
+                    ("Proposal ID", recommendation["proposal_id"]),
+                    ("Response source", recommendation["provider_source"]),
+                    ("Cited observations", ", ".join(recommendation["observation_ids"])),
+                    ("Recommendation rationale", recommendation["rationale"]),
+                ]:
+                    lines.extend((part, 2) for part in _wrap(f"{label}: {value}"))
             for reference in finding.get("standard_references", []):
                 lines.extend(
                     (part, 2)
