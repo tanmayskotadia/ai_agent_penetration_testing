@@ -105,7 +105,7 @@ def _content_stream(
         commands.extend(
             [
                 b"BT",
-                f"/{font} {size} Tf {color} rg {scale:.3f} Tz {LEFT} {y} Td ".encode("ascii")
+                f"/{font} {size} Tf {color} rg {LEFT} {y} Td {scale:.3f} Tz ".encode("ascii")
                 + b"("
                 + _escape(text)
                 + b") Tj",
