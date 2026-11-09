@@ -170,6 +170,12 @@ def test_populated_multi_asset_contract_and_counts_reconcile():
     assert finding["source_records"][1]["cvss_score"] is None
     assert content["approvals_and_decisions"]["action_approvals"][0]["state"] == "denied"
     assert content["execution_summary"][0]["state"] == "partial"
+    summary = content["executive_summary"]
+    lead, next_step, trace = summary.split("\n\n")
+    assert lead.startswith(f"Finding highlighted for review: {finding['title']}.")
+    assert "Some sources could not be processed fully." in lead
+    assert next_step.endswith(finding["remediation"])
+    assert "observation-a" in trace and "observation-a" not in lead
     assert (
         "reviewer-authored report findings group those observations" in content["executive_summary"]
     )
