@@ -11,6 +11,8 @@ The stage bar identifies the active assessment and its recorded-evidence mode. E
 
 The import form separates the original file, its represented targets and exclusions, and its capture metadata. The processing summary shows the outcome and reason, with technical output available on demand. A successful import links to provenance review. In Findings & review, select a source observation to inspect its original reference and hash before saving. The Report stage separates presentation mode from PDF export, shows the frozen export ID, and groups recorded workflow checks separately from live execution and lab checks.
 
+For recordings covered by the same assessment authorization, use the same exact targets, exclusions, and authorization reference. The import form reuses the current matching recorded scope if it has no expiry. Each file still has its own run, capture time and digest. Changed boundaries create a new revision. Earlier imports stay on the scope where they were recorded.
+
 Changing stages preserves drafts. Switching to another assessment clears the import draft and loads that assessment's own data. A failed coverage request shows a recovery action, and a permission error or expired session gets its own message.
 
 ## Automated UI walkthrough

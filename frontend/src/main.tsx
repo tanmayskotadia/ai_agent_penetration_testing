@@ -15,6 +15,13 @@ import { ReplanPanel } from "./ReplanPanel";
 
 type Status = { stage: string; live_scans_enabled: boolean; tools: ApiSchemas["Capability"][] };
 type RecordedResult = Record<string, unknown>;
+
+function sameScopeEntries(saved: string[], supplied: string[]): boolean {
+  const savedEntries = [...saved].sort();
+  const suppliedEntries = [...supplied].sort();
+  return savedEntries.length === suppliedEntries.length
+    && savedEntries.every((entry, index) => entry === suppliedEntries[index]);
+}
 type RiskRanking = {
   policy: string;
   ranking_method: string;
@@ -342,18 +349,27 @@ function AnalystWorkspace() {
       return;
     }
     const targetList = targets.split(/[\n,]/).map(value => value.trim()).filter(Boolean);
+    const exclusionList = exclusions.split(/[\n,]/).map(value => value.trim()).filter(Boolean);
+    const reference = authorizationReference.trim();
     if (!targetList.length) { setIntakeMessage("Enter at least one in-scope host or address."); return; }
-    if (!authorizationReference.trim()) { setIntakeMessage("Enter the source or authorization reference. It is recorded as supplied and is not independently verified."); return; }
+    if (!reference) { setIntakeMessage("Enter the source or authorization reference. It is recorded as supplied and is not independently verified."); return; }
     if (!capturedAt) { setIntakeMessage("Enter the capture time reported by the source artifact."); return; }
     setIntakeBusy(true); setIntakeMessage("Saving encrypted artifact and normalizing recorded input…"); setRecordedResult(null); setReplayResult(null); setRecordedImportId("");
     try {
       const assessmentBase = `/api/v1/assessments/${encodeURIComponent(selected)}`;
       const priorScopes = await apiJson<ApiSchemas["ScopeVersion"][]>(token, `${assessmentBase}/scopes`, "GET");
-      const scope = await apiJson<ApiSchemas["ScopeVersion"]>(token, `${assessmentBase}/scopes`, "POST", {
-        revision: (priorScopes.at(-1)?.revision ?? 0) + 1,
+      const activeScope = priorScopes.at(-1);
+      // Reuse only the current recorded scope with exactly the same authorization and boundaries.
+      const matchesActiveScope = activeScope?.mode === "recorded-import"
+        && activeScope.valid_until == null
+        && activeScope.authorization_reference === reference
+        && sameScopeEntries(activeScope.targets, targetList)
+        && sameScopeEntries(activeScope.exclusions ?? [], exclusionList);
+      const scope = matchesActiveScope ? activeScope : await apiJson<ApiSchemas["ScopeVersion"]>(token, `${assessmentBase}/scopes`, "POST", {
+        revision: (activeScope?.revision ?? 0) + 1,
         targets: targetList,
-        exclusions: exclusions.split(/[\n,]/).map(value => value.trim()).filter(Boolean),
-        authorization_reference: authorizationReference.trim(),
+        exclusions: exclusionList,
+        authorization_reference: reference,
         mode: "recorded-import",
       });
       const run = await apiJson<ApiSchemas["ToolRun"]>(token, `${assessmentBase}/runs`, "POST", {
@@ -384,8 +400,8 @@ function AnalystWorkspace() {
       const normalizer = IMPORT_OPTIONS[importTool].normalizer;
       const normalized = await apiJson<RecordedResult>(token, `${assessmentBase}/imports/${imported.id}/${normalizer}`, "POST", { asset_mapping: {} });
       setRecordedResult(normalized);
-      setRecordedFile({ name: artifact.name, tool: importTool, authorization: authorizationReference.trim() });
-      setIntakeMessage("Recorded evidence processed. No network scan was run; source authenticity and rights are not independently verified.");
+      setRecordedFile({ name: artifact.name, tool: importTool, authorization: reference });
+      setIntakeMessage(`Recorded evidence processed on scope revision ${scope.revision}. Source authenticity and rights still require review.`);
       setRefresh(value => value + 1);
     } catch (failure) {
       setIntakeMessage(failure instanceof Error ? failure.message : "The artifact could not be processed. Check the saved source metadata and retry with a new import.");
@@ -557,7 +573,7 @@ function AnalystWorkspace() {
               </fieldset>
               <fieldset disabled={intakeBusy}>
                 <legend>2. Represented scope</legend>
-                <p className="help-text">Importing saves these boundaries as a new recorded scope revision. List the exact targets represented by the file.</p>
+                <p className="help-text">List the exact targets represented by the file. Matching targets, exclusions, and authorization reuse the current recorded scope. Changes create a new revision.</p>
                 <div className="form-grid">
                   <label>Targets represented in the input<textarea value={targets} onChange={event => setTargets(event.target.value)} placeholder="One host, address or URL per line" required /></label>
                   <label>Excluded hosts/addresses<textarea value={exclusions} onChange={event => setExclusions(event.target.value)} placeholder="Optional. One entry per line." /></label>
