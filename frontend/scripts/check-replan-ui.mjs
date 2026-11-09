@@ -121,14 +121,14 @@ try {
   await page.getByRole("article", { name: "Saved replanning result" }).getByText(/TEST ONLY: the selected observation supports reviewing/).first().waitFor();
   await page.getByText(observationId).first().waitFor();
   await page.getByRole("link", { name: `${observationId} · inspect source` }).waitFor();
-  await page.getByRole("link", { name: "Open saved plan and its separate human review" }).waitFor();
+  await page.getByRole("link", { name: "Open saved plan for review" }).waitFor();
   await page.getByRole("button", { name: "Inspect matching evidence" }).click();
   await page.getByText("A current reviewed redacted derivative is required").waitFor();
   await page.getByRole("button", { name: "Generate redacted snippet" }).click();
   await page.getByRole("button", { name: "Mark derivative reviewed" }).click();
   await page.waitForTimeout(500);
   assert.ok(requests.some(item => item.path.endsWith(`/evidence/${evidenceId}/redaction-review`)), "operator review request reached the API");
-  await page.getByText("Human-reviewed derivative available").waitFor({ timeout: 5000 });
+  await page.getByText("Reviewed redacted copy available").waitFor({ timeout: 5000 });
 
   await page.getByRole("button", { name: "Replan from selected evidence" }).click();
   await page.getByText(/selected evidence and available actions match a prior plan/).first().waitFor();

@@ -63,7 +63,7 @@ function explainBlocker(code: string): string {
     "provider-rate-limited": "The provider rate-limited this request. No recommendation was accepted; check the provider status, then use the explicit retry action only if appropriate.",
     "provider-unavailable-or-invalid-response": "The provider was unavailable or returned an invalid response. No recommendation was accepted; inspect the sanitized trace before deciding whether to retry.",
     "external-data-policy-approval-required": "The consent or policy reference did not match the server-approved policy. No model request was made. Confirm the approved reference with your service operator.",
-    "reviewed-unexpired-evidence-required": "A selected source needs a current human-reviewed redacted derivative. Inspect the evidence below, create the redacted derivative, then review it.",
+    "reviewed-unexpired-evidence-required": "A selected source needs a current reviewed redacted copy. Inspect the evidence below, create the redacted derivative, then review it.",
     "scope-changed-during-reasoning": "The scope changed while reasoning was in progress. Reload the current scope and evidence before trying again.",
     "prior-provider-failure; explicit-reviewer-retry-required": "The previous provider attempt failed. Review the trace, then choose the explicit retry action if another call is appropriate.",
     "no-observed-evidence; stop-and-request-input": "No normalized observations were available. Import or select eligible evidence before asking for a recommendation.",
@@ -220,7 +220,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged, onOpenEv
       const blockers = stringList(proposal.blockers);
       setStatus(blockers.length
         ? `Saved blocked plan ${saved.id}. ${explainBlocker(blockers[0])}`
-        : `Saved plan ${saved.id}. AI recommendation is ready for separate human review.`);
+        : `Saved plan ${saved.id}. Recommendation ready for review.`);
       setRetry(hasRetryableProviderFailure([...plans.filter(plan => plan.id !== saved.id), saved], saved));
       setConversationId(String(saved.request.conversation_id ?? conversationId));
       setInspectorReload(value => value + 1);
@@ -256,8 +256,8 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged, onOpenEv
   const testOnly = provider.provider_source === "test-only" || String(decision.rationale ?? "").includes("TEST ONLY");
 
   return <section className="replan-panel" aria-labelledby="evidence-replan">
-    <div className="replan-heading"><div><p className="eyebrow">EVIDENCE → NEXT STEP</p><h3 id="evidence-replan">Replan from evidence</h3></div><span className="badge">AI inference · human review required</span></div>
-    <p>Ask the configured model to reconsider a bounded next step using normalized observations and human-reviewed redacted source snippets. It cannot run a scanner, authorize an action, or confirm a vulnerability.</p>
+    <div className="replan-heading"><div><p className="eyebrow">EVIDENCE → NEXT STEP</p><h3 id="evidence-replan">Replan from evidence</h3></div><span className="badge">Recommendation · review required</span></div>
+    <p>Request a next-step recommendation from selected observations. Each source needs a current reviewed redacted copy. Any action requires separate approval.</p>
     {loadError && <p role="alert">{loadError}</p>}
     <div className="replan-context" aria-label="Current scope context">
       <strong>Active scope</strong>
@@ -279,7 +279,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged, onOpenEv
             <span><strong>{revision.tool} · result revision {revision.revision}</strong>
               <small>Captured {displayTime(revision.captured_at)} · {revision.observation_ids.length} observation(s) · source {revision.source_sha256.slice(0, 12)}…</small>
               <small>Provenance: {sourceReview
-                ? sourceReview.provenance === "genuine-permitted-capture" && sourceReview.decision === "verify" ? "reviewer-asserted genuine permitted capture" : "reviewed as test-only or rejected"
+                ? sourceReview.provenance === "genuine-permitted-capture" && sourceReview.decision === "verify" ? "Reviewed capture with recorded permission" : "reviewed as test-only or rejected"
                 : "not reviewed; authenticity remains unverified"}</small>
             </span>
           </label>;
@@ -291,7 +291,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged, onOpenEv
       return <article className="replan-evidence" id={`replan-evidence-${revision.evidence_id}`} key={revision.id}>
         <h4>{revision.tool} · evidence checks</h4>
         <p>Source provenance: {sourceReview ? `${sourceReview.decision} · ${sourceReview.provenance}` : "No source provenance review is recorded. Review it only if you personally checked the original and its permission basis."}</p>
-        <p>Redaction: {inspector === undefined ? "Checking status…" : inspector?.reviewed_derivative_available ? "Human-reviewed derivative available" : "A current reviewed redacted derivative is required before provider context can be sent."}</p>
+        <p>Redaction: {inspector === undefined ? "Checking status…" : inspector?.reviewed_derivative_available ? "Reviewed redacted copy available" : "A current reviewed redacted derivative is required before provider context can be sent."}</p>
         <a href="#source-review" onClick={event => { if (onOpenEvidence) { event.preventDefault(); onOpenEvidence("source-review"); } }}>Go to source provenance review</a>
         <EvidenceInspector assessmentId={assessmentId} token={token} evidenceId={revision.evidence_id} onChanged={() => setInspectorReload(value => value + 1)} />
       </article>;
@@ -301,7 +301,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged, onOpenEv
       <textarea value={requestText} onChange={event => setRequestText(event.target.value)} maxLength={1000} placeholder="For example: Given the current evidence, what is the safest useful next recorded-evidence step?" />
     </label>
     <label className="replan-consent"><input type="checkbox" checked={allowExternalProcessing} onChange={event => setAllowExternalProcessing(event.target.checked)} />
-      <span>I explicitly consent to send bounded assessment context for the selected observations and my request to the configured external model provider. The server requires a current human-reviewed redacted derivative for each source, but does not send derivative text or raw originals. Do not include secrets in the request. This does not authorize a scan or action.</span>
+      <span>I explicitly consent to send bounded assessment context for the selected observations and my request to the configured external model provider. The server requires a current reviewed redacted copy for each source, but does not send derivative text or raw originals. Do not include secrets in the request. This does not authorize a scan or action.</span>
     </label>
     <label>Approved data-processing policy reference
       <input value={policyReference} onChange={event => setPolicyReference(event.target.value)} maxLength={300} placeholder="Enter the exact reference approved for this hosted service" />
@@ -325,7 +325,7 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged, onOpenEv
     <p role="status" aria-live="polite">{status}</p>
     {latestPlan && <article className="replan-result" aria-label="Saved replanning result">
       <div className="replan-heading"><h4>Saved plan revision {latestPlan.revision} · {latestPlan.state}</h4>{testOnly && <strong className="test-only-badge">TEST ONLY · synthetic response</strong>}</div>
-      <p><strong>Information kind:</strong> {String(proposal.information_kind ?? "unknown; no accepted model decision")}. {provider.model_called === true ? "A configured provider returned this inference." : provider.provider_source === "test-only" ? "A test fixture produced this response; it is not real model output." : provider.provider_invoked === true ? "The provider was invoked, but no decision passed validation." : "No provider call is recorded."}</p>
+      <p><strong>Recommendation status:</strong> {provider.model_called === true ? "Provider response received." : testOnly ? "Sample response for testing." : provider.provider_invoked === true ? "The provider returned no usable decision." : "No provider call recorded."}</p>
       {blockers.length > 0 && <div role="alert"><strong>Blocked or abstained:</strong><ul>{blockers.map(code => <li key={code}>{explainBlocker(code)}</li>)}</ul></div>}
       {Object.keys(decision).length > 0 && <>
         <p><strong>Decision:</strong> {String(decision.decision)}{decision.selected_candidate_id ? ` · ${String(decision.selected_candidate_id)}` : ""}</p>
@@ -347,8 +347,8 @@ export function ReplanPanel({ assessmentId, token, coverage, onChanged, onOpenEv
       {candidates.length ? <ul>{candidates.map(item => <li key={String(item.id)}><strong>{String(item.id)}</strong> · {String(item.action)}{item.tool ? ` · ${String(item.tool)}` : ""} · observations {stringList(item.observation_ids).join(", ") || "none"}</li>)}</ul> : <p>No safe candidate is available from the supplied evidence.</p>}
       <p><strong>Provider trace:</strong> {String(provider.provider ?? "provider unknown")} · {String(provider.model ?? "model unavailable")} · {provider.provider_invoked === true ? "invoked" : "not invoked"} · {provider.model_called === true ? "live provider response" : testOnly ? "test-only fixture" : "no live response"}</p>
       <p>Plan ID: <code>{latestPlan.id}</code> · Context SHA-256: <code>{String(latestPlan.request.context_sha256 ?? "not recorded")}</code></p>
-      <p><a href="#assessment-setup">Open saved plan and its separate human review</a> · <a href="#assessment-timeline" onClick={event => { if (onOpenEvidence) { event.preventDefault(); onOpenEvidence("assessment-timeline"); } }}>Open audit trace</a></p>
-      <p className="notice">A recommendation is a draft. A separate human plan review is required. It never grants execution permission or creates a scan job.</p>
+      <p><a href="#assessment-setup">Open saved plan for review</a> · <a href="#assessment-timeline" onClick={event => { if (onOpenEvidence) { event.preventDefault(); onOpenEvidence("assessment-timeline"); } }}>Open audit trace</a></p>
+      <p className="notice">A recommendation is a draft. Review the plan before proceeding. Any scan requires its own scope and approval.</p>
       <details><summary>Exact stored plan and sanitized provider trace</summary><pre tabIndex={0}>{JSON.stringify(latestPlan, null, 2)}</pre></details>
     </article>}
   </section>;

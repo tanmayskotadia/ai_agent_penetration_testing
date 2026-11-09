@@ -27,7 +27,6 @@ export function PlanCard({ plan, problem, decision, rationale, busy, onRationale
   return <article className="review-card" aria-label={`Plan revision ${plan.revision}`}>
     <h4>Plan revision {plan.revision} · {plan.state}</h4>
     <p>Plan ID: {plan.id} · Scope ID: {String(plan.request.scope_id ?? "unknown")} · Scope revision: {String(plan.request.scope_revision ?? "unknown")}</p>
-    <p>Information: {String(proposal.information_kind ?? "stored plan proposal")}</p>
     <p>Request: {String(proposal.request_text ?? plan.request.message ?? "not supplied")}</p>
     <p>Targets: {list(proposal.scope_targets).map(String).join(", ") || "not supplied"} · Exclusions: {list(proposal.scope_exclusions).map(String).join(", ") || "none recorded"}</p>
     <p>Permission boundary: reviewing this proposal records a decision only. Execution needs its own authorized scope and action approval.</p>

@@ -14,7 +14,7 @@ const stamp = (value: number | string | undefined) => value == null ? "unknown" 
 
 export function recovery(job: Job): string {
   if (job.status === "unknown" || job.heartbeat_stale) return "Retry eligibility: blocked pending reconciliation. Verify worker termination and retained evidence before requesting fresh approval.";
-  if (["failed", "partial", "blocked", "cancelled"].includes(job.status)) return "Retry eligibility: requires human review. Inspect the diagnostic and retained evidence, correct the cause, then create a fresh scoped request and approval. No automatic retry is offered.";
+  if (["failed", "partial", "blocked", "cancelled"].includes(job.status)) return "Retry requires review. Inspect the diagnostic and retained evidence, correct the cause, then create a fresh scoped request and approval. No automatic retry is offered.";
   return "Retry eligibility: not established. Reconnecting only refreshes status and never resubmits work.";
 }
 
@@ -120,6 +120,6 @@ export function AssessmentTimeline({ assessmentId, token, onChanged }: { assessm
     {decisions.map(decision => <article className="review-card" key={decision.id}><p>Reviewer decision · {safeText(decision.request.decision ?? decision.request.validation_state)} · {stamp(String(decision.request.reviewed_at ?? decision.request.recorded_at ?? ""))}</p><p>Rationale: {safeText(decision.request.rationale)}</p><p>Reference: {safeText(decision.request.plan_id ?? decision.request.observation_id)} · record {decision.id}</p><a href={decision.request.plan_id ? "#assessment-setup" : "#source-priority"}>Review referenced plan or evidence</a><p>Contradiction observation references: {safeText(JSON.stringify(decision.request.contradictory_observation_ids ?? []))}</p></article>)}
     <h4>Assessment audit timeline</h4>
     <p>Audit metadata identifies proposals, decisions and outcomes. It does not expose internal model reasoning or private source bodies. Import actions are recorded-input events; inference events are proposals.</p>
-    <ol aria-label="Assessment audit events">{audit.map(event => <li key={event.event_id}>{stamp(event.created_at)} · {safeText(event.action)} · {safeText(event.outcome)} · {event.actor_kind === "ai-proposal" ? "AI inference/proposal" : event.action.includes("import") ? "recorded import" : "persisted action metadata"}<p>Resource: {event.resource_id ?? "not supplied"} · event {event.event_id} · scope revision {event.scope_revision ?? "unknown"} · plan revision {event.plan_revision ?? "unknown"}</p></li>)}</ol>
+    <ol aria-label="Assessment audit events">{audit.map(event => <li key={event.event_id}>{stamp(event.created_at)} · {safeText(event.action)} · {safeText(event.outcome)} · {event.actor_kind === "ai-proposal" ? "Proposed action" : event.action.includes("import") ? "recorded import" : "persisted action metadata"}<p>Resource: {event.resource_id ?? "not supplied"} · event {event.event_id} · scope revision {event.scope_revision ?? "unknown"} · plan revision {event.plan_revision ?? "unknown"}</p></li>)}</ol>
   </section>;
 }

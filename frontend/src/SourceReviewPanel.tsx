@@ -62,7 +62,7 @@ export function SourceReviewPanel({ assessmentId, token, toolEvidence, onChanged
 
   return <section aria-labelledby="source-review">
     <h3 id="source-review">Source provenance review</h3>
-    <p>Reviewing a source records a human assertion. It does not grant scan authority, change the source file, or turn observations into confirmed vulnerabilities.</p>
+    <p>Record where the source came from and what you checked. This review applies to the source file. Scan authorization and finding validation are separate steps.</p>
     <label>Artifact provenance
       <select value={provenance} onChange={event => setProvenance(event.target.value)}>
         <option value="test-only">Handcrafted or test-only</option>

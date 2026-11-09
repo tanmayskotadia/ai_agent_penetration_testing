@@ -70,7 +70,7 @@ function Inspector({ assessmentId, token, evidenceId, observationId, onChanged }
       <dt>Tool/version</dt><dd>{metadata.tool} · {metadata.tool_version}</dd><dt>Run</dt><dd>{metadata.run_id} · {metadata.mode} · {metadata.run_state}</dd>
       <dt>Captured time</dt><dd>{metadata.captured_at}</dd><dt>Original access</dt><dd>{metadata.original_available ? metadata.original_access : "Original unavailable or retention expired"}</dd>
     </dl>
-    <p>Snippets are bounded redacted derivatives of the source artifact, not an exact finding excerpt. Automated redaction requires human review and may miss unrecognized sensitive text. Source text is displayed inertly.</p>
+    <p>This preview shows a redacted copy of the source. Check it for sensitive details before approving it for use.</p>
     <button disabled={busy || !metadata.reviewed_derivative_available} onClick={() => void operation("read")}>Load reviewed snippet</button>
     <button disabled={busy || !metadata.can_generate_derivative} onClick={() => void operation("generate")}>Generate redacted snippet</button>
     {snippet && <><p>{kind}</p><pre tabIndex={0}>{snippet}</pre><button disabled={busy || !metadata.can_review_derivative || kind !== "Unreviewed redacted source derivative"} onClick={() => void operation("review")}>Mark derivative reviewed</button></>}

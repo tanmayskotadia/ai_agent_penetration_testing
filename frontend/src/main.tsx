@@ -109,7 +109,7 @@ async function downloadFrozenFile(
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function HumanReview() {
+function AnalystWorkspace() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
@@ -474,9 +474,9 @@ function HumanReview() {
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (failure) { setIntakeMessage(failure instanceof Error ? failure.message : "The private original could not be downloaded."); }
   }
-  return <section className="analyst-workspace" aria-labelledby="human-review">
+  return <section className="analyst-workspace" id="workspace" tabIndex={-1} aria-labelledby="workspace-title">
     <div className="workspace-section-heading">
-      <div><p className="eyebrow">SECURITY ASSESSMENTS</p><h2 id="human-review">Analyst workspace</h2></div>
+      <div><p className="eyebrow">SECURITY ASSESSMENTS</p><h2 id="workspace-title">Analyst workspace</h2></div>
       <span className="badge">Recorded evidence only</span>
     </div>
     {!token ? <div className="signin-layout">
@@ -651,6 +651,13 @@ function HumanReview() {
     {token && <p className="workspace-global-status" role="status">{message}</p>}
   </section>;}
 
+const WORKFLOW_CARD_TITLES: Record<WorkspaceStage, string> = {
+  scope: "Plan the assessment",
+  evidence: "Organize evidence",
+  review: "Review findings",
+  report: "Export the report",
+};
+
 function App() {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState("");
@@ -662,21 +669,48 @@ function App() {
       .catch((failure: unknown) => { if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "Unable to connect"); });
     return () => controller.abort();
   }, []);
-  return <><a className="skip-link" href="#workspace-main">Skip to workspace</a><main id="workspace-main" tabIndex={-1}>
-    <header className="app-header">
-      <div className="app-brand">
-        <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4 26 8v7c0 6-4 10-10 13C10 25 6 21 6 15V8l10-4Z"/><path d="M10 16h4l2-4 3 7 2-3h2"/></svg>
-        <div><h1>AegisTrace</h1><p>Security evidence review</p></div>
+  const release = "https://github.com/tanmayskotadia/ai_agent_penetration_testing/releases/tag/recorded-demo-v0.1.0";
+  return <>
+    <a className="skip-link" href="#workspace">Skip to workspace</a>
+    <header className="product-header" id="home">
+      <div className="product-header-inner">
+        <a className="wordmark" href="#home">AegisTrace</a>
+        <nav className="product-nav" aria-label="Product navigation">
+          <a href="#workspace">Workspace</a>
+          <a href="#integration-capabilities">Integrations</a>
+          <a href={release}>Demo</a>
+        </nav>
       </div>
-      <div className="header-status" role="status"><span aria-hidden="true" className={error ? "status-indicator is-error" : status ? "status-indicator is-ready" : "status-indicator"} />{error || (status ? "Workspace connected" : "Connecting to workspace…")}</div>
     </header>
-    <HumanReview />
+    <main id="workspace-main" tabIndex={-1}>
+      <section className="product-intro" aria-labelledby="product-title">
+        <p className="eyebrow">SECURITY ASSESSMENT WORKSPACE</p>
+        <h1 id="product-title">From security evidence to clear next steps.</h1>
+        <p className="product-description">Set your scope, bring network and web evidence together, and trace each report finding back to its source.</p>
+        <div className="product-actions">
+          <a className="product-link product-link-primary" href="#workspace">Open workspace</a>
+          <a className="product-link" href={release}>View recorded demo</a>
+        </div>
+        <dl className="product-metrics">
+          <div><dt>Workspace status</dt><dd><span className="product-connection" role="status"><span aria-hidden="true" className={error ? "status-indicator is-error" : status ? "status-indicator is-ready" : "status-indicator"} />{error ? "Unavailable" : status ? "Connected" : "Connecting…"}</span></dd></div>
+          <div><dt>Operating mode</dt><dd>{status ? status.live_scans_enabled ? "Live-capable" : "Recorded evidence" : "—"}</dd></div>
+          <div><dt>Tool catalogue</dt><dd>{status?.tools.length ?? "—"}</dd></div>
+        </dl>
+      </section>
+      <div className="product-overview">
+        {WORKSPACE_STAGES.map((item, index) => <article key={item.id}>
+          <span className="eyebrow">0{index + 1}</span>
+          <h2>{WORKFLOW_CARD_TITLES[item.id]}</h2>
+          <p>{item.description}</p>
+        </article>)}
+      </div>
+      <AnalystWorkspace />
     <details id="integration-capabilities" className="tool-status">
       <summary>Tool status and limitations {status && <span className="badge">{status.tools.length} tools</span>}</summary>
       {status ? <><p>Each tool’s mode describes what this workspace supports. Recorded imports process existing files offline.</p><ul>{status.tools.map(tool => <li key={tool.name}><div><strong>{tool.name}</strong><small className="capability-description">{tool.demonstration_label}</small><small className="capability-description">{(tool.limitations ?? []).join(". ")}</small></div><span className="badge">{tool.mode ?? "planned"}</span></li>)}</ul></>
         : <p role="status">{error ? "Tool status is unavailable. Reload the page to try again." : "Loading tool capabilities…"}</p>}
     </details>
-    <footer>Assessment permission, evidence provenance and human review come first.</footer>
+    <footer>AegisTrace · Security assessment workspace</footer>
   </main></>;
 }
 

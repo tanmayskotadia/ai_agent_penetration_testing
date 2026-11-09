@@ -62,7 +62,7 @@ try {
     assert.deepEqual(result.violations.map(item => ({ id: item.id, nodes: item.nodes.map(node => node.target) })), [], label);
   }
   await page.goto(server.resolvedUrls.local[0]);
-  await page.getByText("Workspace connected", { exact: true }).waitFor();
+  await page.getByText("Connected", { exact: true }).waitFor();
   await audit("Signed-out accessibility");
   await tabTo(page.getByLabel("Username", { exact: true })); await page.keyboard.type("test-reviewer");
   await tabTo(page.getByLabel("Password", { exact: true })); await page.keyboard.type("test-only-password");

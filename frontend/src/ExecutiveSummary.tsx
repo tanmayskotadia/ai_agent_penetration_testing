@@ -18,7 +18,7 @@ export function ExecutiveSummary({ snapshot, onInspect }: { snapshot: Row | null
     <h5>Coverage limitations and unavailable capabilities</h5>
     <ul>{(Array.isArray(snapshot.gaps) ? snapshot.gaps : []).map((value, index) => <li key={index}>{text(value)}</li>)}</ul>
     <ul>{rows(snapshot.tool_evidence).map(item => { const capability = record(item.capability); return <li key={text(item.name)}>{text(item.name)}: {text(capability.mode)} · {text(capability.demonstration_label)}</li>; })}</ul>
-    <p>Observed evidence, reviewer decisions and AI proposals have separate meanings. Live execution and source authenticity are not implied by this summary.</p>
+    <p>Use the source details to distinguish recorded observations, proposed actions, and review decisions.</p>
     <button onClick={onInspect}>Open analyst view and source trace</button>
   </section>;
 }
