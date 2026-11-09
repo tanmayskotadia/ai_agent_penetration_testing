@@ -450,7 +450,12 @@ def test_report_finding_links_recommendation_without_promoting_its_prose(
         "expected_revision": 1,
         "recommendation": None,
     }
-    assert (
-        client.post(base + "/report-findings", json=revised, headers=headers()).status_code == 201
-    )
+    retry_headers = headers()
+    saved_revision = client.post(base + "/report-findings", json=revised, headers=retry_headers)
+    assert saved_revision.status_code == 201
+    assert "recommendation" not in saved_revision.json()["request"]
+    omitted = {key: value for key, value in revised.items() if key != "recommendation"}
+    replay = client.post(base + "/report-findings", json=omitted, headers=retry_headers)
+    assert replay.headers["Idempotent-Replay"] == "true"
+    assert replay.json() == saved_revision.json()
     assert client.get(path, headers=headers()).json()["sha256"] == frozen["sha256"]
