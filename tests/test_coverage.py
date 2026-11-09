@@ -1,6 +1,7 @@
 """Coverage provenance, invalid results and frozen-report consistency tests."""
 
 import re
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -14,6 +15,58 @@ from test_capabilities import policy_simulation
 from test_nmap import source
 
 pytest_plugins = ("test_ingestion",)
+
+
+@pytest.mark.parametrize("mode", ["recorded-import", "live"])
+def test_prototype_gate_requires_verified_sources_on_one_scope(mode):
+    now = datetime(2026, 11, 9, tzinfo=UTC)
+    tools = ["Nmap", "OWASP ZAP", "Nikto"] if mode == "recorded-import" else ["Nmap", "Nikto"]
+    scopes = {
+        key: {
+            "mode": "live-request" if mode == "live" else mode,
+            "authorization_reference": "TEST ONLY permission reference",
+            "valid_until": (now + timedelta(hours=1)).isoformat(),
+        }
+        for key in ("scope-a", "scope-b")
+    }
+    runs = {
+        tool: {
+            "id": tool,
+            "tool": tool,
+            "scope_id": "scope-a" if tool == "Nmap" else "scope-b",
+            "mode": mode,
+            "state": "completed" if mode == "live" else "recorded",
+        }
+        for tool in tools
+    }
+    sources = [
+        {
+            "id": f"source-{tool}",
+            "run_id": tool,
+            "state": "normalized",
+            "authenticity": "reviewer-verified",
+        }
+        for tool in tools
+    ]
+    gate = coverage.same_scope_source_gates
+    assert gate(sources, runs, scopes, now) == ([], [])
+
+    runs["Nmap"]["scope_id"] = "scope-b"
+    recorded, live = gate(sources, runs, scopes, now)
+    if mode == "recorded-import":
+        assert recorded == sorted(source["id"] for source in sources)
+        assert live == []
+    else:
+        assert recorded == []
+        assert {row["source_id"] for row in live} == {source["id"] for source in sources}
+        assert {row["scope_id"] for row in live} == {"scope-b"}
+        assert gate(sources, runs, scopes, now + timedelta(hours=1)) == ([], [])
+
+    sources[0]["authenticity"] = "test-only-reviewed"
+    assert gate(sources, runs, scopes, now) == ([], [])
+    sources[0]["authenticity"] = "reviewer-verified"
+    scopes["scope-b"]["authorization_reference"] = " "
+    assert gate(sources, runs, scopes, now) == ([], [])
 
 
 def test_stale_worker_state_is_unknown_without_inventing_completion():
