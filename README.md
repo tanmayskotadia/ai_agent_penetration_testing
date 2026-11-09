@@ -4,6 +4,8 @@ An evidence-driven, analyst-controlled Unified VAPT Agent for the DataOps Innova
 
 **Current status:** The guided workspace supports scope-bound intake, recorded Nmap/ZAP/Nikto/OpenAPI imports, reviewer provenance, evidence-driven replanning, correlation, risk review and frozen PDF/JSON exports. The project tracks the recorded rehearsal in [#78](https://github.com/tanmayskotadia/ai_agent_penetration_testing/issues/78) and official lab acceptance in [#72](https://github.com/tanmayskotadia/ai_agent_penetration_testing/issues/72). The hosted recorded workflow keeps live execution disabled. See the [recorded demo guide](demo/recorded-release.md).
 
+Open the [hosted workspace](https://dataops-l44b.onrender.com/) or download the [recorded demo package](https://github.com/tanmayskotadia/ai_agent_penetration_testing/releases/tag/recorded-demo-v0.1.0). The workspace follows four stages from scope and evidence intake through finding review and report export. The demo package includes a captioned walkthrough and a test-only sample report.
+
 The participant requires cloud hosting without local setup. A Render Blueprint and Supabase deployment runbook are provided in [free cloud deployment](docs/free-cloud-deployment.md); creating the hosted service and entering database/encryption secrets remains participant-side setup. Local commands below are optional developer workflows. See [T30 prototype status](docs/prototype-status.md), [cloud direction](docs/runtime-input-cloud-direction.md) and [API contracts](docs/api.md).
 
 ## Quick start: native API/UI smoke mode

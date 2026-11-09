@@ -44,7 +44,7 @@ try {
   await jobCard.waitFor();
   await page.getByText(/Connected; last reconciled/).waitFor();
   assert.equal(await jobCard.getByRole("listitem").count(), 2);
-  assert.ok((await page.locator("body").innerText()).includes("Retry eligibility: requires human review"));
+  assert.ok((await page.locator("body").innerText()).includes("Retry requires review"));
   assert.ok(!(await page.locator("body").innerText()).includes("private-value"));
   assert.ok((await page.locator("body").innerText()).includes("token=[redacted]"));
   offline = true;

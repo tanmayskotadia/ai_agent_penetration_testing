@@ -81,7 +81,7 @@ export function ReportFindingPanel({ assessmentId, token, analytics, onChanged }
     finally { if (active.current) setBusy(false); }
   }
   return <section aria-labelledby="report-content-review"><h3 id="report-content-review">Evidence-backed report content</h3>
-    <p>A human reviewer can group source observations into a report finding and supply descriptions, impact, remediation and references. Technical impact requires an evidence basis; business impact requires stated assumptions. Remediation requires its observed basis and concrete verification or retest steps. Recommendations remain reviewer-supplied and are never marked as executed. Empty fields remain unknown.</p>
+    <p>Group related observations into a finding. Cite the evidence for technical impact, state any business assumptions, and include a verification step for each remediation. Empty fields appear as unknown.</p>
     <button disabled={busy} onClick={() => void reload().catch(error => setStatus(String(error)))}>Reload report content</button>
     <label>Report finding to edit<select aria-label="Report finding to edit" value={editing} onChange={event => edit(event.target.value)}><option value="">New report finding</option>{findings.map(item => <option key={item.id} value={String(item.request.finding_id)}>{String(item.request.title)} · revision {item.revision}</option>)}</select></label>
     {!observations.length ? <p>Import and normalize source evidence before writing report findings.</p> : <>

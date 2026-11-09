@@ -85,7 +85,9 @@ try {
   });
 
   await page.goto(server.resolvedUrls.local[0]);
-  await page.getByRole("heading", { name: "AegisTrace" }).waitFor();
+  await page.getByRole("heading", { name: "From security evidence to clear next steps." }).waitFor();
+  await page.getByRole("link", { name: "Open workspace" }).click();
+  assert.equal(new URL(page.url()).hash, "#workspace");
   await page.getByLabel("Username").fill("analyst@example.test");
   await page.getByLabel("Password").fill("synthetic-password-only");
   await page.getByRole("button", { name: "Sign in" }).click();
