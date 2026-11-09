@@ -359,7 +359,7 @@ def replan(
         "model": config.groq_model,
         "model_called": False,
         "provider_invoked": False,
-        "prompt_version": "adaptive-v2",
+        "prompt_version": "adaptive-v3",
         "schema_version": "1.0",
     }
     proposal: dict[str, Any] | None = None

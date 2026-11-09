@@ -35,11 +35,13 @@ export function FindingTriagePanel({ assessmentId, token, analytics, onChanged }
     return () => { active.current = false; };
   }, [path, token]);
   const currentState = (item: Row) => text(history?.latest_by_observation[String(item.observation_id)]?.validation_state ?? item.validation_state);
+  const sourceId = filters.sourceId?.trim().toLowerCase();
   const visible = observations.filter(item => (!filters.asset || text(item.asset_id) === filters.asset)
     && (!filters.tool || text(item.source_tool) === filters.tool)
     && (!filters.severity || text(item.source_severity) === filters.severity)
     && (!filters.validation || currentState(item) === filters.validation)
-    && (!filters.confidence || confidence(item) === filters.confidence));
+    && (!filters.confidence || confidence(item) === filters.confidence)
+    && (!sourceId || [item.observation_id, item.evidence_id].some(id => typeof id === "string" && id.toLowerCase() === sourceId)));
   async function save(item: Row) {
     if (!history) return;
     const id = String(item.observation_id);
@@ -70,6 +72,7 @@ export function FindingTriagePanel({ assessmentId, token, analytics, onChanged }
     <p>Observed source records and reviewer decisions remain separate. Confidence is source-reported or unknown; no calibrated probability is established. Accepted risk and remediation tracking are deferred and are not marked as remediated.</p>
     <p>{observations.filter(severeUncertain).length} potentially severe observations have low or unknown confidence. They remain in the inventory regardless of review classification.</p>
     <fieldset><legend>Filter source observations</legend>
+      <label>Observation or evidence ID from report<input value={filters.sourceId ?? ""} onChange={event => setFilters(current => ({ ...current, sourceId: event.target.value }))} /></label>
       {([ ["asset", "Asset", "asset_id"], ["tool", "Tool", "source_tool"], ["severity", "Source severity", "source_severity"] ] as const).map(([key, label, field]) => <label key={key}>{label}<select aria-label={label} value={filters[key] ?? ""} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))}><option value="">All</option>{[...new Set(observations.map(item => text(item[field])))].sort().map(value => <option key={value}>{value}</option>)}</select></label>)}
       <label>Validation<select aria-label="Validation" value={filters.validation ?? ""} onChange={event => setFilters(current => ({ ...current, validation: event.target.value }))}><option value="">All</option>{STATES.map(value => <option key={value}>{value}</option>)}</select></label>
       <label>Confidence<select aria-label="Confidence" value={filters.confidence ?? ""} onChange={event => setFilters(current => ({ ...current, confidence: event.target.value }))}><option value="">All</option><option>unknown</option><option>source-reported</option></select></label>

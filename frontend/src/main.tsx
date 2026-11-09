@@ -88,6 +88,27 @@ async function apiJson<T>(token: string, path: string, method: string, body?: un
   return response.json() as Promise<T>;
 }
 
+async function downloadFrozenFile(
+  token: string, assessmentId: string, exportId: string, format: "pdf" | "json",
+) {
+  const base = `/api/v1/assessments/${encodeURIComponent(assessmentId)}/result-exports/${encodeURIComponent(exportId)}`;
+  const response = await fetch(format === "pdf" ? `${base}/pdf` : base, {
+    headers: { Authorization: `Bearer ${token}`, "X-Request-ID": crypto.randomUUID() },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`${format.toUpperCase()} download failed (${response.status}).`);
+  const blob = await response.blob();
+  if (blob.type.split(";")[0] !== `application/${format}`) {
+    throw new Error(`The server did not return a ${format.toUpperCase()} export.`);
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `aegistrace-${exportId}.${format}`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function HumanReview() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -126,6 +147,7 @@ function HumanReview() {
   const [coverageError, setCoverageError] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
   const [reportMessage, setReportMessage] = useState("");
+  const [lastExport, setLastExport] = useState<{ assessmentId: string; id: string } | null>(null);
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [intakeMessage, setIntakeMessage] = useState("");
   const [message, setMessage] = useState("");
@@ -227,6 +249,7 @@ function HumanReview() {
     setManifestResult(null);
     setIntakeMessage("");
     setReportMessage("");
+    setLastExport(null);
   }, [selected]);
   async function signOut() {
     setBusy(true);
@@ -414,23 +437,24 @@ function HumanReview() {
         "POST",
         { revision_ids: selectedRevisions.map(revision => revision.id) },
       );
-      const response = await fetch(
-        `/api/v1/assessments/${encodeURIComponent(selected)}/result-exports/${encodeURIComponent(frozen.id)}/pdf`,
-        { headers: { Authorization: `Bearer ${token}`, "X-Request-ID": crypto.randomUUID() } },
-      );
-      if (!response.ok) throw new Error(`PDF download failed (${response.status}).`);
-      const blob = await response.blob();
-      if (blob.type !== "application/pdf") throw new Error("The server did not return a PDF document.");
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `aegistrace-${selected}-evidence-report.pdf`;
-      anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setLastExport({ assessmentId: selected, id: frozen.id });
+      await downloadFrozenFile(token, selected, frozen.id, "pdf");
       setReportMessage(`Downloaded the frozen evidence summary. Export ID: ${frozen.id}.`);
       setRefresh(value => value + 1);
     } catch (failure) {
       setReportMessage(failure instanceof Error ? failure.message : "Unable to create the evidence report.");
+    } finally {
+      setReportBusy(false);
+    }
+  }
+  async function downloadPreviousExport(format: "pdf" | "json") {
+    if (!token || !lastExport || lastExport.assessmentId !== selected) return;
+    setReportBusy(true);
+    try {
+      await downloadFrozenFile(token, selected, lastExport.id, format);
+      setReportMessage(`Downloaded ${format.toUpperCase()} for export ${lastExport.id}.`);
+    } catch (failure) {
+      setReportMessage(failure instanceof Error ? failure.message : "Unable to download this export.");
     } finally {
       setReportBusy(false);
     }
@@ -595,6 +619,11 @@ function HumanReview() {
               <p className="help-text">The PDF captures the current source revisions as an evidence summary. Later changes require a new export.</p>
               {coverage && sourceCount === 0 && <p>Import permitted evidence to enable the PDF export.</p>}
               <button className="primary-action" onClick={() => void downloadEvidenceReport()} disabled={reportBusy || !coverage || sourceCount === 0}>{reportBusy ? "Preparing PDF…" : "Freeze latest results and download PDF"}</button>
+              {lastExport?.assessmentId === selected && <div>
+                <p className="digest">Last frozen export: <code>{lastExport.id}</code></p>
+                <button className="button-secondary" disabled={reportBusy} onClick={() => void downloadPreviousExport("pdf")}>Download frozen PDF again</button>
+                <button className="button-secondary" disabled={reportBusy} onClick={() => void downloadPreviousExport("json")}>Download matching JSON</button>
+              </div>}
               <p role="status">{reportMessage}</p>
             </div>
           </section>

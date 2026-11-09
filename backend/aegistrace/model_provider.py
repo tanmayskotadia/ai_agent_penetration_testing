@@ -39,8 +39,11 @@ a recorded conflict. Unknown source validation does not prohibit requesting miss
 recorded evidence. For an observed web service, prefer a justified missing web import
 over generic review when such a candidate exists and there are no failures/conflicts.
 Human review checks evidence; it does not by itself confirm a vulnerability.
-Cite only the chosen candidate's observation_ids for its
-rationale, and cite each rejected candidate's own observation_ids for its reason.
+For a selection or review request, copy at least one ID from the chosen candidate's
+observation_ids into the top-level observation_ids. Copy IDs from that candidate only.
+Other observations can inform the decision but cannot be cited as support for the
+chosen action. For example, an unrelated closed port does not support a web import.
+In each rejected alternative, copy one or more IDs from that alternative's candidate.
 List every unchosen candidate once in rejected_alternatives (all candidates if stopping).
 Return only a JSON object matching the supplied schema.
 Rationales are concise evidence-based explanations, not hidden chain-of-thought.

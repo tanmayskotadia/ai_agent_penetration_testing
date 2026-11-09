@@ -1,21 +1,31 @@
 """Small dependency-free PDF renderer for frozen, source-linked result snapshots."""
 
 from typing import Any
+from unicodedata import category
 
 PAGE_WIDTH = 595
 PAGE_HEIGHT = 842
 LEFT = 48
 BODY_HEIGHT_PER_PAGE = 650
+BODY_TOP = 738
+LINE_HEIGHT = (22, 15, 13)
 
 
 def _plain(value: Any) -> str:
     """Keep untrusted source text printable in the built-in PDF fonts."""
-    ascii_text = str(value).encode("ascii", "replace").decode("ascii")
-    return "".join(character if " " <= character <= "~" else " " for character in ascii_text)
+    return (
+        "".join(
+            " " if category(character).startswith("C") else character for character in str(value)
+        )
+        .encode("cp1252", "replace")
+        .decode("cp1252")
+    )
 
 
 def _escape(value: str) -> bytes:
-    return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)").encode("ascii")
+    return (
+        _plain(value).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)").encode("cp1252")
+    )
 
 
 def _wrap(value: Any, width: int = 74) -> list[str]:
@@ -51,7 +61,9 @@ def _display(value: Any) -> str:
     return str(value)
 
 
-def _content_stream(lines: list[tuple[str, int]], page_number: int, page_count: int) -> bytes:
+def _content_stream(
+    lines: list[tuple[str, int]], page_number: int, page_count: int, linked_rows: set[int]
+) -> bytes:
     commands: list[bytes] = []
 
     def draw(text: str, y: int, size: int, bold: bool = False, color: str = "0 0 0") -> None:
@@ -75,18 +87,15 @@ def _content_stream(lines: list[tuple[str, int]], page_number: int, page_count: 
         False,
         "0.30 0.34 0.38",
     )
-    y = 738
-    for text, level in lines:
+    y = BODY_TOP
+    for row, (text, level) in enumerate(lines):
         if level == 0:
-            y -= 4
-            draw(text, y, 13, True, "0.08 0.20 0.32")
-            y -= 18
+            draw(text, y - 4, 13, True, "0.08 0.20 0.32")
         elif level == 1:
             draw(text, y, 10, True)
-            y -= 15
         else:
-            draw(text, y, 9)
-            y -= 13
+            draw(text, y, 9, color="0.04 0.25 0.65" if row in linked_rows else "0 0 0")
+        y -= LINE_HEIGHT[level]
     draw(
         f"AegisTrace | Page {page_number} of {page_count} | Coverage is not established by imports",
         28,
@@ -97,6 +106,32 @@ def _content_stream(lines: list[tuple[str, int]], page_number: int, page_count: 
     return b"\n".join(commands)
 
 
+def _paginate(lines: list[tuple[str, int]]) -> list[list[tuple[str, int]]]:
+    """Keep a heading with its first body line, then flow remaining text naturally."""
+    pages: list[list[tuple[str, int]]] = [[]]
+    height = 0
+    index = 0
+    while index < len(lines):
+        end = index
+        group_height = 0
+        while end < len(lines):
+            level = lines[end][1]
+            line_height = LINE_HEIGHT[level]
+            if group_height + line_height > BODY_HEIGHT_PER_PAGE:
+                break
+            group_height += line_height
+            end += 1
+            if level == 2:
+                break
+        if height + group_height > BODY_HEIGHT_PER_PAGE:
+            pages.append([])
+            height = 0
+        pages[-1].extend(lines[index:end])
+        height += group_height
+        index = end
+    return pages
+
+
 def render_evidence_report(
     snapshot: dict[str, Any],
     observations: list[dict[str, Any]],
@@ -105,6 +140,8 @@ def render_evidence_report(
     """Render an immutable export with explicit limits and source provenance."""
     revisions = snapshot.get("result_revisions", [])
     lines: list[tuple[str, int]] = []
+    evidence_rows: dict[int, str] = {}
+    manifest_rows: dict[str, int] = {}
     lines.extend(
         [
             ("Assessment and export", 0),
@@ -308,7 +345,8 @@ def render_evidence_report(
                 )
             )
         for finding in content.get("detailed_findings", []):
-            lines.extend((part, 1) for part in _wrap(f"{finding['id']}: {finding['title']}"))
+            lines.extend((part, 1) for part in _wrap(finding["title"], width=68))
+            lines.extend((part, 2) for part in _wrap(f"Finding ID: {finding['id']}"))
             for label, value in [
                 ("Record type", finding["record_kind"]),
                 ("Information kind", finding["information_kind"]),
@@ -341,11 +379,15 @@ def render_evidence_report(
                     )
                 )
             for observed in finding["source_records"]:
+                evidence_id = observed.get("evidence_id")
+                if isinstance(evidence_id, str) and evidence_id:
+                    evidence_rows[len(lines)] = evidence_id
+                    lines.append((f"Evidence ID: {evidence_id}", 2))
                 lines.extend(
                     (part, 2)
                     for part in _wrap(
                         f"Source observation {observed.get('id', 'unknown')} | tool {observed.get('source_tool', 'unknown')} | "
-                        f"asset {observed.get('asset_id', 'unknown')} | evidence {observed.get('evidence_id', 'unknown')} | "
+                        f"asset {observed.get('asset_id', 'unknown')} | "
                         f"observed {observed.get('observed_at', 'unknown')} | source reference {observed.get('source_key', 'unknown')} | "
                         f"severity {observed.get('source_severity') or 'unknown'} | CVSS {observed.get('cvss_score') if observed.get('cvss_score') is not None else 'unknown'} "
                         f"version {observed.get('cvss_version') or 'unknown'} vector {observed.get('cvss_vector') or 'unknown'} | "
@@ -356,13 +398,6 @@ def render_evidence_report(
         lines.append(("Selected source processing outcomes", 0))
         for outcome in content.get("execution_summary", []):
             lines.extend((part, 2) for part in _wrap(str(outcome)))
-        for reference in content.get("evidence_manifest", []):
-            lines.extend(
-                (part, 2)
-                for part in _wrap(
-                    f"Evidence source {reference.get('id')}: SHA-256 {reference.get('sha256')} | {reference.get('pointer_type')} {reference.get('pointer')} | captured {reference.get('captured_at')}"
-                )
-            )
         for approval in content.get("approvals_and_decisions", {}).get("action_approvals", []):
             lines.extend(
                 (part, 2)
@@ -420,6 +455,18 @@ def render_evidence_report(
                 "Use the frozen JSON export and its SHA-256 digest to inspect revision IDs, evidence IDs, source hashes, parser revisions, and source observation references."
             )
         )
+        for reference in content.get("evidence_manifest", []):
+            evidence_id = reference.get("id")
+            if not isinstance(evidence_id, str) or not evidence_id:
+                continue
+            manifest_rows.setdefault(evidence_id, len(lines))
+            lines.extend((part, 1) for part in _wrap(f"Evidence source {evidence_id}"))
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"SHA-256 {reference.get('sha256')} | {reference.get('pointer_type')} {reference.get('pointer')} | captured {reference.get('captured_at')}"
+                )
+            )
     if not isinstance(content, dict):
         for limitation in snapshot.get("limitations", []):
             for wrapped in _wrap(f"Limitation: {limitation}"):
@@ -568,55 +615,61 @@ def render_evidence_report(
             )
         )
 
-    blocks: list[list[tuple[str, int]]] = []
-    index = 0
-    while index < len(lines):
-        block = [lines[index]]
-        starts_section = lines[index][1] == 0
-        index += 1
-        while index < len(lines) and lines[index][1] not in {0, 1}:
-            block.append(lines[index])
-            index += 1
-        if starts_section and index < len(lines) and lines[index][1] == 1:
-            block.append(lines[index])
-            index += 1
-            while index < len(lines) and lines[index][1] == 2:
-                block.append(lines[index])
-                index += 1
-        blocks.append(block)
+    links = {
+        row: manifest_rows[evidence_id]
+        for row, evidence_id in evidence_rows.items()
+        if evidence_id in manifest_rows
+    }
+    contents_sections = {
+        "Assessment scope and rules of engagement",
+        "Prioritized observations and reviewer findings",
+        "Detailed findings and source observations",
+        "Business impact, recommendations and references",
+        "Assumptions, scan failures and limitations",
+        "Evidence manifest",
+        "Frozen source runs",
+    }
+    contents = [
+        (row, title)
+        for row, (title, level) in enumerate(lines)
+        if level == 0 and title in contents_sections
+    ]
+    if contents:
+        # Place the short index ahead of the long executive narrative.
+        insertion = next(
+            (
+                row
+                for row, (title, level) in enumerate(lines)
+                if level == 0 and title == "Interpretation and coverage"
+            ),
+            contents[0][0],
+        )
+        inserted = [("Contents", 0), *((title, 2) for _, title in contents)]
 
-    pages: list[list[tuple[str, int]]] = []
-    current_page: list[tuple[str, int]] = []
-    current_height = 0
-    for block in blocks:
-        block_height = sum(22 if level == 0 else 15 if level == 1 else 13 for _, level in block)
-        if current_page and (
-            block_height <= BODY_HEIGHT_PER_PAGE
-            and current_height + block_height > BODY_HEIGHT_PER_PAGE
-            or block_height > BODY_HEIGHT_PER_PAGE
-            and current_height + 50 > BODY_HEIGHT_PER_PAGE
-        ):
-            pages.append(current_page)
-            current_page = []
-            current_height = 0
-        if block_height <= BODY_HEIGHT_PER_PAGE:
-            current_page.extend(block)
-            current_height += block_height
-        else:
-            # Long capability/limitation sections must split across pages rather
-            # than overflow beneath the footer as one indivisible block.
-            for line in block:
-                height = 22 if line[1] == 0 else 15 if line[1] == 1 else 13
-                if current_page and current_height + height > BODY_HEIGHT_PER_PAGE:
-                    pages.append(current_page)
-                    current_page = []
-                    current_height = 0
-                current_page.append(line)
-                current_height += height
-    if current_page:
-        pages.append(current_page)
-    if not pages:
-        pages = [[]]
+        def shifted(row: int) -> int:
+            return row + len(inserted) if row >= insertion else row
+
+        links = {shifted(row): shifted(target) for row, target in links.items()}
+        links.update(
+            {insertion + offset: shifted(row) for offset, (row, _) in enumerate(contents, start=1)}
+        )
+        lines[insertion:insertion] = inserted
+
+    pages = _paginate(lines)
+    destinations: dict[int, tuple[int, int]] = {}
+    targets = set(links.values())
+    page_links: list[list[tuple[int, int, int]]] = []
+    index = 0
+    for page_number, page_lines in enumerate(pages):
+        y = BODY_TOP
+        page_links.append([])
+        for row, (_, level) in enumerate(page_lines):
+            if index in targets:
+                destinations[index] = (page_number, y)
+            if index in links:
+                page_links[-1].append((row, y, links[index]))
+            y -= LINE_HEIGHT[level]
+            index += 1
     objects: list[bytes] = [b""]
 
     def add_object(value: bytes) -> int:
@@ -625,24 +678,44 @@ def render_evidence_report(
 
     catalog_id = add_object(b"")
     pages_id = add_object(b"")
-    regular_font_id = add_object(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-    bold_font_id = add_object(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
-    page_ids: list[int] = []
+    regular_font_id = add_object(
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+    )
+    bold_font_id = add_object(
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"
+    )
+    page_ids = [add_object(b"") for _ in pages]
     for page_number, page_lines in enumerate(pages, start=1):
-        content = _content_stream(page_lines, page_number, len(pages))
+        page_id = page_ids[page_number - 1]
+        annotations = []
+        links_on_page = page_links[page_number - 1]
+        for _, y, target in links_on_page:
+            target_page, target_y = destinations[target]
+            annotations.append(
+                add_object(
+                    f"<< /Type /Annot /Subtype /Link /Rect [{LEFT} {y - 3} {PAGE_WIDTH - LEFT} {y + 9}] "
+                    f"/Border [0 0 0] /Dest [{page_ids[target_page]} 0 R /XYZ null {target_y + 14} null] >>".encode(
+                        "ascii"
+                    )
+                )
+            )
+        annotation_refs = " ".join(f"{annotation} 0 R" for annotation in annotations)
+        annotation_entry = f" /Annots [{annotation_refs}]" if annotations else ""
+        page_content = _content_stream(
+            page_lines, page_number, len(pages), {row for row, _, _ in links_on_page}
+        )
         stream_id = add_object(
             b"<< /Length "
-            + str(len(content)).encode("ascii")
+            + str(len(page_content)).encode("ascii")
             + b" >>\nstream\n"
-            + content
+            + page_content
             + b"\nendstream"
         )
-        page_id = add_object(
+        objects[page_id] = (
             f"<< /Type /Page /Parent {pages_id} 0 R /MediaBox [0 0 {PAGE_WIDTH} {PAGE_HEIGHT}] "
             f"/Resources << /Font << /F1 {regular_font_id} 0 R /F2 {bold_font_id} 0 R >> >> "
-            f"/Contents {stream_id} 0 R >>".encode("ascii")
+            f"/Contents {stream_id} 0 R{annotation_entry} >>".encode("ascii")
         )
-        page_ids.append(page_id)
     objects[catalog_id] = f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode("ascii")
     kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
     objects[pages_id] = f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii")
