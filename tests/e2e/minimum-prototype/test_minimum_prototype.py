@@ -360,6 +360,22 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
     )
     assert context["request"]["provenance_kind"] == "reviewer-supplied; not independently verified"
 
+    reviewed_finding = post(
+        base + "/report-findings",
+        {
+            "expected_revision": 0,
+            "observation_ids": observation_ids,
+            "title": "TEST ONLY — Shared endpoint needs source review",
+            "description": "Two synthetic tools report the same reference on GET /app/check. "
+            "The recorded artifacts do not establish exploitability.",
+            "rationale": "TEST ONLY review links both source records to the same endpoint and asset.",
+            "remediation": "Review the test endpoint configuration and confirm whether the reported reference applies.",
+            "remediation_basis": "Both linked synthetic observations identify the same endpoint and reference.",
+            "verification_steps": [
+                "Inspect the configuration and recheck the specific condition in an approved test environment."
+            ],
+        },
+    )
     revisions = client.get(base + "/result-revisions", headers=headers()).json()
     export = post(
         base + "/result-exports",
@@ -369,6 +385,12 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
     assert frozen.status_code == 200
     assert frozen.json()["snapshot"]["complete_assessment"] is False
     assert frozen.json()["snapshot"]["correlation"]["reviewed_cluster_count"] == 1
+    findings = frozen.json()["snapshot"]["content"]["detailed_findings"]
+    report_finding = next(
+        item for item in findings if item["id"] == reviewed_finding["request"]["finding_id"]
+    )
+    assert {item["id"] for item in report_finding["source_records"]} == set(observation_ids)
+    assert report_finding["business_impact"] == "unknown"
     pdf = client.get(base + "/result-exports/" + export["id"] + "/pdf", headers=headers())
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF-1.4")
     assert pdf.content.rstrip().endswith(b"%%EOF")
@@ -391,5 +413,6 @@ def test_one_assessment_runs_test_only_vertical_slice(import_context):
         assert escaped in pdf_text
     assert "OWASP ZAP" in pdf_text and "Nikto" in pdf_text
     assert "Source occurrence" in pdf_text and "GET /app/check" in pdf_text
+    assert "Shared endpoint needs source review" in pdf_text
     assert "Coverage status: NOT ESTABLISHED" in pdf_text
     assert "TEST ONLY" in pdf_text

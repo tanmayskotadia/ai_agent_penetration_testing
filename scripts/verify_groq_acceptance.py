@@ -29,11 +29,18 @@ from test_nmap import XML  # noqa: E402
 
 
 def main() -> None:
+    cases = [
+        ("http-missing-web-evidence", XML, "select"),
+        ("ssh-no-web-evidence", XML.replace(b'name="http"', b'name="ssh"'), "request-review"),
+        ("conflicting-port-states", XML.replace(b'portid="81"', b'portid="80"'), "request-review"),
+        ("unavailable-web-imports", XML, "request-review"),
+    ]
     parser = argparse.ArgumentParser()
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--approve-synthetic-data", action="store_true")
     parser.add_argument("--interval-seconds", type=int, default=0)
+    parser.add_argument("--case", action="append", choices=[name for name, _, _ in cases])
     args = parser.parse_args()
     if not args.approve_synthetic_data:
         parser.error("Explicit --approve-synthetic-data is required for external Groq calls")
@@ -61,20 +68,9 @@ def main() -> None:
         metadata.create_all(app.state.engine)
         try:
             with TestClient(app) as client:
-                for name, raw, expected in [
-                    ("http-missing-web-evidence", XML, "select"),
-                    (
-                        "ssh-no-web-evidence",
-                        XML.replace(b'name="http"', b'name="ssh"'),
-                        "request-review",
-                    ),
-                    (
-                        "conflicting-port-states",
-                        XML.replace(b'portid="81"', b'portid="80"'),
-                        "request-review",
-                    ),
-                    ("unavailable-web-imports", XML, "request-review"),
-                ]:
+                for name, raw, expected in cases:
+                    if args.case and name not in args.case:
+                        continue
                     if results and args.interval_seconds:
                         time.sleep(args.interval_seconds)
                     if name == "unavailable-web-imports":

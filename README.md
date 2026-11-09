@@ -2,7 +2,7 @@
 
 An evidence-driven, analyst-controlled Unified VAPT Agent for the DataOps Innovation Hackathon.
 
-**Current status:** The T30 software-only vertical slice is implemented in the open T30 PR and exercises scope-bound intake, recorded Nmap/ZAP/Nikto/OpenAPI imports, reviewer provenance, cross-tool correlation, risk/coverage review and PDF export. Synthetic fixtures are test-only; genuine scanner evidence and an authorized participant demonstration are still required for acceptance. Native scanner execution remains disabled by default.
+**Current status:** The guided workspace supports scope-bound intake, recorded Nmap/ZAP/Nikto/OpenAPI imports, reviewer provenance, evidence-driven replanning, correlation, risk review and frozen PDF/JSON exports. The project tracks the recorded rehearsal in [#78](https://github.com/tanmayskotadia/ai_agent_penetration_testing/issues/78) and official lab acceptance in [#72](https://github.com/tanmayskotadia/ai_agent_penetration_testing/issues/72). The hosted recorded workflow keeps live execution disabled. See the [recorded demo guide](demo/recorded-release.md).
 
 The participant requires cloud hosting without local setup. A Render Blueprint and Supabase deployment runbook are provided in [free cloud deployment](docs/free-cloud-deployment.md); creating the hosted service and entering database/encryption secrets remains participant-side setup. Local commands below are optional developer workflows. See [T30 prototype status](docs/prototype-status.md), [cloud direction](docs/runtime-input-cloud-direction.md) and [API contracts](docs/api.md).
 
@@ -73,7 +73,7 @@ Synthetic UI walkthrough only; it does not show real assessment data or prove fr
 
 ## Authorization, licenses and limitations
 
-General-purpose implementation collects assessment inputs at runtime and does not require organizer answers to proceed. No live security testing is enabled. A later user must provide valid target authority and satisfy deterministic execution controls; the hackathon profile retains its organizer-authorized-target rule. Active exploitation/offensive validation requires explicit action-bound human approval outside the LLM. Model processing remains disabled; never put credentials in browser variables or public issues.
+The recorded workflow accepts assessment inputs at runtime. Live execution requires valid target authority and verified runtime controls. The hackathon profile restricts live testing to organizer-authorized targets. Active validation requires separate action-bound human approval. Optional [Groq replanning](docs/evidence-driven-replanning.md) requires reviewed evidence, explicit request consent, an approved policy reference and private provider settings.
 
 Tool editions, scanner/feed licenses and model data policy must be documented in T06 before corresponding capabilities are promised. No commercial binary/feed/license or captured sensitive scan output is bundled. Original problem PDF, temporary planning artifacts, credentials and runtime data are excluded from source. Dependency licenses remain their upstream terms; a project redistribution license is not implied.
 

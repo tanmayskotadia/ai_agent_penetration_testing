@@ -44,6 +44,7 @@ try {
     else if (path.endsWith("/result-revisions")) value = [{ id: "result-test", run_id: "run-test", revision: 1 }];
     else if (path.endsWith("/result-exports")) { value = { id: "export-test" }; status = 201; }
     else if (path.endsWith("/pdf")) { await route.fulfill({ contentType: "application/pdf", body: "%PDF-1.4\nTEST ONLY download fixture" }); return; }
+    else if (path.endsWith("/result-exports/export-test")) value = { id: "export-test", sha256: "e".repeat(64), snapshot: { mode: "TEST ONLY" } };
     else if (!["/plans", "/plan-reviews", "/assets", "/asset-contexts", "/scan-jobs"].some(suffix => path.endsWith(suffix))) throw new Error(`Unexpected test endpoint: ${path}`);
     await route.fulfill({ status, json: value });
   });
@@ -91,7 +92,10 @@ try {
   await page.getByRole("heading", { name: "Assessment presentation", exact: true }).waitFor();
   const download = page.waitForEvent("download");
   await activate(page.getByRole("button", { name: "Freeze latest results and download PDF", exact: true }));
-  assert.ok((await download).suggestedFilename().endsWith(".pdf"));
+  assert.equal((await download).suggestedFilename(), "aegistrace-export-test.pdf");
+  const manifest = page.waitForEvent("download");
+  await activate(page.getByRole("button", { name: "Download matching JSON", exact: true }));
+  assert.equal((await manifest).suggestedFilename(), "aegistrace-export-test.json");
   await activate(page.getByRole("button", { name: "Executive view", exact: true }));
   const summary = page.getByRole("region", { name: "Executive assessment summary", exact: true });
   await summary.waitFor();

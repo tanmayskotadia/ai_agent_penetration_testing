@@ -1,7 +1,36 @@
 from uuid import uuid4
 
-from aegistrace.pdf_report import render_evidence_report
+from aegistrace.pdf_report import _paginate, render_evidence_report
 from aegistrace.report_content import build_vapt_content
+
+
+def test_pdf_keeps_multiline_finding_heading_with_body():
+    heading = [("Long title", 1), ("continued title", 1), ("Finding ID: example", 2)]
+    pages = _paginate([("Previous text", 2)] * 48 + heading + [("Details", 2)] * 60)
+    assert pages[1][:3] == heading
+    assert [line for page in pages for line in page].count(("Details", 2)) == 60
+
+
+def test_pdf_links_only_frozen_evidence_and_keeps_hostile_text_inert():
+    observations = [
+        {"id": "observation-1", "title": "Café (demo)", "evidence_id": "source-1"},
+        {"id": "observation-2", "title": "Other source", "evidence_id": "absent"},
+    ]
+    source = {
+        "assessment_id": str(uuid4()),
+        "created_at": "2026-11-05T10:00:00+00:00",
+        "observations": observations,
+        "evidence_references": [{"id": "source-1"}],
+    }
+    content = build_vapt_content(source)
+    baseline = render_evidence_report({"content": content}, observations, {})
+    content["evidence_manifest"] = []
+    missing = render_evidence_report({"content": content}, observations, {})
+    assert baseline.count(b"/Subtype /Link") == missing.count(b"/Subtype /Link") + 1
+    assert b"Evidence source source-1" in baseline
+    assert b"Caf\xe9 \\(demo\\)" in baseline
+    assert b"/WinAnsiEncoding" in baseline
+    assert b"/URI" not in baseline
 
 
 def test_vapt_content_emits_required_sections_with_unknowns_not_guesses():
