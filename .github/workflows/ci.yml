@@ -68,6 +68,12 @@ jobs:
           worker_pid=$!
           trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
           RUN_SERVICE_TESTS=1 uv run pytest -m services
+      - name: Restore encrypted evidence and a frozen report into isolated PostgreSQL
+        env:
+          RESTORE_TEST_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          test -n "$RESTORE_TEST_POSTGRES_CONTAINER"
+          uv run pytest -m services tests/e2e/minimum-prototype/test_postgresql_restore.py
       - name: Build workspace
         working-directory: frontend
         run: npm ci --no-audit --no-fund && npm run build && node scripts/check-coverage-ui.mjs && npx playwright install --with-deps chromium && node scripts/check-assessment-ui.mjs && node scripts/check-timeline-ui.mjs && node scripts/check-triage-ui.mjs && node scripts/check-evidence-approval-ui.mjs && node scripts/check-accessibility-ui.mjs

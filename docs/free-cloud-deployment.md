@@ -30,3 +30,9 @@ This deploys the import-first AegisTrace application and its built React UI as o
 - Native Nmap/ZAP/Nikto execution stays disabled. No scanner worker or private default-deny egress network is part of this free deployment. Do not treat hosting or a submitted file as authorization to test a target.
 - This is a free-tier demonstration, not a high-availability service. Keep synthetic data in the public demo; do not upload sensitive client evidence. Back up Supabase data and the evidence key separately if retaining data matters.
 - Participant-owned genuine authorized scanner captures and review of the resulting report are still required to satisfy T30's genuine-evidence acceptance gate.
+
+## Verify recovery in isolation
+
+Foundation CI migrates a fresh PostgreSQL database, imports synthetic assessment evidence, freezes a report, and restores a custom-format backup into a second disposable database. The drill checks readiness, the original scope and audit references, the frozen JSON and PDF digest, and the SHA-256 of a decrypted original. It also checks that anonymous and cross-assessment access remain denied. No backup artifact is retained by CI.
+
+For hosted recovery, use a separate target with no public exposure and an application instance configured with the matching protected evidence key. Keep the archive and keys in separate protected locations. Verify readiness and repeat the same report, evidence, and access checks before considering a cutover. The CI drill uses synthetic data and establishes the recovery procedure for PostgreSQL. A restore of a hosted backup requires its own record.
