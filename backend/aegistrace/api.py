@@ -1,3 +1,6 @@
+import json
+import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -10,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -41,6 +45,8 @@ from aegistrace.result_api import result_router
 from aegistrace.settings import Settings
 from aegistrace.source_review_api import source_review_router
 
+request_logger = logging.getLogger("uvicorn.error").getChild("requests")
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     config = settings or Settings()  # type: ignore[call-arg]
@@ -49,6 +55,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             config.app_secret.get_secret_value(),
             config.evidence_key.get_secret_value() if config.evidence_key else "",
             config.bootstrap_token.get_secret_value() if config.bootstrap_token else "",
+            config.groq_api_key.get_secret_value() if config.groq_api_key else "",
+            config.database_url,
+            config.redis_url,
         )
     )
     engine = make_engine(config)
@@ -171,12 +180,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 {"code": "invalid-request-id", "message": "Request IDs must be UUIDs"}, 422
             )
         token = request_context.set((request_id, correlation_id))
+        started = time.monotonic()
+        status_code = 500
         try:
             response = await call_next(request)
+            status_code = response.status_code
             response.headers["X-Request-ID"] = str(request_id)
+            response.headers["X-Correlation-ID"] = str(correlation_id)
             return response
         finally:
             request_context.reset(token)
+            route = request.scope.get("route")
+            template = route.path if isinstance(route, APIRoute) else None
+            # Only server-owned route templates enter the log. Health probes are
+            # suppressed on success, but their failures are actionable.
+            if status_code >= 400 or (template and template.startswith("/api/")):
+                request_logger.log(
+                    logging.ERROR if status_code >= 500 else logging.INFO,
+                    "%s",
+                    json.dumps(
+                        {
+                            "event": "request.completed",
+                            "route": template,
+                            "status": status_code,
+                            "request_id": str(request_id),
+                            "correlation_id": str(correlation_id),
+                            "duration_ms": round((time.monotonic() - started) * 1000),
+                        },
+                        separators=(",", ":"),
+                    ),
+                )
 
     @app.get("/health/live")
     def liveness() -> dict[str, str]:
