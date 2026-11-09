@@ -117,6 +117,11 @@ def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
         request: Request,
         actor: Identity = actor_dependency,
     ) -> JSONResponse:
+        report_body = body.model_dump(mode="json")
+        if body.recommendation is None:
+            # Keep receipts issued before the optional recommendation field replayable.
+            report_body.pop("recommendation")
+
         def apply(connection: Connection) -> dict[str, Any]:
             require_access(connection, assessment_id, actor.subject)
             if actor.principal_kind != "human" or actor.role not in {"reviewer", "admin"}:
@@ -165,7 +170,7 @@ def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
                         409,
                         "An observation already belongs to another report finding; revise that finding",
                     )
-            payload = body.model_dump(mode="json") | {
+            payload = report_body | {
                 "finding_id": str(body.finding_id or uuid4()),
                 "information_kind": "reviewer-decision",
                 "recorded_by": actor.subject,
@@ -202,6 +207,6 @@ def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
             )
             return value
 
-        return mutation(engine, request, actor, body.model_dump(mode="json"), apply, 201)
+        return mutation(engine, request, actor, report_body, apply, 201)
 
     return router
