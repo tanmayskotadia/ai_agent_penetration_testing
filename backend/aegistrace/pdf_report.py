@@ -3,6 +3,8 @@
 from typing import Any
 from unicodedata import category
 
+from aegistrace.report_content import SCOPE_TRACE_LAYOUT
+
 PAGE_WIDTH = 595
 PAGE_HEIGHT = 842
 LEFT = 48
@@ -204,6 +206,9 @@ def render_evidence_report(
         ]
     )
     content = snapshot.get("content")
+    scope_trace_layout = snapshot.get("report_layout_revision") == SCOPE_TRACE_LAYOUT
+    frozen_scope_by_id: dict[str, dict[str, Any]] = {}
+    frozen_run_scope_ids: dict[str, str] = {}
     if isinstance(content, dict):
         lines.append(("Executive summary from frozen evidence and reviewer records", 0))
         for index, paragraph in enumerate(
@@ -213,16 +218,36 @@ def render_evidence_report(
                 lines.append(("", 2))
             lines.extend((part, 2) for part in _wrap(paragraph))
         lines.append(("Assessment scope and rules of engagement", 0))
-        scope = content.get("scope", {})
-        for label, value in [
-            ("Scope revision", scope.get("revision", "unknown")),
-            ("Targets", scope.get("targets", [])),
-            ("Exclusions", scope.get("exclusions", [])),
-            ("Authorization", scope.get("authorization_status", "unknown")),
-            ("Authorization reference", scope.get("authorization_reference") or "not supplied"),
-            ("Validity", scope.get("valid_until") or "not supplied"),
-        ]:
-            lines.extend((part, 2) for part in _wrap(f"{label}: {_display(value)}"))
+        summary_scope = content.get("scope") or {}
+        scope_snapshots = (
+            content.get("scope_snapshots") or [summary_scope]
+            if scope_trace_layout
+            else [summary_scope]
+        )
+        for scope in scope_snapshots:
+            scope_id = scope.get("id") or scope.get("scope_id")
+            if scope_id:
+                frozen_scope_by_id[str(scope_id)] = scope
+            if scope_trace_layout:
+                lines.append((f"Scope revision: {scope.get('revision') or 'unknown'}", 1))
+            for label, value in [
+                *(
+                    [("Scope ID", scope_id or "unknown"), ("Mode", scope.get("mode", "unknown"))]
+                    if scope_trace_layout
+                    else [("Scope revision", scope.get("revision", "unknown"))]
+                ),
+                ("Targets", scope.get("targets", [])),
+                ("Exclusions", scope.get("exclusions", [])),
+                ("Authorization", summary_scope.get("authorization_status", "unknown")),
+                ("Authorization reference", scope.get("authorization_reference") or "not supplied"),
+                ("Validity", scope.get("valid_until") or "not supplied"),
+            ]:
+                lines.extend((part, 2) for part in _wrap(f"{label}: {_display(value)}"))
+        frozen_run_scope_ids = {
+            str(run["id"]): str(run["scope_id"])
+            for run in content.get("tool_runs", [])
+            if run.get("id") and run.get("scope_id")
+        }
         lines.append(("Standards and reference coverage", 0))
         lines.extend(
             (part, 2)
@@ -537,7 +562,16 @@ def render_evidence_report(
 
     coverage = snapshot.get("coverage_snapshot")
     if isinstance(coverage, dict):
-        lines.append(("Coverage and capabilities at export time", 0))
+        if scope_trace_layout:
+            lines.append(("Assessment-wide coverage and capabilities", 0))
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    "This section summarizes the assessment at export time. See Frozen source runs for the inputs selected for this report."
+                )
+            )
+        else:
+            lines.append(("Coverage and capabilities at export time", 0))
         for text in [
             f"Captured: {coverage.get('captured_at', 'unknown')}",
             f"Coverage digest: {coverage.get('snapshot_sha256', 'unknown')}",
@@ -583,6 +617,15 @@ def render_evidence_report(
                 1,
             )
         )
+        scope_id = frozen_run_scope_ids.get(str(revision.get("run_id")))
+        if scope_trace_layout and scope_id is not None:
+            scope = frozen_scope_by_id.get(scope_id, {})
+            lines.extend(
+                (part, 2)
+                for part in _wrap(
+                    f"Scope revision: {scope.get('revision') or 'unknown'} | Scope ID: {scope_id}"
+                )
+            )
         for label, key in [
             ("Tool", "tool"),
             ("Tool version", "tool_version"),

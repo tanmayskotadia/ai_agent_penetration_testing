@@ -45,6 +45,7 @@ def test_revision_and_export_are_frozen_and_late_callback_is_quarantined(import_
     assert frozen.status_code == 200 and frozen.json()["sha256"] == export.json()["sha256"]
     assert frozen.json()["snapshot"]["complete_assessment"] is False
     assert frozen.json()["snapshot"]["report_renderer_enabled"] is True
+    assert frozen.json()["snapshot"]["report_layout_revision"] == "scope-trace-v1"
     pdf = client.get(base + "/result-exports/" + export.json()["id"] + "/pdf", headers=headers())
     assert pdf.status_code == 200
     assert pdf.headers["content-type"] == "application/pdf"
