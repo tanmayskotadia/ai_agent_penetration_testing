@@ -45,6 +45,8 @@ All inputs and screenshots used to demonstrate this workflow should be synthetic
 
 Use the PDF contents to open the detailed findings. In a finding, select its linked **Evidence ID** to jump to the entry in the frozen evidence manifest. The entry shows the source hash and capture metadata. An ID without a link has no corresponding entry in that export's manifest.
 
+The renderer wraps using the built-in font widths, including unusually wide labels and long unbroken references. Both sparse and dense reports retain page margins and internal evidence links.
+
 In **Report**, **Download matching JSON** downloads the same frozen export as the PDF. **Download frozen PDF again** retries that export without creating another snapshot.
 
 To inspect the source in AegisTrace, sign in, select the assessment listed in the PDF, and open **Findings & review**. In **Finding validation and uncertainty**, paste the source observation ID or evidence ID into **Observation or evidence ID from report**. Use the evidence inspector on the matching row. The filter searches the assessment's current observation inventory. If an older observation is absent, use the frozen manifest to identify its original reference. Source access still depends on your role and assessment permissions.

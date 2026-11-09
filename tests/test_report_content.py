@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from aegistrace.pdf_report import _paginate, render_evidence_report
+from aegistrace.pdf_report import TEXT_WIDTH, _advance, _paginate, _wrap, render_evidence_report
 from aegistrace.report_content import build_vapt_content
 
 
@@ -9,6 +9,13 @@ def test_pdf_keeps_multiline_finding_heading_with_body():
     pages = _paginate([("Previous text", 2)] * 48 + heading + [("Details", 2)] * 60)
     assert pages[1][:3] == heading
     assert [line for page in pages for line in page].count(("Details", 2)) == 60
+
+
+def test_pdf_wraps_long_wide_source_text_without_dropping_characters():
+    text = "W" * 160
+    lines = _wrap(text, width=68)
+    assert "".join(lines) == text
+    assert max(_advance(line) * 10 for line in lines) <= TEXT_WIDTH * 1000
 
 
 def test_pdf_links_only_frozen_evidence_and_keeps_hostile_text_inert():

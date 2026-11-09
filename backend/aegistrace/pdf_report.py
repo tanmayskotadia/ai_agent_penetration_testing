@@ -6,9 +6,29 @@ from unicodedata import category
 PAGE_WIDTH = 595
 PAGE_HEIGHT = 842
 LEFT = 48
+TEXT_WIDTH = PAGE_WIDTH - 2 * LEFT
 BODY_HEIGHT_PER_PAGE = 650
 BODY_TOP = 738
 LINE_HEIGHT = (22, 15, 13)
+# Base-14 Helvetica and Helvetica-Bold WinAnsi advances in 1/1000 em.
+# The larger advance keeps wrapping valid for both fonts.
+_WIN_ANSI_WIDTHS = tuple(
+    map(
+        int,
+        """278 333 474 556 556 889 722 238 333 333 389 584 278 333 278 278 556 556 556 556
+556 556 556 556 556 556 333 333 584 584 584 611 1015 722 722 722 722 667 611 778
+722 278 556 722 611 833 722 778 667 778 722 667 611 722 667 944 667 667 611 333
+278 333 584 556 333 556 611 556 611 556 333 611 611 278 278 556 278 889 611 611
+611 611 389 556 333 611 556 778 556 556 500 389 280 389 584 350 556 350 278 556
+500 1000 556 556 333 1000 667 333 1000 350 611 350 350 278 278 500 500 350 556 1000
+333 1000 556 333 944 350 500 667 278 333 556 556 556 556 280 556 333 737 370 556
+584 333 737 333 400 584 333 333 333 611 556 278 333 333 365 556 834 834 834 611
+722 722 722 722 722 722 1000 722 667 667 667 667 278 278 278 278 722 722 778 778
+778 778 778 584 778 722 722 722 722 667 667 611 556 556 556 556 556 556 889 556
+556 556 556 556 278 278 278 278 611 611 611 611 611 611 611 584 611 611 611 611
+611 556 611 556""".split(),
+    )
+)
 
 
 def _plain(value: Any) -> str:
@@ -28,6 +48,13 @@ def _escape(value: str) -> bytes:
     )
 
 
+def _advance(value: str) -> int:
+    return sum(
+        _WIN_ANSI_WIDTHS[code - 32] if code >= 32 else 0
+        for code in value.encode("cp1252", "replace")
+    )
+
+
 def _wrap(value: Any, width: int = 74) -> list[str]:
     text = _plain(value).strip()
     if not text:
@@ -35,15 +62,20 @@ def _wrap(value: Any, width: int = 74) -> list[str]:
     words = text.split()
     lines: list[str] = []
     current = ""
+    # Wrapped lines can be rendered in either 9 pt body or 10 pt bold.
+    budget = TEXT_WIDTH * 100
     for word in words:
-        while len(word) > width:
+        while len(word) > width or _advance(word) > budget:
             if current:
                 lines.append(current)
                 current = ""
-            lines.append(word[:width])
-            word = word[width:]
+            end = min(len(word), width)
+            while _advance(word[:end]) > budget:
+                end -= 1
+            lines.append(word[:end])
+            word = word[end:]
         candidate = f"{current} {word}".strip()
-        if len(candidate) > width and current:
+        if current and (len(candidate) > width or _advance(candidate) > budget):
             lines.append(current)
             current = word
         else:
@@ -68,10 +100,12 @@ def _content_stream(
 
     def draw(text: str, y: int, size: int, bold: bool = False, color: str = "0 0 0") -> None:
         font = "F2" if bold else "F1"
+        advance = _advance(_plain(text)) * size
+        scale = min(100.0, 100_000 * TEXT_WIDTH / advance) if advance else 100.0
         commands.extend(
             [
                 b"BT",
-                f"/{font} {size} Tf {color} rg {LEFT} {y} Td ".encode("ascii")
+                f"/{font} {size} Tf {color} rg {scale:.3f} Tz {LEFT} {y} Td ".encode("ascii")
                 + b"("
                 + _escape(text)
                 + b") Tj",
