@@ -14,6 +14,8 @@ from aegistrace.standards import (
     source_references,
 )
 
+SCOPE_TRACE_LAYOUT = "scope-trace-v1"
+
 
 class DetailedReportFinding(BaseModel):
     model_config = ConfigDict(extra="forbid")

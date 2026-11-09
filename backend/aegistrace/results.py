@@ -22,7 +22,7 @@ from aegistrace.jobs import job_event, lock_job
 from aegistrace.platform_api import record_request
 from aegistrace.policy import PolicyError
 from aegistrace.reasoning_schema import proposals
-from aegistrace.report_content import build_vapt_content
+from aegistrace.report_content import SCOPE_TRACE_LAYOUT, build_vapt_content
 from aegistrace.report_finding_api import latest_report_findings, report_finding_history
 from aegistrace.repository import insert_record, require_access
 from aegistrace.result_schema import exports, late_outputs, revisions
@@ -449,6 +449,7 @@ def freeze_export(
         "capabilities": coverage["capabilities"],
         "complete_assessment": False,
         "report_renderer_enabled": True,
+        "report_layout_revision": SCOPE_TRACE_LAYOUT,
         "limitations": limitations,
         "assessment": dict(
             connection.execute(

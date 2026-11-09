@@ -15,6 +15,8 @@ For recordings covered by the same assessment authorization, use the same exact 
 
 Changing stages preserves drafts. Switching to another assessment clears the import draft and loads that assessment's own data. A failed coverage request shows a recovery action, and a permission error or expired session gets its own message.
 
+When a new report includes sources from more than one scope revision, its PDF lists each selected scope and identifies the revision for every source run. The assessment-wide coverage section describes the wider workspace at export time. Existing frozen exports retain their original layout.
+
 ## Automated UI walkthrough
 
 From `frontend/`:
