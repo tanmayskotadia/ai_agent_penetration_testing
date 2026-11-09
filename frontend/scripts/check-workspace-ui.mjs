@@ -12,6 +12,8 @@ try {
   page.on("pageerror", error => console.error("Browser error:", error.message));
   const requests = [];
   const reportWrites = [];
+  const scopes = [];
+  const importedScopes = [];
   let coverageRequests = 0;
   let importAttempts = 0;
   const coverage = {
@@ -52,11 +54,18 @@ try {
       run_state: "recorded", original_available: false, reviewed_derivative_available: false,
       can_generate_derivative: false, can_review_derivative: false,
     };
-    else if (request.method() === "POST" && path.endsWith("/scopes")) data = { id: "scope-test", revision: 1 };
+    else if (path.endsWith("/scopes") && request.method() === "GET") data = scopes;
+    else if (path.endsWith("/scopes") && request.method() === "POST") {
+      data = { ...JSON.parse(request.postData() ?? "{}"), id: `scope-${scopes.length + 1}` };
+      scopes.push(data);
+    }
     else if (request.method() === "POST" && path.endsWith("/runs")) data = { id: "run-test" };
     else if (request.method() === "POST" && path.endsWith("/evidence")) data = { id: "evidence-test" };
-    else if (request.method() === "POST" && path.endsWith("/imports")) data = { id: "import-test" };
-    else if (path.endsWith("/normalize-nmap")) {
+    else if (request.method() === "POST" && path.endsWith("/imports")) {
+      importedScopes.push(JSON.parse(request.postData() ?? "{}"));
+      data = { id: "import-test" };
+    }
+    else if (/\/normalize-(nmap|nikto)$/.test(path)) {
       importAttempts += 1;
       data = importAttempts === 1
         ? { state: "quarantined", code: "TEST ONLY parse failure", findings_created: 0 }
@@ -143,6 +152,19 @@ try {
   await page.getByText("TEST ONLY parse failure", { exact: true }).waitFor();
   await normalize.click();
   await page.getByRole("heading", { name: "Evidence normalized" }).waitFor();
+  await importForm.getByLabel("Evidence format").selectOption("Nikto");
+  await importForm.locator('input[type="file"]').setInputFiles({ name: "test-only.json", mimeType: "application/json", buffer: Buffer.from("{}") });
+  await importForm.getByLabel("Version reported by source").fill("TEST ONLY");
+  await normalize.click();
+  await page.getByText("Recorded evidence processed on scope revision 1.", { exact: false }).waitFor();
+  assert.deepEqual(importedScopes.map(({ tool, scope_id, scope_revision }) => [tool, scope_id, scope_revision]), [
+    ["Nmap", "scope-1", 1], ["Nmap", "scope-1", 1], ["Nikto", "scope-1", 1],
+  ]);
+  assert.equal(scopes.length, 1, "matching recorded imports reuse the scope");
+  await importForm.getByLabel("Excluded hosts/addresses").fill("excluded.test");
+  await normalize.click();
+  await page.getByText("Recorded evidence processed on scope revision 2.", { exact: false }).waitFor();
+  assert.equal(importedScopes.at(-1).scope_id, "scope-2", "changed boundaries create a new scope");
   await page.getByRole("button", { name: "Open source provenance review", exact: true }).click();
   await page.locator("#source-review:focus").waitFor();
   await stages.nth(2).click();
