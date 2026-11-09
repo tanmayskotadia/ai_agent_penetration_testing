@@ -3046,6 +3046,16 @@
             "title": "Rationale",
             "type": "string"
           },
+          "recommendation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportRecommendationReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "references": {
             "items": {
               "type": "string"
@@ -3155,6 +3165,37 @@
           "rationale"
         ],
         "title": "ReportFindingCreate",
+        "type": "object"
+      },
+      "ReportRecommendationReference": {
+        "additionalProperties": false,
+        "properties": {
+          "disposition": {
+            "enum": [
+              "used",
+              "edited",
+              "considered"
+            ],
+            "title": "Disposition",
+            "type": "string"
+          },
+          "plan_id": {
+            "format": "uuid",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "disposition"
+        ],
+        "title": "ReportRecommendationReference",
         "type": "object"
       },
       "ReportStandardReferenceCreate": {

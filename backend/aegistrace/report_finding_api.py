@@ -1,6 +1,7 @@
 """Append-only reviewer report content linked to assessment-owned observations."""
 
 from datetime import UTC, datetime
+from html import unescape
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -8,7 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import Connection, Engine, select
 
-from aegistrace.api_contracts import ReportFindingCreate, WorkflowResource
+from aegistrace.api_contracts import (
+    ReportFindingCreate,
+    ReportRecommendationReference,
+    WorkflowResource,
+)
 from aegistrace.api_schema import resources
 from aegistrace.auth import Identity, identity_dependency
 from aegistrace.mutations import mutation
@@ -44,6 +49,45 @@ def latest_report_findings(history: list[dict[str, Any]]) -> list[dict[str, Any]
     return sorted(latest.values(), key=lambda value: value["request"]["finding_id"])
 
 
+def recommendation_trace(
+    connection: Connection,
+    assessment_id: UUID,
+    reference: ReportRecommendationReference,
+    observation_ids: set[str],
+) -> dict[str, Any]:
+    plan = connection.execute(
+        select(resources.c.payload).where(
+            resources.c.id == str(reference.plan_id),
+            resources.c.assessment_id == str(assessment_id),
+            resources.c.kind == "plans",
+        )
+    ).scalar_one_or_none()
+    if plan is None:
+        raise HTTPException(404, "Recommendation plan not found")
+    request_data = plan["request"]
+    proposal = request_data.get("proposal", {})
+    decision = proposal.get("decision")
+    if (
+        not request_data.get("adaptive")
+        or not decision
+        or not proposal.get("reasoning_proposal_id")
+    ):
+        raise HTTPException(422, "Choose a plan with a saved evidence-based recommendation")
+    cited = set(decision["observation_ids"])
+    if not cited or not cited <= observation_ids:
+        raise HTTPException(422, "Select all observations cited by the recommendation")
+    provider = proposal["provider"]
+    return {
+        "plan_id": str(reference.plan_id),
+        "plan_revision": plan["revision"],
+        "proposal_id": proposal["reasoning_proposal_id"],
+        "disposition": reference.disposition,
+        "provider_source": provider.get("provider_source", "unknown"),
+        "observation_ids": sorted(cited),
+        "rationale": unescape(decision["rationale"]),
+    }
+
+
 def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
     router = APIRouter(
         prefix="/api/v1/assessments/{assessment_id}/report-findings", tags=["report-content"]
@@ -73,6 +117,11 @@ def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
         request: Request,
         actor: Identity = actor_dependency,
     ) -> JSONResponse:
+        report_body = body.model_dump(mode="json")
+        if body.recommendation is None:
+            # Keep receipts issued before the optional recommendation field replayable.
+            report_body.pop("recommendation")
+
         def apply(connection: Connection) -> dict[str, Any]:
             require_access(connection, assessment_id, actor.subject)
             if actor.principal_kind != "human" or actor.role not in {"reviewer", "admin"}:
@@ -121,13 +170,17 @@ def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
                         409,
                         "An observation already belongs to another report finding; revise that finding",
                     )
-            payload = body.model_dump(mode="json") | {
+            payload = report_body | {
                 "finding_id": str(body.finding_id or uuid4()),
                 "information_kind": "reviewer-decision",
                 "recorded_by": actor.subject,
                 "recorded_at": datetime.now(UTC).isoformat(),
                 "confirmation": "content review does not confirm exploitability",
             }
+            if body.recommendation is not None:
+                payload["recommendation_trace"] = recommendation_trace(
+                    connection, assessment_id, body.recommendation, selected
+                )
             value = WorkflowResource(
                 id=uuid4(),
                 assessment_id=assessment_id,
@@ -154,6 +207,6 @@ def report_finding_router(engine: Engine, config: Settings) -> APIRouter:
             )
             return value
 
-        return mutation(engine, request, actor, body.model_dump(mode="json"), apply, 201)
+        return mutation(engine, request, actor, report_body, apply, 201)
 
     return router

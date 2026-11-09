@@ -41,7 +41,7 @@ class RecordedProvider:
         value = {
             "decision": "select" if chosen["action"] == "request-import" else "request-review",
             "selected_candidate_id": chosen["id"],
-            "rationale": "TEST ONLY: cited observations support reviewing the selected evidence gap.",
+            "rationale": 'TEST ONLY: cited observations support reviewing the "selected" evidence gap.',
             "observation_ids": chosen["observation_ids"],
             "expected_information_gain": "TEST ONLY: compare independent web evidence with observed services.",
             "assumptions": ["TEST ONLY synthetic data; source service names are unverified"],
@@ -384,3 +384,78 @@ def test_postgresql_bounded_adaptive_plan(import_context, monkeypatch):
     test_http_and_ssh_produce_different_bounded_proposals_and_persist_reviewable_plans(
         import_context, monkeypatch
     )
+
+
+def test_report_finding_links_recommendation_without_promoting_its_prose(
+    import_context, monkeypatch
+):
+    monkeypatch.setattr(adaptive_planner, "build_provider", lambda config: RecordedProvider())
+    client, _, base, headers, body = prepare_case(import_context)
+    response = client.post(base + "/reasoning/replan", json=body, headers=headers())
+    assert response.status_code == 201, response.text
+    plan = response.json()
+    proposal = plan["request"]["proposal"]
+    cited = proposal["decision"]["observation_ids"]
+    finding = {
+        "observation_ids": cited,
+        "title": "Reviewed observation",
+        "description": "The report conclusion comes from the selected observations.",
+        "rationale": "The recommendation informed the review without adding a finding.",
+        "recommendation": {"plan_id": plan["id"], "disposition": "edited"},
+    }
+    _, _, other_base, other_headers, other_body = prepare_case(import_context)
+    other = client.post(other_base + "/reasoning/replan", json=other_body, headers=other_headers())
+    assert other.status_code == 201, other.text
+    unrelated = finding | {"recommendation": {"plan_id": other.json()["id"], "disposition": "used"}}
+    assert (
+        client.post(base + "/report-findings", json=unrelated, headers=headers()).status_code == 404
+    )
+    revision = client.get(base + "/result-revisions", headers=headers()).json()[0]
+    uncited = next(value for value in revision["observation_ids"] if value not in cited)
+    mismatched = finding | {"observation_ids": [uncited]}
+    assert (
+        client.post(base + "/report-findings", json=mismatched, headers=headers()).status_code
+        == 422
+    )
+
+    saved = client.post(base + "/report-findings", json=finding, headers=headers())
+    assert saved.status_code == 201, saved.text
+    exported = client.post(
+        base + "/result-exports", json={"revision_ids": [revision["id"]]}, headers=headers()
+    )
+    assert exported.status_code == 201, exported.text
+    frozen = exported.json()
+    record = next(
+        item
+        for item in frozen["snapshot"]["content"]["detailed_findings"]
+        if item["id"] == saved.json()["request"]["finding_id"]
+    )
+    trace = record["content_provenance"]["recommendation"]
+    assert trace["plan_id"] == plan["id"]
+    assert trace["proposal_id"] == proposal["reasoning_proposal_id"]
+    assert trace["provider_source"] == "test-only"
+    assert trace["observation_ids"] == sorted(cited)
+    assert trace["disposition"] == "edited"
+    assert '"selected"' in trace["rationale"]
+    assert record["description"] == finding["description"]
+    assert record["remediation"] == "unknown"
+    path = base + "/result-exports/" + frozen["id"]
+    pdf = client.get(path + "/pdf", headers=headers())
+    assert pdf.status_code == 200
+    assert b"AI recommendation review: edited" in pdf.content
+    assert plan["id"].encode() in pdf.content
+
+    revised = finding | {
+        "finding_id": record["id"],
+        "expected_revision": 1,
+        "recommendation": None,
+    }
+    retry_headers = headers()
+    saved_revision = client.post(base + "/report-findings", json=revised, headers=retry_headers)
+    assert saved_revision.status_code == 201
+    assert "recommendation" not in saved_revision.json()["request"]
+    omitted = {key: value for key, value in revised.items() if key != "recommendation"}
+    replay = client.post(base + "/report-findings", json=omitted, headers=retry_headers)
+    assert replay.headers["Idempotent-Replay"] == "true"
+    assert replay.json() == saved_revision.json()
+    assert client.get(path, headers=headers()).json()["sha256"] == frozen["sha256"]
