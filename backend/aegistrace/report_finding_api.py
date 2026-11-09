@@ -1,6 +1,7 @@
 """Append-only reviewer report content linked to assessment-owned observations."""
 
 from datetime import UTC, datetime
+from html import unescape
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -83,7 +84,7 @@ def recommendation_trace(
         "disposition": reference.disposition,
         "provider_source": provider.get("provider_source", "unknown"),
         "observation_ids": sorted(cited),
-        "rationale": decision["rationale"],
+        "rationale": unescape(decision["rationale"]),
     }
 
 

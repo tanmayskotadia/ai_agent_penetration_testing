@@ -418,7 +418,10 @@ def render_evidence_report(
                     ("Proposal ID", recommendation["proposal_id"]),
                     ("Response source", recommendation["provider_source"]),
                     ("Cited observations", ", ".join(recommendation["observation_ids"])),
-                    ("Recommendation rationale", recommendation["rationale"]),
+                    (
+                        "Recommendation rationale",
+                        recommendation["rationale"].replace("\u2011", "-"),
+                    ),
                 ]:
                     lines.extend((part, 2) for part in _wrap(f"{label}: {value}"))
             for reference in finding.get("standard_references", []):

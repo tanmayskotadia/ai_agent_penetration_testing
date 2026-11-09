@@ -41,7 +41,7 @@ class RecordedProvider:
         value = {
             "decision": "select" if chosen["action"] == "request-import" else "request-review",
             "selected_candidate_id": chosen["id"],
-            "rationale": "TEST ONLY: cited observations support reviewing the selected evidence gap.",
+            "rationale": 'TEST ONLY: cited observations support reviewing the "selected" evidence gap.',
             "observation_ids": chosen["observation_ids"],
             "expected_information_gain": "TEST ONLY: compare independent web evidence with observed services.",
             "assumptions": ["TEST ONLY synthetic data; source service names are unverified"],
@@ -436,6 +436,7 @@ def test_report_finding_links_recommendation_without_promoting_its_prose(
     assert trace["provider_source"] == "test-only"
     assert trace["observation_ids"] == sorted(cited)
     assert trace["disposition"] == "edited"
+    assert '"selected"' in trace["rationale"]
     assert record["description"] == finding["description"]
     assert record["remediation"] == "unknown"
     path = base + "/result-exports/" + frozen["id"]
