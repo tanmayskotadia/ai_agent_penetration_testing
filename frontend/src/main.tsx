@@ -669,7 +669,7 @@ function App() {
       .catch((failure: unknown) => { if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "Unable to connect"); });
     return () => controller.abort();
   }, []);
-  const release = "https://github.com/tanmayskotadia/ai_agent_penetration_testing/releases/tag/recorded-demo-v0.1.0";
+  const release = "https://github.com/tanmayskotadia/ai_agent_penetration_testing/releases";
   return <>
     <a className="skip-link" href="#workspace">Skip to workspace</a>
     <header className="product-header" id="home">
