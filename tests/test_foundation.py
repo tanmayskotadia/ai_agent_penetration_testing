@@ -83,3 +83,42 @@ def test_real_postgresql_and_redis_worker_roundtrip() -> None:
     worker = create_worker(settings)
     result = worker.send_task("aegistrace.diagnostic.ping")
     assert result.get(timeout=20) == "foundation-pong"
+
+
+def test_request_diagnostics_log_templates_without_request_data(tmp_path, caplog):
+    import json
+    from uuid import uuid4
+
+    settings = Settings(
+        _env_file=None,
+        app_secret=SecretStr(secrets.token_hex(32)),
+        database_url=f"sqlite:///{tmp_path / 'diagnostics.db'}",
+    )
+    caplog.set_level("INFO", logger="uvicorn.error.requests")
+    request_id, correlation_id, assessment_id, export_id = (str(uuid4()) for _ in range(4))
+    with TestClient(create_app(settings)) as client:
+        denied = client.get(
+            f"/api/v1/assessments/{assessment_id}/result-exports/{export_id}/pdf",
+            params={"debug": "private-query-marker"},
+            headers={"X-Request-ID": request_id, "X-Correlation-ID": correlation_id},
+        )
+        assert client.get("/health/live").status_code == 200
+        assert client.get("/health/ready").status_code == 503
+    assert denied.status_code == 401
+    assert denied.headers["X-Request-ID"] == request_id
+    assert denied.headers["X-Correlation-ID"] == correlation_id
+    records = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "uvicorn.error.requests"
+    ]
+    assert [record["status"] for record in records] == [401, 503]
+    assert (
+        records[0]["route"] == "/api/v1/assessments/{assessment_id}/result-exports/{export_id}/pdf"
+    )
+    assert records[0]["correlation_id"] == correlation_id
+    assert records[0]["duration_ms"] >= 0
+    assert records[1]["route"] == "/health/ready"
+    assert all(
+        value not in caplog.text for value in (assessment_id, export_id, "private-query-marker")
+    )
